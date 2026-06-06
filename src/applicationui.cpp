@@ -41,7 +41,7 @@ ApplicationUI::ApplicationUI() : QObject() {
 
   // Create scene document from main.qml asset, the parent is set
   // to ensure the document gets destroyed properly at shut down.
-  QmlDocument *qml = QmlDocument::create("asset:///LoginPage.qml").parent(this);
+  QmlDocument *qml = QmlDocument::create("asset:///MainPage.qml").parent(this);
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();

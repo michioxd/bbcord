@@ -2,6 +2,19 @@
 <!DOCTYPE TS>
 <TS version="2.0">
 <context>
+    <name>ChatCard</name>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="16"/>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="160"/>
+        <source>Message #</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>LoginPage</name>
     <message>
         <location filename="../assets/LoginPage.qml" line="24"/>

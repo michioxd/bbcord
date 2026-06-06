@@ -11,8 +11,8 @@ Page {
             layout: StackLayout {
             }
 
-            leftPadding: 50.0
-            rightPadding: 50.0
+            leftPadding: ui.du(8.0)
+            rightPadding: ui.du(8.0)
 
             ImageView {
                 imageSource: "asset:///images/icon.png"

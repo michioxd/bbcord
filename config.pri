@@ -36,13 +36,23 @@ simulator {
 
 config_pri_assets {
     OTHER_FILES += \
+        $$quote($$BASEDIR/assets/ChatCard.qml) \
         $$quote($$BASEDIR/assets/LoginPage.qml) \
+        $$quote($$BASEDIR/assets/MainPage.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
+        $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icon.png) \
         $$quote($$BASEDIR/assets/images/icon110.png) \
         $$quote($$BASEDIR/assets/images/icon86.png) \
         $$quote($$BASEDIR/assets/images/icon90.png) \
         $$quote($$BASEDIR/assets/images/icon96.png) \
+        $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
+        $$quote($$BASEDIR/assets/images/icons/hash.png) \
+        $$quote($$BASEDIR/assets/images/icons/house.png) \
+        $$quote($$BASEDIR/assets/images/icons/paperclip.png) \
+        $$quote($$BASEDIR/assets/images/icons/send.png) \
+        $$quote($$BASEDIR/assets/images/icons/sign-out.png) \
+        $$quote($$BASEDIR/assets/images/icons/speaker.png) \
         $$quote($$BASEDIR/assets/images/splaash720x1280.png) \
         $$quote($$BASEDIR/assets/images/splash.png) \
         $$quote($$BASEDIR/assets/images/splash1280x720.png) \
@@ -76,7 +86,10 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/*.qs) \
         $$quote($$BASEDIR/../assets/images/*.qml) \
         $$quote($$BASEDIR/../assets/images/*.js) \
-        $$quote($$BASEDIR/../assets/images/*.qs)
+        $$quote($$BASEDIR/../assets/images/*.qs) \
+        $$quote($$BASEDIR/../assets/images/icons/*.qml) \
+        $$quote($$BASEDIR/../assets/images/icons/*.js) \
+        $$quote($$BASEDIR/../assets/images/icons/*.qs)
 
     HEADERS += \
         $$quote($$BASEDIR/../src/*.h) \
