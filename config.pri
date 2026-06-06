@@ -37,6 +37,12 @@ simulator {
 config_pri_assets {
     OTHER_FILES += \
         $$quote($$BASEDIR/assets/icon.png) \
+        $$quote($$BASEDIR/assets/images/icon.png) \
+        $$quote($$BASEDIR/assets/images/icon110.png) \
+        $$quote($$BASEDIR/assets/images/icon86.png) \
+        $$quote($$BASEDIR/assets/images/icon90.png) \
+        $$quote($$BASEDIR/assets/images/icon96.png) \
+        $$quote($$BASEDIR/assets/images/splash.png) \
         $$quote($$BASEDIR/assets/main.qml)
 }
 
@@ -61,7 +67,10 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
-        $$quote($$BASEDIR/../assets/*.qs)
+        $$quote($$BASEDIR/../assets/*.qs) \
+        $$quote($$BASEDIR/../assets/images/*.qml) \
+        $$quote($$BASEDIR/../assets/images/*.js) \
+        $$quote($$BASEDIR/../assets/images/*.qs)
 
     HEADERS += \
         $$quote($$BASEDIR/../src/*.h) \
