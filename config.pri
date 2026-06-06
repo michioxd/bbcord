@@ -36,13 +36,19 @@ simulator {
 
 config_pri_assets {
     OTHER_FILES += \
+        $$quote($$BASEDIR/assets/LoginPage.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/icon.png) \
         $$quote($$BASEDIR/assets/images/icon110.png) \
         $$quote($$BASEDIR/assets/images/icon86.png) \
         $$quote($$BASEDIR/assets/images/icon90.png) \
         $$quote($$BASEDIR/assets/images/icon96.png) \
+        $$quote($$BASEDIR/assets/images/splaash720x1280.png) \
         $$quote($$BASEDIR/assets/images/splash.png) \
+        $$quote($$BASEDIR/assets/images/splash1280x720.png) \
+        $$quote($$BASEDIR/assets/images/splash1280x768.png) \
+        $$quote($$BASEDIR/assets/images/splash720.png) \
+        $$quote($$BASEDIR/assets/images/splash768x1280.png) \
         $$quote($$BASEDIR/assets/main.qml)
 }
 

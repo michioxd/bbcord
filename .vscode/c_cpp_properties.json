@@ -4,6 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}\\third_party\\jsoncpp\\include",
                 "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include",
                 "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4",
                 "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\Qt",

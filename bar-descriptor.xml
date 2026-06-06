@@ -78,6 +78,11 @@
     </icon>
     <splashScreens>
        <image>splash.png</image>
+       <image>splaash720x1280.png</image>
+       <image>splash1280x720.png</image>
+       <image>splash720.png</image>
+       <image>splash1280x768.png</image>
+       <image>splash768x1280.png</image>
     </splashScreens>
     <author>michioxd</author>
 
@@ -103,6 +108,11 @@
     <asset path="assets/images/icon90.png">icon90.png</asset>
     <asset path="assets/images/icon96.png">icon96.png</asset>
     <asset path="assets/images/splash.png">splash.png</asset>
+    <asset path="assets/images/splaash720x1280.png">splaash720x1280.png</asset>
+    <asset path="assets/images/splash1280x720.png">splash1280x720.png</asset>
+    <asset path="assets/images/splash720.png">splash720.png</asset>
+    <asset path="assets/images/splash1280x768.png">splash1280x768.png</asset>
+    <asset path="assets/images/splash768x1280.png">splash768x1280.png</asset>
 
     <!-- Request permission to execute native code.  Required for native applications. -->
     <permission system="true">run_native</permission>

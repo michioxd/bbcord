@@ -19,32 +19,31 @@
 
 #include <QObject>
 
-namespace bb
-{
-    namespace cascades
-    {
-        class LocaleHandler;
-    }
+namespace bb {
+namespace cascades {
+class LocaleHandler;
 }
+} // namespace bb
 
 class QTranslator;
 
 /*!
  * @brief Application UI object
  *
- * Use this object to create and init app UI, to create context objects, to register the new meta types etc.
+ * Use this object to create and init app UI, to create context objects, to
+ * register the new meta types etc.
  */
-class ApplicationUI : public QObject
-{
-    Q_OBJECT
+class ApplicationUI : public QObject {
+  Q_OBJECT
 public:
-    ApplicationUI();
-    virtual ~ApplicationUI() {}
+  ApplicationUI();
+  virtual ~ApplicationUI() {}
 private slots:
-    void onSystemLanguageChanged();
+  void onSystemLanguageChanged();
+
 private:
-    QTranslator* m_pTranslator;
-    bb::cascades::LocaleHandler* m_pLocaleHandler;
+  QTranslator *m_pTranslator;
+  bb::cascades::LocaleHandler *m_pLocaleHandler;
 };
 
 #endif /* ApplicationUI_HPP_ */

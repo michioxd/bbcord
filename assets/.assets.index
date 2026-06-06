@@ -1,10 +1,16 @@
 1
-8
+14
 icon.png
 images/icon.png
 images/icon110.png
 images/icon86.png
 images/icon90.png
 images/icon96.png
+images/splaash720x1280.png
 images/splash.png
+images/splash1280x720.png
+images/splash1280x768.png
+images/splash720.png
+images/splash768x1280.png
+LoginPage.qml
 main.qml
