@@ -34,7 +34,15 @@
             "compilerPath": "C:\\bbndk\\10.3.1.995\\host_10_3_1_12\\win32\\x86\\usr\\bin\\qcc.exe",
             "cStandard": "c11",
             "cppStandard": "c++11",
-            "intelliSenseMode": "${default}"
+            "intelliSenseMode": "${default}",
+            "compilerArgs": [
+                "-Vgcc_ntoarmv7le_cpp",
+                "-o bbcord src/main.cpp",
+                "-I$QNX_TARGET/usr/include/qt4/QtCore",
+                "-L$QNX_TARGET/armle-v7/usr/lib",
+                "-lbb",
+                "-lbbcascades"
+            ]
         }
     ],
     "version": 4
