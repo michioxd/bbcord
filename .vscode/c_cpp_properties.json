@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\Qt",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtCore",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtGui",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtNetwork",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtDeclarative",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtXml",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtSvg",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtSql",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\qt4\\QtOpenGL",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\bb",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\bb\\cascades",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\c++\\4.8.3",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\arm",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\target-override\\usr\\include",
+                "C:\\bbndk\\10.3.1.995\\target_10_3_1_995\\qnx6\\usr\\include\\sys"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__QNXNTO__",
+                "__ARM__",
+                "__LITTLEENDIAN__",
+                "__ARMEL__"
+            ],
+            "compilerPath": "C:\\bbndk\\10.3.1.995\\host_10_3_1_12\\win32\\x86\\usr\\bin\\qcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "${default}"
+        }
+    ],
+    "version": 4
+}
