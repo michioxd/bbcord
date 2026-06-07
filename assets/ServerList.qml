@@ -4,6 +4,7 @@ Container {
     id: serverList
 
     property string serverName: "lmao server"
+    property string serverId: ""
 
     signal channelSelected(string channelName)
 
@@ -34,16 +35,35 @@ Container {
 
     ListView {
         dataModel: channelModel
+        verticalAlignment: VerticalAlignment.Fill
 
         onTriggered: {
             var item = channelModel.data(indexPath)
 
             if (item.type == "channel") {
+                serverListController.selectChannel(item.id)
                 serverList.channelSelected(item.name)
             }
         }
 
         listItemComponents: [
+            ListItemComponent {
+                type: "loading"
+
+                Container {
+                    preferredHeight: ui.du(7.0)
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Fill
+                    layout: DockLayout {}
+
+                    ActivityIndicator {
+                        running: true
+                        horizontalAlignment: HorizontalAlignment.Center
+                        verticalAlignment: VerticalAlignment.Center
+                    }
+                }
+            },
+
             ListItemComponent {
                 type: "category"
 
@@ -85,13 +105,13 @@ Container {
                         verticalAlignment: VerticalAlignment.Center
 
                         ImageView {
-                            imageSource: "asset:///images/icons/hash.png"
+                            imageSource: ListItemData.icon
 
                             preferredWidth: ui.du(4)
                             preferredHeight: ui.du(4)
 
                             verticalAlignment: VerticalAlignment.Bottom
-                            opacity: 0.45
+                            opacity: ListItemData.unread ? 1.0 : 0.45
 
                             scalingMethod: ScalingMethod.AspectFit
                         }
@@ -99,6 +119,7 @@ Container {
                         Label {
                             text: ListItemData.name
                             textStyle.fontSize: FontSize.Medium
+                            opacity: ListItemData.unread ? 1.0 : 0.45
                         }
                     }
                 }
@@ -108,6 +129,16 @@ Container {
         function itemType(data, indexPath) {
             return data.type
         }
+
+        attachedObjects: [
+            ListScrollStateHandler {
+                onAtEndChanged: {
+                    if (atEnd) {
+                        serverListController.loadMoreGuildChannels()
+                    }
+                }
+            }
+        ]
     }
 
     attachedObjects: [
@@ -116,14 +147,74 @@ Container {
         }
     ]
 
-    onCreationCompleted: {
-        channelModel.append({"type": "category", "name": "Text Channels"})
-        channelModel.append({"type": "channel", "name": "general"})
-        channelModel.append({"type": "channel", "name": "random"})
-        channelModel.append({"type": "channel", "name": "dev"})
+    function refreshChannels() {
+        channelModel.clear()
+        for (var i = 0; i < appStore.guildChannels.length; ++i) {
+            channelModel.append(appStore.guildChannels[i])
+        }
+        updateChannelLoading()
+    }
 
-        channelModel.append({"type": "category", "name": "Voice Channels"})
-        channelModel.append({"type": "channel", "name": "lounge"})
-        channelModel.append({"type": "channel", "name": "music"})
+    function appendChannels(channels) {
+        removeChannelLoading()
+        for (var i = 0; i < channels.length; ++i) {
+            channelModel.append(channels[i])
+        }
+        updateChannelLoading()
+    }
+
+    function refreshChannelsIfNeeded() {
+        var end = channelModel.size() - loadingRowOffset()
+        if (end != appStore.guildChannels.length) {
+            refreshChannels()
+            return
+        }
+
+        for (var i = 0; i < appStore.guildChannels.length; ++i) {
+            var item = channelModel.data([i])
+            if (item.id != appStore.guildChannels[i].id) {
+                refreshChannels()
+                return
+            }
+
+            if (item.unread != appStore.guildChannels[i].unread) {
+                channelModel.replace([i], appStore.guildChannels[i])
+            }
+        }
+    }
+
+    function loadingRowOffset() {
+        if (channelModel.size() == 0) {
+            return 0
+        }
+
+        var last = channelModel.data([channelModel.size() - 1])
+        return last.type == "loading" ? 1 : 0
+    }
+
+    function removeChannelLoading() {
+        if (channelModel.size() == 0) {
+            return
+        }
+
+        var lastIndex = channelModel.size() - 1
+        var last = channelModel.data([lastIndex])
+        if (last.type == "loading") {
+            channelModel.removeAt([lastIndex])
+        }
+    }
+
+    function updateChannelLoading() {
+        removeChannelLoading()
+        if (appStore.dataLoading) {
+            channelModel.append({ "type": "loading" })
+        }
+    }
+
+    onCreationCompleted: {
+        refreshChannels()
+        appStore.guildChannelsAppended.connect(appendChannels)
+        appStore.guildChannelsChanged.connect(refreshChannelsIfNeeded)
+        appStore.dataLoadingChanged.connect(updateChannelLoading)
     }
 }

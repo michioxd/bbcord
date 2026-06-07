@@ -210,11 +210,18 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     m_sessionId = DiscordJsonParser::extractStringField(bytes, "session_id");
     m_resumeGatewayUrl =
         DiscordJsonParser::extractStringField(bytes, "resume_gateway_url");
+    QString userSettingsProto =
+        DiscordJsonParser::extractStringField(bytes, "user_settings_proto");
 
     qDebug() << "[discord] large READY received; skipping full JSON parse"
              << "session" << m_sessionId;
     setState(Ready);
     emit ready(m_sessionId);
+    QVariantMap readyPayload;
+    readyPayload["session_id"] = m_sessionId;
+    readyPayload["resume_gateway_url"] = m_resumeGatewayUrl;
+    readyPayload["user_settings_proto"] = userSettingsProto;
+    emit dispatchReceived("READY", readyPayload);
     return;
   }
 

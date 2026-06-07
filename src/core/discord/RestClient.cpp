@@ -44,6 +44,18 @@ QString avatarErrorMessage(int status) {
 
   return QString("Discord avatar error %1").arg(status);
 }
+
+QString dataErrorMessage(const QString &name, int status) {
+  if (status == 401 || status == 403) {
+    return "Invalid Discord token";
+  }
+
+  if (status == 429) {
+    return "Discord REST rate limited";
+  }
+
+  return QString("Discord %1 error %2").arg(name).arg(status);
+}
 } // namespace
 
 DiscordRestClient::DiscordRestClient(QObject *parent)
@@ -85,6 +97,114 @@ void DiscordRestClient::loginWithToken(const QString &token) {
   startTimerIfNeeded();
 }
 
+void DiscordRestClient::fetchGuilds(const QString &token, int limit,
+                                    const QString &afterId) {
+  cancel();
+
+  m_token = token.trimmed();
+  if (m_token.isEmpty()) {
+    emit requestFailed("Token is empty");
+    return;
+  }
+
+  if (limit <= 0) {
+    limit = 25;
+  }
+
+  m_requestPath = QString("/api/v9/users/@me/guilds?limit=%1").arg(limit);
+  if (!afterId.trimmed().isEmpty()) {
+    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+  }
+
+  m_requestType = GuildsRequest;
+  m_requestSent = false;
+  m_finished = false;
+  m_pollTicks = 0;
+  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
+                                 DiscordRestClient::eventHandler, this);
+
+  if (m_connection == NULL) {
+    finishRequest();
+    emit requestFailed("Could not create Discord guilds connection");
+    return;
+  }
+
+  startTimerIfNeeded();
+}
+
+void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
+                                        const QString &afterId) {
+  cancel();
+
+  m_token = token.trimmed();
+  if (m_token.isEmpty()) {
+    emit requestFailed("Token is empty");
+    return;
+  }
+
+  if (limit <= 0) {
+    limit = 25;
+  }
+
+  m_requestPath = QString("/api/v9/users/@me/channels?limit=%1").arg(limit);
+  if (!afterId.trimmed().isEmpty()) {
+    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+  }
+
+  m_requestType = DmChannelsRequest;
+  m_requestSent = false;
+  m_finished = false;
+  m_pollTicks = 0;
+  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
+                                 DiscordRestClient::eventHandler, this);
+
+  if (m_connection == NULL) {
+    finishRequest();
+    emit requestFailed("Could not create Discord DM connection");
+    return;
+  }
+
+  startTimerIfNeeded();
+}
+
+void DiscordRestClient::fetchGuildChannels(const QString &token,
+                                           const QString &guildId, int limit,
+                                           const QString &afterId) {
+  cancel();
+
+  m_token = token.trimmed();
+  m_guildId = guildId.trimmed();
+  if (m_token.isEmpty() || m_guildId.isEmpty()) {
+    emit requestFailed("Guild request is empty");
+    return;
+  }
+
+  if (limit <= 0) {
+    limit = 25;
+  }
+
+  m_requestPath =
+      QString("/api/v9/guilds/%1/channels?limit=%2").arg(m_guildId).arg(limit);
+  if (!afterId.trimmed().isEmpty()) {
+    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+  }
+
+  m_requestType = GuildChannelsRequest;
+  m_requestSent = false;
+  m_finished = false;
+  m_pollTicks = 0;
+  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
+                                 DiscordRestClient::eventHandler, this);
+
+  if (m_connection == NULL) {
+    finishRequest();
+    emit requestFailed("Could not create Discord channel connection");
+    return;
+  }
+
+  startTimerIfNeeded();
+}
+
 void DiscordRestClient::downloadAvatar(const QString &userId,
                                        const QString &avatarHash,
                                        const QString &outputPath) {
@@ -95,7 +215,7 @@ void DiscordRestClient::downloadAvatar(const QString &userId,
   m_outputPath = outputPath.trimmed();
   if (m_avatarUserId.isEmpty() || m_avatarHash.isEmpty() ||
       m_outputPath.isEmpty()) {
-    emit avatarDownloadFailed("Avatar request is empty");
+    emit avatarDownloadFailed(m_avatarUserId, "Avatar request is empty");
     return;
   }
 
@@ -108,7 +228,40 @@ void DiscordRestClient::downloadAvatar(const QString &userId,
 
   if (m_connection == NULL) {
     finishRequest();
-    emit avatarDownloadFailed("Could not create Discord avatar connection");
+    emit avatarDownloadFailed(m_avatarUserId,
+                              "Could not create Discord avatar connection");
+    return;
+  }
+
+  startTimerIfNeeded();
+}
+
+void DiscordRestClient::downloadGuildIcon(const QString &guildId,
+                                          const QString &iconHash,
+                                          const QString &outputPath) {
+  cancel();
+
+  m_iconGuildId = guildId.trimmed();
+  m_iconHash = iconHash.trimmed();
+  m_outputPath = outputPath.trimmed();
+  if (m_iconGuildId.isEmpty() || m_iconHash.isEmpty() ||
+      m_outputPath.isEmpty()) {
+    emit guildIconDownloadFailed(m_iconGuildId, "Guild icon request is empty");
+    return;
+  }
+
+  m_requestType = GuildIconRequest;
+  m_requestSent = false;
+  m_finished = false;
+  m_pollTicks = 0;
+  m_connection = mg_http_connect(m_mgr, kDiscordCdnUrl,
+                                 DiscordRestClient::eventHandler, this);
+
+  if (m_connection == NULL) {
+    QString safeGuildId = m_iconGuildId;
+    finishRequest();
+    emit guildIconDownloadFailed(safeGuildId,
+                                 "Could not create Discord icon connection");
     return;
   }
 
@@ -124,8 +277,12 @@ void DiscordRestClient::cancel() {
   m_requestSent = false;
   m_finished = true;
   m_pollTicks = 0;
+  m_requestPath.clear();
+  m_guildId.clear();
   m_avatarUserId.clear();
   m_avatarHash.clear();
+  m_iconGuildId.clear();
+  m_iconHash.clear();
   m_outputPath.clear();
   stopTimerIfIdle();
 }
@@ -158,8 +315,10 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
     if (connection->is_tls) {
       struct mg_tls_opts opts;
       memset(&opts, 0, sizeof(opts));
-      opts.name = mg_str(m_requestType == AvatarRequest ? kDiscordCdnHost
-                                                        : kDiscordApiHost);
+      opts.name = mg_str(
+          (m_requestType == AvatarRequest || m_requestType == GuildIconRequest)
+              ? kDiscordCdnHost
+              : kDiscordApiHost);
       opts.skip_verification = true;
       mg_tls_init(connection, &opts);
     }
@@ -171,8 +330,12 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
   case MG_EV_TLS_HS:
     if (m_requestType == AvatarRequest) {
       sendAvatarRequest(connection);
-    } else {
+    } else if (m_requestType == GuildIconRequest) {
+      sendGuildIconRequest(connection);
+    } else if (m_requestType == LoginRequest) {
       sendGetMeRequest(connection);
+    } else {
+      sendApiRequest(connection);
     }
     break;
 
@@ -182,7 +345,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
     int status = mg_http_status(message);
     QByteArray body = httpBodyToBytes(message);
 
-    if (m_requestType == AvatarRequest) {
+    if (m_requestType == AvatarRequest || m_requestType == GuildIconRequest) {
       qDebug() << "[discord-rest] avatar status" << status;
       if (status == 200) {
         QByteArray outputPathBytes = m_outputPath.toUtf8();
@@ -190,21 +353,78 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
                            body.constData(),
                            static_cast<size_t>(body.size()))) {
           QString outputPath = m_outputPath;
+          QString avatarUserId = m_avatarUserId;
+          QString guildId = m_iconGuildId;
+          bool isGuildIcon = m_requestType == GuildIconRequest;
           finishRequest();
-          emit avatarDownloadFailed(
-              QString("Could not save avatar: %1").arg(outputPath));
+          if (isGuildIcon) {
+            emit guildIconDownloadFailed(
+                guildId, QString("Could not save icon: %1").arg(outputPath));
+          } else {
+            emit avatarDownloadFailed(
+                avatarUserId,
+                QString("Could not save avatar: %1").arg(outputPath));
+          }
           break;
         }
 
         QString outputPath = m_outputPath;
+        QString avatarUserId = m_avatarUserId;
+        QString guildId = m_iconGuildId;
+        bool isGuildIcon = m_requestType == GuildIconRequest;
         finishRequest();
-        emit avatarDownloaded(outputPath);
+        if (isGuildIcon) {
+          emit guildIconDownloaded(guildId, outputPath);
+        } else {
+          emit avatarDownloaded(avatarUserId, outputPath);
+        }
         break;
       }
 
       QString errorMessage = avatarErrorMessage(status);
+      QString avatarUserId = m_avatarUserId;
+      QString guildId = m_iconGuildId;
+      bool isGuildIcon = m_requestType == GuildIconRequest;
       finishRequest();
-      emit avatarDownloadFailed(errorMessage);
+      if (isGuildIcon) {
+        emit guildIconDownloadFailed(guildId, errorMessage);
+      } else {
+        emit avatarDownloadFailed(avatarUserId, errorMessage);
+      }
+      break;
+    }
+
+    if (m_requestType == GuildsRequest || m_requestType == DmChannelsRequest ||
+        m_requestType == GuildChannelsRequest) {
+      QString requestName =
+          m_requestType == GuildsRequest
+              ? "guilds"
+              : (m_requestType == DmChannelsRequest ? "DM channels"
+                                                    : "guild channels");
+      qDebug() << "[discord-rest]" << requestName << "status" << status;
+      if (status == 200) {
+        QString parseError;
+        QVariantList items = DiscordJsonParser::parseArray(body, &parseError);
+        if (!parseError.isEmpty()) {
+          failDataRequest(
+              QString("Discord REST JSON error: %1").arg(parseError));
+          break;
+        }
+
+        QString guildId = m_guildId;
+        RequestType finishedType = m_requestType;
+        finishRequest();
+        if (finishedType == GuildsRequest) {
+          emit guildsLoaded(items);
+        } else if (finishedType == DmChannelsRequest) {
+          emit dmChannelsLoaded(items);
+        } else {
+          emit guildChannelsLoaded(guildId, items);
+        }
+        break;
+      }
+
+      failDataRequest(dataErrorMessage(requestName, status));
       break;
     }
 
@@ -263,8 +483,12 @@ void DiscordRestClient::finishRequest() {
   m_requestSent = false;
   m_finished = true;
   m_pollTicks = 0;
+  m_requestPath.clear();
+  m_guildId.clear();
   m_avatarUserId.clear();
   m_avatarHash.clear();
+  m_iconGuildId.clear();
+  m_iconHash.clear();
   m_outputPath.clear();
   stopTimerIfIdle();
 }
@@ -281,6 +505,20 @@ void DiscordRestClient::failWithMessage(const QString &message) {
 
   finishRequest();
   emit loginFailed(safeMessage);
+}
+
+void DiscordRestClient::failDataRequest(const QString &message) {
+  if (m_finished) {
+    return;
+  }
+
+  QString safeMessage = message.trimmed();
+  if (safeMessage.isEmpty()) {
+    safeMessage = "Discord REST error";
+  }
+
+  finishRequest();
+  emit requestFailed(safeMessage);
 }
 
 void DiscordRestClient::succeedWithUser(const QVariantMap &user) {
@@ -312,6 +550,27 @@ void DiscordRestClient::sendGetMeRequest(struct mg_connection *connection) {
             tokenBytes.constData());
 }
 
+void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
+  if (connection == NULL || m_requestSent || m_requestPath.isEmpty()) {
+    return;
+  }
+
+  m_requestSent = true;
+
+  QByteArray pathBytes = m_requestPath.toUtf8();
+  QByteArray tokenBytes = m_token.toUtf8();
+  mg_printf(connection,
+            "GET %s HTTP/1.1\r\n"
+            "Host: discord.com\r\n"
+            "Authorization: %s\r\n"
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 "
+            "Safari/537.36\r\n"
+            "Accept: application/json\r\n"
+            "Connection: close\r\n\r\n",
+            pathBytes.constData(), tokenBytes.constData());
+}
+
 void DiscordRestClient::sendAvatarRequest(struct mg_connection *connection) {
   if (m_requestType != AvatarRequest || connection == NULL || m_requestSent) {
     return;
@@ -330,4 +589,25 @@ void DiscordRestClient::sendAvatarRequest(struct mg_connection *connection) {
             "Accept: image/png,image/*\r\n"
             "Connection: close\r\n\r\n",
             userIdBytes.constData(), avatarHashBytes.constData());
+}
+
+void DiscordRestClient::sendGuildIconRequest(struct mg_connection *connection) {
+  if (m_requestType != GuildIconRequest || connection == NULL ||
+      m_requestSent) {
+    return;
+  }
+
+  m_requestSent = true;
+
+  QByteArray guildIdBytes = m_iconGuildId.toUtf8();
+  QByteArray iconHashBytes = m_iconHash.toUtf8();
+  mg_printf(connection,
+            "GET /icons/%s/%s.png?size=128 HTTP/1.1\r\n"
+            "Host: cdn.discordapp.com\r\n"
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 "
+            "Safari/537.36\r\n"
+            "Accept: image/png,image/*\r\n"
+            "Connection: close\r\n\r\n",
+            guildIdBytes.constData(), iconHashBytes.constData());
 }

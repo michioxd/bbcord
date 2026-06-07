@@ -2,9 +2,13 @@
 #define Client_HPP_
 
 #include <QObject>
+#include <QQueue>
 #include <QString>
+#include <QStringList>
+#include <QVariantList>
 #include <QVariantMap>
 
+#include "discord/Gateway.hpp"
 #include "discord/RestClient.hpp"
 #include "models/Models.hpp"
 
@@ -24,6 +28,15 @@ public:
   Q_INVOKABLE void login(const QString &token);
   Q_INVOKABLE void autoLogin();
   Q_INVOKABLE void logout();
+  Q_INVOKABLE void loadMainData();
+  Q_INVOKABLE void loadGuildIcon(const QString &guildId);
+  Q_INVOKABLE void loadMoreDmChannels();
+  Q_INVOKABLE void loadDmAvatar(const QString &channelId);
+  Q_INVOKABLE void loadGuildChannels(const QString &guildId);
+  Q_INVOKABLE void loadMoreGuildChannels();
+  Q_INVOKABLE void selectHome();
+  Q_INVOKABLE void selectGuild(const QString &guildId);
+  Q_INVOKABLE void selectChannel(const QString &channelId);
 
   bool loggedIn() const;
   bool busy() const;
@@ -39,8 +52,17 @@ Q_SIGNALS:
 private Q_SLOTS:
   void onRestLoginSucceeded(const QVariantMap &user);
   void onRestLoginFailed(const QString &message);
-  void onAvatarDownloaded(const QString &localPath);
-  void onAvatarDownloadFailed(const QString &message);
+  void onGuildsLoaded(const QVariantList &guilds);
+  void onDmChannelsLoaded(const QVariantList &channels);
+  void onGuildChannelsLoaded(const QString &guildId,
+                             const QVariantList &channels);
+  void onDataRequestFailed(const QString &message);
+  void onAvatarDownloaded(const QString &userId, const QString &localPath);
+  void onAvatarDownloadFailed(const QString &userId, const QString &message);
+  void onGuildIconDownloaded(const QString &guildId, const QString &localPath);
+  void onGuildIconDownloadFailed(const QString &guildId,
+                                 const QString &message);
+  void onGatewayDispatch(const QString &eventName, const QVariantMap &payload);
 
 private:
   void setLoggedIn(bool loggedIn);
@@ -49,12 +71,68 @@ private:
   void saveToken();
   void clearSavedToken();
   void loadCurrentUserAvatar(const DiscordUser &user);
+  void loadGuilds();
+  void queueDmAvatar(const QString &channelId, const QString &userId,
+                     const QString &avatarHash);
+  void loadNextAvatar();
+  void queueGuildIcon(const QString &guildId, const QString &iconHash);
+  void loadNextGuildIcon();
   QString avatarCachePath(const DiscordUser &user) const;
+  QString guildIconCachePath(const QString &guildId,
+                             const QString &iconHash) const;
   QString avatarSourceForPath(const QString &path) const;
+  QVariantMap guildToItem(const QVariantMap &guild) const;
+  QVariantMap dmChannelToItem(const QVariantMap &channel) const;
+  QVariantMap guildChannelToItem(const QVariantMap &channel) const;
+  bool applyGuildOrder(const QStringList &orderedGuildIds);
+  bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
+  void sortGuilds();
+  void updateGuildUnreadCount(const QString &guildId, int delta);
+  void updateGuildChannelUnread(const QString &channelId, bool unread);
+  QVariantList
+  sortedAccessibleGuildChannels(const QVariantList &channels) const;
+  void moveDmToTop(const QString &channelId, const QString &lastMessageId);
+  void applyGatewayOrderingEvent(const QString &eventName,
+                                 const QVariantMap &payload);
+  void appendVisibleGuildChannels();
+  void updateDataLoading();
 
   AppStore *m_store;
   DiscordRestClient m_restClient;
+  DiscordRestClient m_dataClient;
+  DiscordRestClient m_avatarClient;
+  DiscordRestClient m_avatarClient2;
+  DiscordRestClient m_guildIconClient;
+  DiscordRestClient m_guildIconClient2;
+  DiscordGateway m_gateway;
+  QQueue<QVariantMap> m_pendingAvatars;
+  QQueue<QVariantMap> m_pendingGuildIcons;
+  QString m_loadingAvatarUserId;
+  QString m_loadingAvatarUserId2;
+  QString m_loadingGuildIconId;
+  QString m_loadingGuildIconId2;
+  QStringList m_queuedAvatarUserIds;
+  QStringList m_loadedAvatarUserIds;
+  QStringList m_queuedGuildIconIds;
+  QStringList m_loadedGuildIconIds;
+  QStringList m_orderedGuildIds;
   QString m_token;
+  QString m_lastGuildId;
+  QString m_lastDmChannelId;
+  QString m_selectedGuildId;
+  QVariantList m_guilds;
+  QVariantList m_allDmChannels;
+  QVariantList m_dmChannels;
+  QVariantList m_allGuildChannels;
+  QVariantList m_visibleGuildChannels;
+  int m_visibleDmChannelCount;
+  int m_visibleGuildChannelCount;
+  bool m_loadingGuilds;
+  bool m_loadingDmChannels;
+  bool m_loadingGuildChannels;
+  bool m_guildsHasMore;
+  bool m_dmChannelsHasMore;
+  bool m_guildChannelsHasMore;
   bool m_loggedIn;
   bool m_busy;
   QString m_statusText;

@@ -84,6 +84,9 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/JsonParser.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
         $$quote($$BASEDIR/src/core/models/Models.cpp) \
+        $$quote($$BASEDIR/src/ui/DmListController.cpp) \
+        $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
+        $$quote($$BASEDIR/src/ui/ServerListController.cpp) \
         $$quote($$BASEDIR/src/main.cpp)
 
     HEADERS += \
@@ -93,7 +96,10 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/Gateway.hpp) \
         $$quote($$BASEDIR/src/core/discord/JsonParser.hpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.hpp) \
-        $$quote($$BASEDIR/src/core/models/Models.hpp)
+        $$quote($$BASEDIR/src/core/models/Models.hpp) \
+        $$quote($$BASEDIR/src/ui/DmListController.hpp) \
+        $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
+        $$quote($$BASEDIR/src/ui/ServerListController.hpp)
 }
 
 CONFIG += precompile_header
@@ -122,6 +128,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/core/models/*.cc) \
         $$quote($$BASEDIR/../src/core/models/*.cpp) \
         $$quote($$BASEDIR/../src/core/models/*.cxx) \
+        $$quote($$BASEDIR/../src/ui/*.c) \
+        $$quote($$BASEDIR/../src/ui/*.c++) \
+        $$quote($$BASEDIR/../src/ui/*.cc) \
+        $$quote($$BASEDIR/../src/ui/*.cpp) \
+        $$quote($$BASEDIR/../src/ui/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \

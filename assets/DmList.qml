@@ -31,7 +31,9 @@ Container {
     }
 
 	ListView {
+		id: dmListView
 		dataModel: dmModel
+		verticalAlignment: VerticalAlignment.Fill
 
 		onTriggered: {
 			var item = dmModel.data(indexPath)
@@ -42,6 +44,23 @@ Container {
 		}
 
 		listItemComponents: [
+			ListItemComponent {
+				type: "loading"
+
+				Container {
+					preferredHeight: ui.du(7.0)
+					horizontalAlignment: HorizontalAlignment.Fill
+					verticalAlignment: VerticalAlignment.Fill
+					layout: DockLayout {}
+
+					ActivityIndicator {
+						running: true
+						horizontalAlignment: HorizontalAlignment.Center
+						verticalAlignment: VerticalAlignment.Center
+					}
+				}
+			},
+
 			ListItemComponent {
 				type: "category"
 
@@ -69,6 +88,20 @@ Container {
 					horizontalAlignment: HorizontalAlignment.Fill
 					leftPadding: ui.du(2)
 					rightPadding: ui.du(2)
+
+					function requestAvatar() {
+						if (ListItemData.avatar === "" && ListItemData.avatarHash !== "") {
+							ListItem.view.loadVisibleDmAvatar(ListItemData.id)
+						}
+					}
+
+					onCreationCompleted: {
+						requestAvatar()
+					}
+
+					ListItem.onDataChanged: {
+						requestAvatar()
+					}
 
 					layout: StackLayout {
 						orientation: LayoutOrientation.LeftToRight
@@ -118,6 +151,20 @@ Container {
 		function itemType(data, indexPath) {
 			return data.type
 		}
+
+		function loadVisibleDmAvatar(channelId) {
+			dmListController.loadDmAvatar(channelId)
+		}
+
+		attachedObjects: [
+			ListScrollStateHandler {
+				onAtEndChanged: {
+					if (atEnd) {
+						dmListController.loadMoreDmChannels()
+					}
+				}
+			}
+		]
 	}
 
 	attachedObjects: [
@@ -126,10 +173,84 @@ Container {
 		}
 	]
 
+	function refreshDms() {
+		dmModel.clear()
+		dmModel.append({"type": "category", "name": "Direct Messages"})
+		for (var i = 0; i < appStore.dmChannels.length; ++i) {
+			dmModel.append(appStore.dmChannels[i])
+		}
+		updateDmLoading()
+	}
+
+	function appendDms(channels) {
+		removeDmLoading()
+		for (var i = 0; i < channels.length; ++i) {
+			dmModel.append(channels[i])
+		}
+		updateDmLoading()
+	}
+
+	function refreshDmsIfNeeded() {
+		var end = dmModel.size() - loadingRowOffset()
+		if (end - 1 != appStore.dmChannels.length) {
+			refreshDms()
+			return
+		}
+
+		for (var i = 0; i < appStore.dmChannels.length; ++i) {
+			var item = dmModel.data([i + 1])
+			if (item.id != appStore.dmChannels[i].id) {
+				refreshDms()
+				return
+			}
+		}
+	}
+
+	function loadingRowOffset() {
+		if (dmModel.size() == 0) {
+			return 0
+		}
+
+		var last = dmModel.data([dmModel.size() - 1])
+		return last.type == "loading" ? 1 : 0
+	}
+
+	function removeDmLoading() {
+		if (dmModel.size() == 0) {
+			return
+		}
+
+		var lastIndex = dmModel.size() - 1
+		var last = dmModel.data([lastIndex])
+		if (last.type == "loading") {
+			dmModel.removeAt([lastIndex])
+		}
+	}
+
+	function updateDmLoading() {
+		removeDmLoading()
+		if (appStore.dataLoading) {
+			dmModel.append({ "type": "loading" })
+		}
+	}
+
 	onCreationCompleted: {
-		dmModel.append({"type": "category", "name": "Friends"})
-		dmModel.append({"type": "dm", "name": "michioxd", "initials": "M", "avatarColor": "#5865F2", "avatar": ""})
-		dmModel.append({"type": "dm", "name": "BerryBot", "initials": "B", "avatarColor": "#43B581", "avatar": ""})
-		dmModel.append({"type": "dm", "name": "Demo User", "initials": "D", "avatarColor": "#4F545C", "avatar": "asset:///images/demo.png"})
+		refreshDms()
+		appStore.dmChannelsAppended.connect(appendDms)
+		appStore.dmAvatarChanged.connect(updateDmAvatar)
+		appStore.dmChannelsChanged.connect(refreshDmsIfNeeded)
+		appStore.dataLoadingChanged.connect(updateDmLoading)
+	}
+
+	function updateDmAvatar(channelId, avatarSource) {
+		var end = dmModel.size() - loadingRowOffset()
+		for (var i = 1; i < end; ++i) {
+			var item = dmModel.data([i])
+			if (item.id == channelId) {
+				item.avatar = avatarSource
+				dmModel.replace([i], item)
+				break
+			}
+		}
 	}
 }

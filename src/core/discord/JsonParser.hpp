@@ -4,6 +4,7 @@
 #include <QByteArray>
 #include <QString>
 #include <QVariant>
+#include <QVariantList>
 #include <QVariantMap>
 
 class DiscordJsonParser {
@@ -21,6 +22,8 @@ public:
 
   static GatewayPayload parseGatewayPayload(const QByteArray &bytes);
   static QVariantMap parseObject(const QByteArray &bytes,
+                                 QString *errorMessage = 0);
+  static QVariantList parseArray(const QByteArray &bytes,
                                  QString *errorMessage = 0);
   static QByteArray buildIdentifyPayload(const QString &token,
                                          QString *errorMessage = 0);

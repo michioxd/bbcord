@@ -17,15 +17,23 @@ Page {
                 background: Color.create("#111111")
                 
                 ListView {
+                    id: guildListView
                     dataModel: serverModel
+                    verticalAlignment: VerticalAlignment.Fill
+
+                    function loadVisibleGuildIcon(guildId) {
+                        mainPageController.loadGuildIcon(guildId)
+                    }
 
                     onTriggered: {
                         var item = serverModel.data(indexPath)
 
                         if (item.type == "dm") {
+                            mainPageController.selectHome()
                             mainPage.loadDmList()
                         } else if (item.type == "server") {
-                            mainPage.loadServerList(item.name)
+                            mainPageController.selectGuild(item.id)
+                            mainPage.loadServerList(item.id, item.name)
                         }
                     }
                     
@@ -44,6 +52,22 @@ Page {
 
                                 layout: DockLayout {}
 
+                                function requestIcon() {
+                                    if (ListItemData.type == "server" &&
+                                            ListItemData.icon === "" &&
+                                            ListItemData.iconHash !== "") {
+                                        ListItem.view.loadVisibleGuildIcon(ListItemData.id)
+                                    }
+                                }
+
+                                onCreationCompleted: {
+                                    requestIcon()
+                                }
+
+                                ListItem.onDataChanged: {
+                                    requestIcon()
+                                }
+
                                 ImageView {
                                     imageSource: ListItemData.icon
                                     visible: ListItemData.icon !== ""
@@ -53,7 +77,7 @@ Page {
                                 }
 
                                 Label {
-                                    text: ListItemData.name
+                                    text: ListItemData.initials
 
                                     visible: ListItemData.icon === ""
 
@@ -63,9 +87,34 @@ Page {
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.fontSize: FontSize.Large
                                 }
+
+                                Container {
+                                    preferredWidth: ui.du(3)
+                                    preferredHeight: ui.du(3)
+                                    horizontalAlignment: HorizontalAlignment.Right
+                                    verticalAlignment: VerticalAlignment.Top
+                                    background: Color.create("#ED4245")
+                                    visible: ListItemData.unreadCount > 0
+
+                                    layout: DockLayout {}
+
+                                    Label {
+                                        text: ListItemData.unreadCount > 99 ? "99+" : ListItemData.unreadCount
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        verticalAlignment: VerticalAlignment.Center
+                                        textStyle.color: Color.White
+                                        textStyle.fontWeight: FontWeight.Bold
+                                        textStyle.fontSize: FontSize.XXSmall
+                                    }
+                                }
                             }
                         }
                     ]
+
+                    function itemType(data, indexPath) {
+                        return ""
+                    }
+
                     leftPadding: ui.du(1.0)
                     topPadding: ui.du(1.0)
                 }
@@ -141,10 +190,11 @@ Page {
             }
         }
 
-        function loadServerList(serverName) {
+        function loadServerList(serverId, serverName) {
             var page = serverListDefinition.createObject()
 
             if (page) {
+                page.serverId = serverId
                 page.serverName = serverName
                 page.channelSelected.connect(function(channelName) {
                         mainPage.openChat(channelName)
@@ -159,20 +209,61 @@ Page {
             serverModel.append({
                     "type": "dm",
                     "name": "Home",
-                    "icon": "asset:///images/icons/first.png"
-            })
-            serverModel.append({
-                    "type": "server",
-                    "name": "lmao server",
-                    "icon": "asset:///images/demo.png"
-            })
-            serverModel.append({
-                    "type": "server",
-                    "name": "D",
-                    "icon": ""
+                    "id": "home",
+                    "icon": "asset:///images/icons/first.png",
+                    "unreadCount": 0
             })
 
             loadDmList()
+            appStore.guildIconChanged.connect(updateServerIcon)
+            appStore.guildsChanged.connect(refreshServersIfNeeded)
+            mainPageController.loadMainData()
+        }
+
+        function resetServers() {
+            serverModel.clear()
+            serverModel.append({
+                "type": "dm",
+                "name": "Home",
+                "id": "home",
+                "icon": "asset:///images/icons/first.png",
+                "unreadCount": 0
+            })
+
+            for (var i = 0; i < appStore.guilds.length; ++i) {
+                serverModel.append(appStore.guilds[i])
+            }
+        }
+
+        function refreshServersIfNeeded() {
+            if (serverModel.size() - 1 != appStore.guilds.length) {
+                resetServers()
+                return
+            }
+
+            for (var i = 0; i < appStore.guilds.length; ++i) {
+                var item = serverModel.data([i + 1])
+                if (item.id != appStore.guilds[i].id) {
+                    resetServers()
+                    return
+                }
+
+                if (item.icon != appStore.guilds[i].icon ||
+                        item.unreadCount != appStore.guilds[i].unreadCount) {
+                    serverModel.replace([i + 1], appStore.guilds[i])
+                }
+            }
+        }
+
+        function updateServerIcon(guildId, iconSource) {
+            for (var i = 1; i < serverModel.size(); ++i) {
+                var item = serverModel.data([i])
+                if (item.id == guildId) {
+                    item.icon = iconSource
+                    serverModel.replace([i], item)
+                    break
+                }
+            }
         }
     attachedObjects: [
         ArrayDataModel {

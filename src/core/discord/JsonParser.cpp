@@ -42,6 +42,24 @@ QVariantMap DiscordJsonParser::parseObject(const QByteArray &bytes,
   return parsed.toMap();
 }
 
+QVariantList DiscordJsonParser::parseArray(const QByteArray &bytes,
+                                           QString *errorMessage) {
+  bb::data::JsonDataAccess json;
+  QVariant parsed = json.loadFromBuffer(bytes);
+
+  if (json.hasError()) {
+    if (errorMessage != 0) {
+      *errorMessage = json.error().errorMessage();
+    }
+    return QVariantList();
+  }
+
+  if (errorMessage != 0) {
+    errorMessage->clear();
+  }
+  return parsed.toList();
+}
+
 QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
                                                    QString *errorMessage) {
   QVariantMap properties;

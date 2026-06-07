@@ -18,6 +18,9 @@
 
 #include "core/AppStore.hpp"
 #include "core/Client.hpp"
+#include "ui/DmListController.hpp"
+#include "ui/MainPageController.hpp"
+#include "ui/ServerListController.hpp"
 
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
@@ -28,7 +31,10 @@ using namespace bb::cascades;
 
 ApplicationUI::ApplicationUI()
     : QObject(), m_appStore(new AppStore(this)),
-      m_discordClient(new DiscordClient(m_appStore, this)) {
+      m_discordClient(new DiscordClient(m_appStore, this)),
+      m_dmListController(new DmListController(m_discordClient, this)),
+      m_mainPageController(new MainPageController(m_discordClient, this)),
+      m_serverListController(new ServerListController(m_discordClient, this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);
   m_pLocaleHandler = new LocaleHandler(this);
@@ -49,6 +55,9 @@ ApplicationUI::ApplicationUI()
   QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
   qml->setContextProperty("appStore", m_appStore);
   qml->setContextProperty("discordClient", m_discordClient);
+  qml->setContextProperty("dmListController", m_dmListController);
+  qml->setContextProperty("mainPageController", m_mainPageController);
+  qml->setContextProperty("serverListController", m_serverListController);
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();

@@ -5,13 +5,15 @@ const char *kDefaultUserAvatar = "asset:///images/icon.png";
 }
 
 AppStore::AppStore(QObject *parent)
-    : QObject(parent), m_loggedIn(false), m_busy(false),
+    : QObject(parent), m_loggedIn(false), m_busy(false), m_dataLoading(false),
       m_statusText("Disconnected"),
       m_currentUserAvatarSource(kDefaultUserAvatar) {}
 
 bool AppStore::loggedIn() const { return m_loggedIn; }
 
 bool AppStore::busy() const { return m_busy; }
+
+bool AppStore::dataLoading() const { return m_dataLoading; }
 
 QString AppStore::statusText() const { return m_statusText; }
 
@@ -47,6 +49,8 @@ QString AppStore::currentUserAvatarSource() const {
 QVariantList AppStore::guilds() const { return m_guilds; }
 
 QVariantList AppStore::dmChannels() const { return m_dmChannels; }
+
+QVariantList AppStore::guildChannels() const { return m_guildChannels; }
 
 QString AppStore::selectedGuildId() const { return m_selectedGuildId; }
 
@@ -84,10 +88,12 @@ void AppStore::selectChannel(const QString &channelId) {
 void AppStore::clearSession() {
   setLoggedIn(false);
   setBusy(false);
+  setDataLoading(false);
   setStatusText("Disconnected");
   setCurrentUser(DiscordUser());
   setGuilds(QVariantList());
   setDmChannels(QVariantList());
+  setGuildChannels(QVariantList());
   selectHome();
 }
 
@@ -107,6 +113,15 @@ void AppStore::setBusy(bool busy) {
 
   m_busy = busy;
   emit busyChanged(m_busy);
+}
+
+void AppStore::setDataLoading(bool dataLoading) {
+  if (m_dataLoading == dataLoading) {
+    return;
+  }
+
+  m_dataLoading = dataLoading;
+  emit dataLoadingChanged(m_dataLoading);
 }
 
 void AppStore::setStatusText(const QString &statusText) {
@@ -150,7 +165,58 @@ void AppStore::setGuilds(const QVariantList &guilds) {
   emit guildsChanged();
 }
 
+void AppStore::updateGuildIcon(const QString &guildId,
+                               const QString &iconSource) {
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == guildId) {
+      guild["icon"] = iconSource;
+      m_guilds.replace(i, guild);
+      emit guildIconChanged(guildId, iconSource);
+      return;
+    }
+  }
+}
+
+void AppStore::updateDmAvatar(const QString &channelId,
+                              const QString &avatarSource) {
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    if (channel.value("id").toString() == channelId) {
+      channel["avatar"] = avatarSource;
+      m_dmChannels.replace(i, channel);
+      emit dmAvatarChanged(channelId, avatarSource);
+      return;
+    }
+  }
+}
+
 void AppStore::setDmChannels(const QVariantList &dmChannels) {
+  QVariantList appended;
+  if (dmChannels.size() >= m_dmChannels.size()) {
+    for (int i = m_dmChannels.size(); i < dmChannels.size(); ++i) {
+      appended.append(dmChannels.at(i));
+    }
+  }
+
   m_dmChannels = dmChannels;
+  if (!appended.isEmpty()) {
+    emit dmChannelsAppended(appended);
+  }
   emit dmChannelsChanged();
+}
+
+void AppStore::setGuildChannels(const QVariantList &channels) {
+  QVariantList appended;
+  if (channels.size() >= m_guildChannels.size()) {
+    for (int i = m_guildChannels.size(); i < channels.size(); ++i) {
+      appended.append(channels.at(i));
+    }
+  }
+
+  m_guildChannels = channels;
+  if (!appended.isEmpty()) {
+    emit guildChannelsAppended(appended);
+  }
+  emit guildChannelsChanged();
 }
