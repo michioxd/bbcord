@@ -26,6 +26,7 @@ class LocaleHandler;
 } // namespace bb
 
 class QTranslator;
+class AppStore;
 class DiscordClient;
 
 /*!
@@ -45,6 +46,7 @@ private slots:
 private:
   QTranslator *m_pTranslator;
   bb::cascades::LocaleHandler *m_pLocaleHandler;
+  AppStore *m_appStore;
   DiscordClient *m_discordClient;
 };
 

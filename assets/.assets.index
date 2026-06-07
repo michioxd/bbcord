@@ -1,5 +1,5 @@
 1
-36
+37
 ChannelMemberList.qml
 ChatCard.qml
 DmList.qml
@@ -36,3 +36,4 @@ main.qml
 MainPage.qml
 MessageBubble.qml
 ServerList.qml
+UserSheet.qml

@@ -41,7 +41,7 @@ Page {
 
                 text: qsTr("Login")
                 horizontalAlignment: HorizontalAlignment.Fill
-                enabled: !discordClient.busy
+                enabled: !appStore.busy
 
                 onClicked: {
                     discordClient.login(tokenField.text)
@@ -62,7 +62,7 @@ Page {
             }
 
             Label {
-                text: discordClient.statusText
+                text: appStore.statusText
                 horizontalAlignment: HorizontalAlignment.Center
                 multiline: true
                 visible: text.length > 0

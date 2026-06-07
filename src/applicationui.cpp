@@ -16,7 +16,8 @@
 
 #include "applicationui.hpp"
 
-#include "core/DiscordClient.hpp"
+#include "core/AppStore.hpp"
+#include "core/Client.hpp"
 
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
@@ -26,7 +27,8 @@
 using namespace bb::cascades;
 
 ApplicationUI::ApplicationUI()
-    : QObject(), m_discordClient(new DiscordClient(this)) {
+    : QObject(), m_appStore(new AppStore(this)),
+      m_discordClient(new DiscordClient(m_appStore, this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);
   m_pLocaleHandler = new LocaleHandler(this);
@@ -45,6 +47,7 @@ ApplicationUI::ApplicationUI()
   // Create scene document from main.qml asset, the parent is set
   // to ensure the document gets destroyed properly at shut down.
   QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
+  qml->setContextProperty("appStore", m_appStore);
   qml->setContextProperty("discordClient", m_discordClient);
 
   // Create root object for the UI

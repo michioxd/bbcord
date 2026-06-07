@@ -1,10 +1,9 @@
-#include "DiscordGateway.hpp"
+#include "Gateway.hpp"
 
-#include <bb/data/JsonDataAccess>
+#include "JsonParser.hpp"
 
 #include <QByteArray>
 #include <QDebug>
-#include <QVariant>
 #include <QVariantList>
 
 extern "C" {
@@ -38,59 +37,6 @@ QString gatewayEventName(int event) {
   }
 }
 
-int variantToInt(const QVariant &value, int fallback) {
-  bool ok = false;
-  int result = value.toInt(&ok);
-  return ok ? result : fallback;
-}
-
-bool hasJsonToken(const QByteArray &bytes, const char *compactToken,
-                  const char *spacedToken) {
-  return bytes.indexOf(compactToken) >= 0 || bytes.indexOf(spacedToken) >= 0;
-}
-
-QString extractJsonString(const QByteArray &bytes, const char *fieldName) {
-  QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");
-  int pos = bytes.indexOf(marker);
-  if (pos < 0) {
-    return QString();
-  }
-
-  pos = bytes.indexOf(':', pos + marker.size());
-  if (pos < 0) {
-    return QString();
-  }
-
-  ++pos;
-  while (pos < bytes.size() &&
-         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
-          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
-    ++pos;
-  }
-
-  if (pos >= bytes.size() || bytes.at(pos) != '"') {
-    return QString();
-  }
-
-  ++pos;
-  QByteArray value;
-  bool escaped = false;
-  for (; pos < bytes.size(); ++pos) {
-    char ch = bytes.at(pos);
-    if (escaped) {
-      value.append(ch);
-      escaped = false;
-    } else if (ch == '\\') {
-      escaped = true;
-    } else if (ch == '"') {
-      break;
-    } else {
-      value.append(ch);
-    }
-  }
-
-  return QString::fromUtf8(value.constData(), value.size());
-}
 } // namespace
 
 DiscordGateway::DiscordGateway(QObject *parent)
@@ -258,11 +204,12 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
   QByteArray bytes(data, length);
   qDebug() << "[discord] websocket message bytes" << length;
 
-  if (length > 262144 && hasJsonToken(bytes, "\"op\":0", "\"op\": 0") &&
-      hasJsonToken(bytes, "\"t\":\"READY\"", "\"t\": \"READY\"")) {
-    m_sequence = variantToInt(extractJsonString(bytes, "s"), m_sequence);
-    m_sessionId = extractJsonString(bytes, "session_id");
-    m_resumeGatewayUrl = extractJsonString(bytes, "resume_gateway_url");
+  if (DiscordJsonParser::isLargeReadyPayload(bytes)) {
+    m_sequence = DiscordJsonParser::valueToInt(
+        DiscordJsonParser::extractStringField(bytes, "s"), m_sequence);
+    m_sessionId = DiscordJsonParser::extractStringField(bytes, "session_id");
+    m_resumeGatewayUrl =
+        DiscordJsonParser::extractStringField(bytes, "resume_gateway_url");
 
     qDebug() << "[discord] large READY received; skipping full JSON parse"
              << "session" << m_sessionId;
@@ -271,34 +218,27 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     return;
   }
 
-  bb::data::JsonDataAccess json;
-  QVariant parsed = json.loadFromBuffer(bytes);
-
-  if (json.hasError()) {
-    emit error(QString("Gateway JSON parse error: %1")
-                   .arg(json.error().errorMessage()));
+  DiscordJsonParser::GatewayPayload payload =
+      DiscordJsonParser::parseGatewayPayload(bytes);
+  if (!payload.valid) {
+    emit error(
+        QString("Gateway JSON parse error: %1").arg(payload.errorMessage));
     return;
   }
 
-  QVariantMap root = parsed.toMap();
-  int op = variantToInt(root.value("op"), -1);
-  int sequence = variantToInt(root.value("s"), -1);
-  QString eventName = root.value("t").toString();
-  QVariantMap eventData = root.value("d").toMap();
+  qDebug() << "[discord] gateway payload op" << payload.op << "event"
+           << payload.eventName << "sequence" << payload.sequence;
 
-  qDebug() << "[discord] gateway payload op" << op << "event" << eventName
-           << "sequence" << sequence;
-
-  if (sequence >= 0) {
-    m_sequence = sequence;
+  if (payload.sequence >= 0) {
+    m_sequence = payload.sequence;
   }
 
-  switch (op) {
+  switch (payload.op) {
   case 0:
-    handleDispatch(eventName, eventData, sequence);
+    handleDispatch(payload.eventName, payload.data, payload.sequence);
     break;
   case 10:
-    handleHello(eventData);
+    handleHello(payload.data);
     break;
   case 11:
     qDebug() << "[discord] heartbeat ACK";
@@ -319,13 +259,14 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     emit error("Discord gateway invalid session");
     break;
   default:
-    qDebug() << "[discord] unhandled gateway opcode" << op;
+    qDebug() << "[discord] unhandled gateway opcode" << payload.op;
     break;
   }
 }
 
 void DiscordGateway::handleHello(const QVariantMap &data) {
-  int interval = variantToInt(data.value("heartbeat_interval"), 0);
+  int interval =
+      DiscordJsonParser::valueToInt(data.value("heartbeat_interval"), 0);
   if (interval <= 0) {
     emit error("Discord gateway HELLO did not include heartbeat interval");
     return;
@@ -352,27 +293,11 @@ void DiscordGateway::handleDispatch(const QString &eventName,
 }
 
 void DiscordGateway::sendIdentify() {
-  QVariantMap properties;
-  properties["os"] = "BlackBerry 10";
-  properties["browser"] = "BBCord";
-  properties["device"] = "BBCord";
-
-  QVariantMap data;
-  data["token"] = m_token;
-  data["intents"] = 0;
-  data["large_threshold"] = 50;
-  data["properties"] = properties;
-
-  QVariantMap root;
-  root["op"] = 2;
-  root["d"] = data;
-
-  bb::data::JsonDataAccess json;
-  QByteArray payload;
-  json.saveToBuffer(root, &payload);
-  if (json.hasError()) {
-    emit error(QString("Gateway identify JSON error: %1")
-                   .arg(json.error().errorMessage()));
+  QString errorMessage;
+  QByteArray payload =
+      DiscordJsonParser::buildIdentifyPayload(m_token, &errorMessage);
+  if (!errorMessage.isEmpty()) {
+    emit error(QString("Gateway identify JSON error: %1").arg(errorMessage));
     return;
   }
 

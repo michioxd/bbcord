@@ -43,6 +43,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/MainPage.qml) \
         $$quote($$BASEDIR/assets/MessageBubble.qml) \
         $$quote($$BASEDIR/assets/ServerList.qml) \
+        $$quote($$BASEDIR/assets/UserSheet.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icon.png) \
@@ -77,14 +78,22 @@ config_pri_assets {
 config_pri_source_group1 {
     SOURCES += \
         $$quote($$BASEDIR/src/applicationui.cpp) \
-        $$quote($$BASEDIR/src/core/DiscordClient.cpp) \
-        $$quote($$BASEDIR/src/core/discord/DiscordGateway.cpp) \
+        $$quote($$BASEDIR/src/core/AppStore.cpp) \
+        $$quote($$BASEDIR/src/core/Client.cpp) \
+        $$quote($$BASEDIR/src/core/discord/Gateway.cpp) \
+        $$quote($$BASEDIR/src/core/discord/JsonParser.cpp) \
+        $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
+        $$quote($$BASEDIR/src/core/models/Models.cpp) \
         $$quote($$BASEDIR/src/main.cpp)
 
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \
-        $$quote($$BASEDIR/src/core/DiscordClient.hpp) \
-        $$quote($$BASEDIR/src/core/discord/DiscordGateway.hpp)
+        $$quote($$BASEDIR/src/core/AppStore.hpp) \
+        $$quote($$BASEDIR/src/core/Client.hpp) \
+        $$quote($$BASEDIR/src/core/discord/Gateway.hpp) \
+        $$quote($$BASEDIR/src/core/discord/JsonParser.hpp) \
+        $$quote($$BASEDIR/src/core/discord/RestClient.hpp) \
+        $$quote($$BASEDIR/src/core/models/Models.hpp)
 }
 
 CONFIG += precompile_header
@@ -108,6 +117,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/core/discord/*.cc) \
         $$quote($$BASEDIR/../src/core/discord/*.cpp) \
         $$quote($$BASEDIR/../src/core/discord/*.cxx) \
+        $$quote($$BASEDIR/../src/core/models/*.c) \
+        $$quote($$BASEDIR/../src/core/models/*.c++) \
+        $$quote($$BASEDIR/../src/core/models/*.cc) \
+        $$quote($$BASEDIR/../src/core/models/*.cpp) \
+        $$quote($$BASEDIR/../src/core/models/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \

@@ -22,8 +22,11 @@ NavigationPane {
 
     property variant currentLoginPage: null
     property variant currentMainPage: null
+    property variant currentUserSheet: null
 
     onCreationCompleted: {
+        currentUserSheet = userSheetDefinition.createObject()
+
         var loginPage = loginPageDefinition.createObject()
         if (loginPage) {
             currentLoginPage = loginPage
@@ -71,19 +74,21 @@ NavigationPane {
     Menu.definition: MenuDefinition {
         actions: [
             ActionItem {
-                title: "User"
-                imageSource: "asset:///images/icon.png"
-                enabled: discordClient.loggedIn
+                title: appStore.currentUserName.length > 0 ? appStore.currentUserName : "User"
+                imageSource: appStore.currentUserAvatarSource
+                enabled: appStore.loggedIn
 
                 onTriggered: {
-                    userSheet.open()
+                    if (currentUserSheet) {
+                        currentUserSheet.open()
+                    }
                 }
             },
 
             ActionItem {
                 title: "Log out"
                 imageSource: "asset:///images/icons/sign-out.png"
-                enabled: discordClient.loggedIn
+                enabled: appStore.loggedIn
 
                 onTriggered: {
                     logoutDialog.show()
@@ -92,7 +97,7 @@ NavigationPane {
 
             ActionItem {
                 title: "Settings"
-                enabled: discordClient.loggedIn
+                enabled: appStore.loggedIn
 
                 onTriggered: {
                     console.log("settings")
@@ -116,6 +121,10 @@ NavigationPane {
             id: mainPageDefinition
             source: "asset:///MainPage.qml"
         },
+        ComponentDefinition {
+            id: userSheetDefinition
+            source: "asset:///UserSheet.qml"
+        },
 
         SystemDialog {
             id: logoutDialog
@@ -128,30 +137,6 @@ NavigationPane {
                 if (result == SystemUiResult.ConfirmButtonSelection) {
                     discordClient.logout()
                     nav.showLoginPage()
-                }
-            }
-        },
-
-        Sheet {
-            id: userSheet
-
-            Page {
-                titleBar: TitleBar {
-                    title: "User"
-                    dismissAction: ActionItem {
-                        title: "Close"
-                        onTriggered: userSheet.close()
-                    }
-                }
-
-                Container {
-                    leftPadding: ui.du(4)
-                    rightPadding: ui.du(4)
-                    topPadding: ui.du(4)
-
-                    Label {
-                        text: "User menu"
-                    }
                 }
             }
         }

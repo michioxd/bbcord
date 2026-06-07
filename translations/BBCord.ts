@@ -63,4 +63,27 @@
         <translation type="unfinished"></translation>
     </message>
 </context>
+<context>
+    <name>UserSheet</name>
+    <message>
+        <location filename="../assets/UserSheet.qml" line="8"/>
+        <source>User</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/UserSheet.qml" line="10"/>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/UserSheet.qml" line="31"/>
+        <source>Not logged in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/UserSheet.qml" line="46"/>
+        <source>User ID: </source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
 </TS>

@@ -1,10 +1,14 @@
-#ifndef DiscordClient_HPP_
-#define DiscordClient_HPP_
+#ifndef Client_HPP_
+#define Client_HPP_
 
 #include <QObject>
 #include <QString>
+#include <QVariantMap>
 
-#include "discord/DiscordGateway.hpp"
+#include "discord/RestClient.hpp"
+#include "models/Models.hpp"
+
+class AppStore;
 
 class DiscordClient : public QObject {
   Q_OBJECT
@@ -14,6 +18,7 @@ class DiscordClient : public QObject {
 
 public:
   explicit DiscordClient(QObject *parent = 0);
+  explicit DiscordClient(AppStore *store, QObject *parent = 0);
   virtual ~DiscordClient();
 
   Q_INVOKABLE void login(const QString &token);
@@ -32,10 +37,10 @@ Q_SIGNALS:
   void statusTextChanged(const QString &statusText);
 
 private Q_SLOTS:
-  void onGatewayReady(const QString &sessionId);
-  void onGatewayError(const QString &message);
-  void onGatewayClosed();
-  void onGatewayStateChanged(int state);
+  void onRestLoginSucceeded(const QVariantMap &user);
+  void onRestLoginFailed(const QString &message);
+  void onAvatarDownloaded(const QString &localPath);
+  void onAvatarDownloadFailed(const QString &message);
 
 private:
   void setLoggedIn(bool loggedIn);
@@ -43,12 +48,16 @@ private:
   void setStatusText(const QString &statusText);
   void saveToken();
   void clearSavedToken();
+  void loadCurrentUserAvatar(const DiscordUser &user);
+  QString avatarCachePath(const DiscordUser &user) const;
+  QString avatarSourceForPath(const QString &path) const;
 
-  DiscordGateway m_gateway;
+  AppStore *m_store;
+  DiscordRestClient m_restClient;
   QString m_token;
   bool m_loggedIn;
   bool m_busy;
   QString m_statusText;
 };
 
-#endif /* DiscordClient_HPP_ */
+#endif /* Client_HPP_ */

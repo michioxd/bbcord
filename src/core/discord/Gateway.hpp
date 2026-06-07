@@ -1,5 +1,5 @@
-#ifndef DiscordGateway_HPP_
-#define DiscordGateway_HPP_
+#ifndef Gateway_HPP_
+#define Gateway_HPP_
 
 #include <QObject>
 #include <QString>
@@ -63,4 +63,4 @@ private:
   ConnectionState m_state;
 };
 
-#endif /* DiscordGateway_HPP_ */
+#endif /* Gateway_HPP_ */
