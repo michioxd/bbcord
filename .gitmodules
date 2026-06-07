@@ -7,3 +7,9 @@
 [submodule "third_party/jsoncpp"]
 	path = third_party/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp
+[submodule "third_party/openssl"]
+	path = third_party/openssl
+	url = https://github.com/openssl/openssl
+[submodule "third_party/libwebsockets"]
+	path = third_party/libwebsockets
+	url = https://github.com/warmcat/libwebsockets
