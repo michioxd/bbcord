@@ -1,3 +1,6 @@
 /arm
 /x86
 /.vs
+third_party/prebuilt/
+third_party/openssl/build*/
+third_party/libwebsockets/build*/
