@@ -1,10 +1,44 @@
 APP_NAME = BBCord
 
 CONFIG += qt warn_on cascades10
+
+QT += network
+
 LIBS += -lbb
 LIBS += -lbbdata
 LIBS += -lbbmultimedia
 LIBS += -lbbsystem
-QT += network
+LIBS += -lsocket
+LIBS += -lm
+
+SOURCES += third_party/mongoose/mongoose.c
+HEADERS += third_party/mongoose/mongoose.h
+
+INCLUDEPATH += $$PWD/third_party/mongoose
+DEFINES += MG_TLS=MG_TLS_OPENSSL
+QMAKE_CFLAGS += -Wc,-std=gnu99
+QMAKE_CFLAGS += -Wc,"-DMG_TLS=MG_TLS_OPENSSL"
+QMAKE_CFLAGS += -Wc,"-DMG_ENABLE_OPENSSL=1"
+
+simulator {
+    INCLUDEPATH += $$PWD/third_party/prebuilt/simulator/openssl/include
+    LIBS += $$PWD/third_party/prebuilt/simulator/openssl/lib/libssl.a
+    LIBS += $$PWD/third_party/prebuilt/simulator/openssl/lib/libcrypto.a
+}
+
+device {
+    INCLUDEPATH += $$PWD/third_party/prebuilt/device/openssl/include
+    LIBS += $$PWD/third_party/prebuilt/device/openssl/lib/libssl.a
+    LIBS += $$PWD/third_party/prebuilt/device/openssl/lib/libcrypto.a
+}
 
 include(config.pri)
+
+CONFIG -= precompile_header
+CONFIG -= precompiled_header
+PRECOMPILED_HEADER =
+QMAKE_CFLAGS_USE_PRECOMPILE =
+QMAKE_CXXFLAGS_USE_PRECOMPILE =
+QMAKE_CFLAGS_PRECOMPILE =
+QMAKE_CXXFLAGS_PRECOMPILE =
+

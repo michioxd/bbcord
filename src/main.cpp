@@ -1,37 +1,179 @@
-/*
- * Copyright (c) 2011-2015 BlackBerry Limited.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #include "applicationui.hpp"
 
 #include <bb/cascades/Application>
+#include <bb/system/SystemToast>
 
-#include <QLocale>
-#include <QTranslator>
+#include <QDebug>
+#include <QString>
 
-#include <Qt/qdeclarativedebug.h>
+extern "C" {
+#include "mongoose.h"
+}
 
 using namespace bb::cascades;
+
+static uint64_t s_next_heartbeat_ms = 0;
+static long s_heartbeat_interval_ms = 0;
+
+static void toast(const QString &s) {
+  qDebug() << "[toast]" << s;
+
+  bb::system::SystemToast *t = new bb::system::SystemToast();
+  t->setBody(s);
+  t->show();
+}
+
+static const char *ev_name(int ev) {
+  switch (ev) {
+  case MG_EV_OPEN:
+    return "MG_EV_OPEN";
+  case MG_EV_POLL:
+    return "MG_EV_POLL";
+  case MG_EV_RESOLVE:
+    return "MG_EV_RESOLVE";
+  case MG_EV_CONNECT:
+    return "MG_EV_CONNECT";
+  case MG_EV_TLS_HS:
+    return "MG_EV_TLS_HS";
+  case MG_EV_ACCEPT:
+    return "MG_EV_ACCEPT";
+  case MG_EV_READ:
+    return "MG_EV_READ";
+  case MG_EV_WRITE:
+    return "MG_EV_WRITE";
+  case MG_EV_CLOSE:
+    return "MG_EV_CLOSE";
+  case MG_EV_ERROR:
+    return "MG_EV_ERROR";
+  case MG_EV_HTTP_MSG:
+    return "MG_EV_HTTP_MSG";
+  case MG_EV_WS_OPEN:
+    return "MG_EV_WS_OPEN";
+  case MG_EV_WS_MSG:
+    return "MG_EV_WS_MSG";
+  case MG_EV_WS_CTL:
+    return "MG_EV_WS_CTL";
+  default:
+    return "UNKNOWN";
+  }
+}
+static void wsfn(struct mg_connection *c, int ev, void *ev_data) {
+  if (ev != MG_EV_POLL) {
+    qDebug() << "[mg]" << ev_name(ev) << "ev=" << ev << "fd=" << c->fd
+             << "is_tls=" << c->is_tls << "is_websocket=" << c->is_websocket
+             << "is_closing=" << c->is_closing
+             << "recv.len=" << (unsigned int)c->recv.len
+             << "send.len=" << (unsigned int)c->send.len;
+  }
+
+  switch (ev) {
+  case MG_EV_OPEN:
+    toast("Mongoose: open");
+    break;
+
+  case MG_EV_CONNECT:
+    qDebug() << "[mg] tcp connected";
+    toast("Mongoose: TCP connected");
+
+    if (c->is_tls) {
+      struct mg_tls_opts opts;
+      memset(&opts, 0, sizeof(opts));
+      opts.name = mg_str("gateway.discord.gg");
+      opts.skip_verification = true;
+      mg_tls_init(c, &opts);
+    }
+    break;
+
+  case MG_EV_TLS_HS:
+    qDebug() << "[mg] TLS handshake OK";
+    toast("TLS OK");
+    break;
+
+  case MG_EV_ERROR:
+    qDebug() << "[mg] error:" << (ev_data ? (char *)ev_data : "(null)");
+    toast(QString("Mongoose error: %1")
+              .arg(ev_data ? (char *)ev_data : "(null)"));
+    break;
+
+  case MG_EV_WS_OPEN:
+    qDebug() << "[mg] websocket connected";
+    toast("WS connected");
+    break;
+
+  case MG_EV_WS_MSG: {
+    struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
+    QString msg = QString::fromUtf8(wm->data.buf, (int)wm->data.len);
+    int op = (int)mg_json_get_long(wm->data, "$.op", -1);
+
+    qDebug() << "[mg] ws msg:" << msg;
+
+    if (op == 10) {
+      s_heartbeat_interval_ms =
+          mg_json_get_long(wm->data, "$.d.heartbeat_interval", 0);
+      s_next_heartbeat_ms = mg_millis() + s_heartbeat_interval_ms;
+
+      qDebug() << "[discord] hello heartbeat_interval="
+               << s_heartbeat_interval_ms;
+      toast("Discord hello received");
+    } else if (op == 11) {
+      qDebug() << "[discord] heartbeat ACK";
+    }
+    break;
+  }
+
+  case MG_EV_POLL:
+    if (c->is_websocket && s_heartbeat_interval_ms > 0 &&
+        mg_millis() >= s_next_heartbeat_ms) {
+      static const char heartbeat[] = "{\"op\":1,\"d\":null}";
+      mg_ws_send(c, heartbeat, sizeof(heartbeat) - 1, WEBSOCKET_OP_TEXT);
+      s_next_heartbeat_ms = mg_millis() + s_heartbeat_interval_ms;
+      qDebug() << "[discord] heartbeat sent";
+    }
+    break;
+
+  case MG_EV_CLOSE:
+    qDebug() << "[mg] closed";
+    toast("Mongoose: closed");
+    break;
+  }
+}
 
 Q_DECL_EXPORT int main(int argc, char **argv) {
   Application app(argc, argv);
 
-  // Create the Application UI object, this is where the main.qml file
-  // is loaded and the application scene is set.
+  qDebug() << "BBCord starting";
+  qDebug() << "Mongoose version:" << MG_VERSION;
+
+  mg_log_set(MG_LL_DEBUG);
+
+  struct mg_mgr mgr;
+  mg_mgr_init(&mgr);
+
+  toast(QString("Mongoose %1").arg(MG_VERSION));
+
+  const char *url = "wss://gateway.discord.gg/?v=10&encoding=json";
+
+  qDebug() << "connecting to" << url;
+
+  struct mg_connection *conn =
+      mg_ws_connect(&mgr, "wss://gateway.discord.gg/?v=10&encoding=json", wsfn,
+                    NULL, "User-Agent: BBCord/0.1\r\n");
+
+  if (conn == NULL) {
+    qDebug() << "mg_ws_connect returned NULL";
+    toast("mg_ws_connect returned NULL");
+  } else {
+    qDebug() << "mg_ws_connect OK, conn =" << conn;
+  }
+
   ApplicationUI appui;
 
-  // Enter the application main event loop.
+  while (true) {
+    mg_mgr_poll(&mgr, 100);
+    app.processEvents();
+  }
+
+  mg_mgr_free(&mgr);
+
   return Application::exec();
 }
