@@ -84,10 +84,10 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/JsonParser.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
         $$quote($$BASEDIR/src/core/models/Models.cpp) \
+        $$quote($$BASEDIR/src/main.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
-        $$quote($$BASEDIR/src/ui/ServerListController.cpp) \
-        $$quote($$BASEDIR/src/main.cpp)
+        $$quote($$BASEDIR/src/ui/ServerListController.cpp)
 
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \

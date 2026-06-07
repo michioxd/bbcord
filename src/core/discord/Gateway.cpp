@@ -174,13 +174,6 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
   case MG_EV_ERROR: {
     QString message = QString::fromUtf8(
         eventData ? static_cast<char *>(eventData) : "Gateway error");
-    if (message == "MG_MAX_RECV_SIZE" && m_state == Connected) {
-      qDebug() << "[discord] gateway READY is too large; accepting login and "
-                  "closing gateway";
-      setState(Ready);
-      emit ready(QString());
-      break;
-    }
 
     emit error(message);
     break;
@@ -249,15 +242,6 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     break;
   case 11:
     qDebug() << "[discord] heartbeat ACK";
-    if (m_state == Connected) {
-      qDebug() << "[discord] heartbeat ACK received; accepting login before "
-                  "large READY payload";
-      setState(Ready);
-      emit ready(QString());
-      if (m_connection != NULL) {
-        m_connection->is_closing = 1;
-      }
-    }
     break;
   case 7:
     emit error("Discord gateway requested reconnect");

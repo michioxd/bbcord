@@ -146,6 +146,7 @@ void appendGuildIdsFromProtoFolderItem(QStringList *orderedGuildIds,
 
     int fieldNumber = static_cast<int>(tag >> 3);
     int wireType = static_cast<int>(tag & 0x07);
+
     if (fieldNumber == kProtoFieldGuildFolderGuildIds && wireType == 2) {
       QByteArray guildBytes;
       if (!readProtoLengthDelimited(itemBytes, &offset, &guildBytes)) {
@@ -174,6 +175,7 @@ void appendGuildIdsFromUserSettingsProto(QStringList *orderedGuildIds,
 
     int fieldNumber = static_cast<int>(tag >> 3);
     int wireType = static_cast<int>(tag & 0x07);
+
     if (fieldNumber == kProtoFieldGuildFolders && wireType == 2) {
       QByteArray guildFolders;
       if (!readProtoLengthDelimited(settings, &offset, &guildFolders)) {
@@ -189,6 +191,7 @@ void appendGuildIdsFromUserSettingsProto(QStringList *orderedGuildIds,
 
         int folderFieldNumber = static_cast<int>(folderTag >> 3);
         int folderWireType = static_cast<int>(folderTag & 0x07);
+
         if (folderFieldNumber == kProtoFieldGuildFolderItems &&
             folderWireType == 2) {
           QByteArray itemBytes;
@@ -1128,6 +1131,7 @@ bool DiscordClient::applyGuildOrder(const QStringList &orderedGuildIds) {
 bool DiscordClient::applyGuildOrderFromGatewayPayload(
     const QVariantMap &payload) {
   QStringList orderedGuildIds;
+
   appendGuildIdsFromUserSettingsProto(
       &orderedGuildIds, payload.value("user_settings_proto").toString());
 
@@ -1150,15 +1154,12 @@ bool DiscordClient::applyGuildOrderFromGatewayPayload(
   }
 
   if (orderedGuildIds.isEmpty()) {
-    QVariantList guilds = payload.value("guilds").toList();
-    for (int i = 0; i < guilds.size(); ++i) {
-      orderedGuildIds.append(guilds.at(i).toMap().value("id").toString());
-    }
+    return false;
   }
 
-  if (!orderedGuildIds.isEmpty()) {
-    m_orderedGuildIds = orderedGuildIds;
-  }
+  m_orderedGuildIds = orderedGuildIds;
+  qDebug() << "[discord-client] applied guild order from gateway"
+           << orderedGuildIds.size();
 
   return applyGuildOrder(orderedGuildIds);
 }
@@ -1391,12 +1392,12 @@ void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
     return;
   }
 
-  if (eventName == "CHANNEL_CREATE" || eventName == "CHANNEL_DELETE" ||
-      eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
-      eventName == "READY" || eventName == "READY_SUPPLEMENTAL" ||
-      eventName == "USER_SETTINGS_PROTO_UPDATE") {
-    applyGuildOrderFromGatewayPayload(payload);
-    sortGuilds();
+  if (eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
+      eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
+    bool orderChanged = applyGuildOrderFromGatewayPayload(payload);
+    if (!orderChanged) {
+      sortGuilds();
+    }
     stableSortItems(&m_allDmChannels, dmShouldMoveBefore);
     stableSortItems(&m_dmChannels, dmShouldMoveBefore);
     if (m_store) {

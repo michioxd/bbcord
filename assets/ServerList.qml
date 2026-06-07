@@ -172,7 +172,7 @@ Container {
 
         for (var i = 0; i < appStore.guildChannels.length; ++i) {
             var item = channelModel.data([i])
-            if (item.id != appStore.guildChannels[i].id) {
+            if (!item || item.id != appStore.guildChannels[i].id) {
                 refreshChannels()
                 return
             }

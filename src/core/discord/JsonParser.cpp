@@ -63,15 +63,37 @@ QVariantList DiscordJsonParser::parseArray(const QByteArray &bytes,
 QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
                                                    QString *errorMessage) {
   QVariantMap properties;
-  properties["os"] = "BlackBerry 10";
-  properties["browser"] = "BBCord";
-  properties["device"] = "BBCord";
+  properties["os"] = "Windows";
+  properties["browser"] = "Discord Client";
+  properties["device"] = "";
+  properties["system_locale"] = "en-US";
+  properties["browser_user_agent"] =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
+      "like Gecko) Chrome/149.0.0.0 Safari/537.36";
+  properties["browser_version"] = "149.0.0.0";
+  properties["os_version"] = "10";
+  properties["referrer"] = "";
+  properties["referring_domain"] = "";
+  properties["referrer_current"] = "";
+  properties["referring_domain_current"] = "";
+  properties["release_channel"] = "stable";
+  properties["client_build_number"] = 375000;
+  properties["client_event_source"] = QVariant();
 
   QVariantMap data;
   data["token"] = token;
-  data["intents"] = 0;
-  data["large_threshold"] = 50;
+  data["capabilities"] = 30717;
   data["properties"] = properties;
+
+  QVariantMap clientState;
+  clientState["guild_versions"] = QVariantMap();
+  clientState["highest_last_message_id"] = "0";
+  clientState["read_state_version"] = 0;
+  clientState["user_guild_settings_version"] = -1;
+  clientState["user_settings_version"] = -1;
+  clientState["private_channels_version"] = "0";
+  clientState["api_code_version"] = 0;
+  data["client_state"] = clientState;
 
   QVariantMap root;
   root["op"] = 2;

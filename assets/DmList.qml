@@ -199,7 +199,7 @@ Container {
 
 		for (var i = 0; i < appStore.dmChannels.length; ++i) {
 			var item = dmModel.data([i + 1])
-			if (item.id != appStore.dmChannels[i].id) {
+			if (!item || item.id != appStore.dmChannels[i].id) {
 				refreshDms()
 				return
 			}
@@ -243,10 +243,11 @@ Container {
 	}
 
 	function updateDmAvatar(channelId, avatarSource) {
+		if (dmModel.size() == 0) return
 		var end = dmModel.size() - loadingRowOffset()
 		for (var i = 1; i < end; ++i) {
 			var item = dmModel.data([i])
-			if (item.id == channelId) {
+			if (item && item.id == channelId) {
 				item.avatar = avatarSource
 				dmModel.replace([i], item)
 				break
