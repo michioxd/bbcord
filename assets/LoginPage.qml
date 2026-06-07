@@ -1,6 +1,8 @@
 import bb.cascades 1.4
 
 Page {
+    signal loginSucceeded()
+
     Container {
         layout: DockLayout {}
         
@@ -26,6 +28,7 @@ Page {
             }
 
             TextField {
+                id: tokenField
                 hintText: qsTr("Enter your Discord token...")
                 horizontalAlignment: HorizontalAlignment.Fill
                 textFormat: TextFormat.Plain
@@ -38,6 +41,31 @@ Page {
 
                 text: qsTr("Login")
                 horizontalAlignment: HorizontalAlignment.Fill
+                enabled: !discordClient.busy
+
+                onClicked: {
+                    discordClient.login(tokenField.text)
+                }
+            }
+
+            Button {
+                id: btnContinue
+
+                text: qsTr("Continue")
+                horizontalAlignment: HorizontalAlignment.Fill
+                visible: false
+
+                onClicked: {
+                    console.log("[login] continue clicked")
+                    loginSucceeded()
+                }
+            }
+
+            Label {
+                text: discordClient.statusText
+                horizontalAlignment: HorizontalAlignment.Center
+                multiline: true
+                visible: text.length > 0
             }
 
             Button {

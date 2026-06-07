@@ -15,13 +15,145 @@
  */
 
 import bb.cascades 1.4
+import bb.system 1.2
 
-Page {
-    Container {
-        Label {
-            // Localized text with the dynamic translation and locale updates support
-            text: qsTr("Hello World") + Retranslate.onLocaleOrLanguageChanged
-            textStyle.base: SystemDefaults.TextStyles.BigText
+NavigationPane {
+    id: nav
+
+    property variant currentLoginPage: null
+    property variant currentMainPage: null
+
+    onCreationCompleted: {
+        var loginPage = loginPageDefinition.createObject()
+        if (loginPage) {
+            currentLoginPage = loginPage
+            loginPage.loginSucceeded.connect(openMainPage)
+            nav.push(loginPage)
+        }
+        discordClient.loginSucceeded.connect(openMainPage)
+        discordClient.autoLogin()
+    }
+
+    function openMainPage() {
+        if (currentMainPage) {
+            return
+        }
+
+        var mainPage = mainPageDefinition.createObject()
+        if (mainPage) {
+            currentMainPage = mainPage
+            mainPage.navigationPane = nav
+            nav.push(mainPage)
+            if (currentLoginPage) {
+                nav.remove(currentLoginPage)
+                currentLoginPage.destroy()
+                currentLoginPage = null
+            }
         }
     }
+
+    function showLoginPage() {
+        if (currentMainPage) {
+            nav.remove(currentMainPage)
+            currentMainPage.destroy()
+            currentMainPage = null
+        }
+
+        if (!currentLoginPage) {
+            currentLoginPage = loginPageDefinition.createObject()
+            if (currentLoginPage) {
+                currentLoginPage.loginSucceeded.connect(openMainPage)
+                nav.push(currentLoginPage)
+            }
+        }
+    }
+
+    Menu.definition: MenuDefinition {
+        actions: [
+            ActionItem {
+                title: "User"
+                imageSource: "asset:///images/icon.png"
+                enabled: discordClient.loggedIn
+
+                onTriggered: {
+                    userSheet.open()
+                }
+            },
+
+            ActionItem {
+                title: "Log out"
+                imageSource: "asset:///images/icons/sign-out.png"
+                enabled: discordClient.loggedIn
+
+                onTriggered: {
+                    logoutDialog.show()
+                }
+            },
+
+            ActionItem {
+                title: "Settings"
+                enabled: discordClient.loggedIn
+
+                onTriggered: {
+                    console.log("settings")
+                }
+            }
+        ]
+    }
+
+    onPopTransitionEnded: {
+        if (page != currentMainPage) {
+            page.destroy()
+        }
+    }
+
+    attachedObjects: [
+        ComponentDefinition {
+            id: loginPageDefinition
+            source: "asset:///LoginPage.qml"
+        },
+        ComponentDefinition {
+            id: mainPageDefinition
+            source: "asset:///MainPage.qml"
+        },
+
+        SystemDialog {
+            id: logoutDialog
+            title: "Log out"
+            body: "Log out and clear saved token?"
+            confirmButton.label: "OK"
+            cancelButton.label: "Cancel"
+
+            onFinished: {
+                if (result == SystemUiResult.ConfirmButtonSelection) {
+                    discordClient.logout()
+                    nav.showLoginPage()
+                }
+            }
+        },
+
+        Sheet {
+            id: userSheet
+
+            Page {
+                titleBar: TitleBar {
+                    title: "User"
+                    dismissAction: ActionItem {
+                        title: "Close"
+                        onTriggered: userSheet.close()
+                    }
+                }
+
+                Container {
+                    leftPadding: ui.du(4)
+                    rightPadding: ui.du(4)
+                    topPadding: ui.du(4)
+
+                    Label {
+                        text: "User menu"
+                    }
+                }
+            }
+        }
+    ]
 }

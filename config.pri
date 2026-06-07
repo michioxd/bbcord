@@ -77,9 +77,14 @@ config_pri_assets {
 config_pri_source_group1 {
     SOURCES += \
         $$quote($$BASEDIR/src/applicationui.cpp) \
+        $$quote($$BASEDIR/src/core/DiscordClient.cpp) \
+        $$quote($$BASEDIR/src/core/discord/DiscordGateway.cpp) \
         $$quote($$BASEDIR/src/main.cpp)
 
-    HEADERS += $$quote($$BASEDIR/src/applicationui.hpp)
+    HEADERS += \
+        $$quote($$BASEDIR/src/applicationui.hpp) \
+        $$quote($$BASEDIR/src/core/DiscordClient.hpp) \
+        $$quote($$BASEDIR/src/core/discord/DiscordGateway.hpp)
 }
 
 CONFIG += precompile_header
@@ -93,6 +98,16 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/*.cc) \
         $$quote($$BASEDIR/../src/*.cpp) \
         $$quote($$BASEDIR/../src/*.cxx) \
+        $$quote($$BASEDIR/../src/core/*.c) \
+        $$quote($$BASEDIR/../src/core/*.c++) \
+        $$quote($$BASEDIR/../src/core/*.cc) \
+        $$quote($$BASEDIR/../src/core/*.cpp) \
+        $$quote($$BASEDIR/../src/core/*.cxx) \
+        $$quote($$BASEDIR/../src/core/discord/*.c) \
+        $$quote($$BASEDIR/../src/core/discord/*.c++) \
+        $$quote($$BASEDIR/../src/core/discord/*.cc) \
+        $$quote($$BASEDIR/../src/core/discord/*.cpp) \
+        $$quote($$BASEDIR/../src/core/discord/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \

@@ -26,6 +26,7 @@ class LocaleHandler;
 } // namespace bb
 
 class QTranslator;
+class DiscordClient;
 
 /*!
  * @brief Application UI object
@@ -44,6 +45,7 @@ private slots:
 private:
   QTranslator *m_pTranslator;
   bb::cascades::LocaleHandler *m_pLocaleHandler;
+  DiscordClient *m_discordClient;
 };
 
 #endif /* ApplicationUI_HPP_ */

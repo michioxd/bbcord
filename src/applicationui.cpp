@@ -16,6 +16,8 @@
 
 #include "applicationui.hpp"
 
+#include "core/DiscordClient.hpp"
+
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
 #include <bb/cascades/LocaleHandler>
@@ -23,7 +25,8 @@
 
 using namespace bb::cascades;
 
-ApplicationUI::ApplicationUI() : QObject() {
+ApplicationUI::ApplicationUI()
+    : QObject(), m_discordClient(new DiscordClient(this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);
   m_pLocaleHandler = new LocaleHandler(this);
@@ -41,7 +44,8 @@ ApplicationUI::ApplicationUI() : QObject() {
 
   // Create scene document from main.qml asset, the parent is set
   // to ensure the document gets destroyed properly at shut down.
-  QmlDocument *qml = QmlDocument::create("asset:///MainPage.qml").parent(this);
+  QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
+  qml->setContextProperty("discordClient", m_discordClient);
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();

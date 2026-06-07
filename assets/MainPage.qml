@@ -1,14 +1,12 @@
 import bb.cascades 1.4
 
-NavigationPane {
-    id: nav
+Page {
+    id: mainPage
 
-    Page {
-        id: mainPage
+    property variant navigationPane: null
+    property variant activeContent: null
 
-        property variant activeContent: null
-    
-        Container {
+    Container {
             layout: StackLayout {
                 orientation: LayoutOrientation.LeftToRight
             }
@@ -83,32 +81,6 @@ NavigationPane {
             }
         }
 
-        attachedObjects: [
-            Sheet {
-                id: userSheet
-
-                Page {
-                    titleBar: TitleBar {
-                        title: "User"
-                    }
-
-                    Container {
-                        Label {
-                            text: "User menu"
-                        }
-
-                        Button {
-                            text: "Close"
-                            onClicked: userSheet.close()
-                        }
-                    }
-                }
-            },
-            ArrayDataModel {
-                id: serverModel
-            }
-        ]
-
         function openChat(channelName) {
             var page = chatCardDefinition.createObject()
 
@@ -116,7 +88,9 @@ NavigationPane {
                 page.channelName = channelName
                 page.title = "# " + channelName
                 page.backRequested.connect(function() {
-                        nav.pop()
+                        if (mainPage.navigationPane) {
+                            mainPage.navigationPane.pop()
+                        }
                     })
                 page.memberListRequested.connect(function() {
                         var memberPage = channelMemberListDefinition.createObject()
@@ -125,14 +99,20 @@ NavigationPane {
                             memberPage.channelName = channelName
                             memberPage.title = "Members #" + channelName
                             memberPage.backRequested.connect(function() {
-                                    nav.pop()
+                                    if (mainPage.navigationPane) {
+                                        mainPage.navigationPane.pop()
+                                    }
                                 })
-                            nav.push(memberPage)
+                            if (mainPage.navigationPane) {
+                                mainPage.navigationPane.push(memberPage)
+                            }
                         } else {
                             console.log("Could not create ChannelMemberList.qml")
                         }
                     })
-                nav.push(page)
+                if (mainPage.navigationPane) {
+                    mainPage.navigationPane.push(page)
+                }
             } else {
                 console.log("Could not create ChatCard.qml")
             }
@@ -194,43 +174,11 @@ NavigationPane {
 
             loadDmList()
         }
-    }
-
-    Menu.definition: MenuDefinition {
-        actions: [
-            ActionItem {
-                title: "User"
-                imageSource: "asset:///images/icon.png"
-
-                onTriggered: {
-                    userSheet.open()
-                }
-            },
-
-            ActionItem {
-                title: "Log out"
-                imageSource: "asset:///images/icons/sign-out.png"
-
-                onTriggered: {
-                    console.log("logging out")
-                }
-            },
-
-            ActionItem {
-                title: "Settings"
-
-                onTriggered: {
-                    console.log("settings")
-                }
-            }
-        ]
-    }
-
-    onPopTransitionEnded: {
-        page.destroy()
-    }
-
     attachedObjects: [
+        ArrayDataModel {
+            id: serverModel
+        },
+
         ComponentDefinition {
             id: chatCardDefinition
             source: "asset:///ChatCard.qml"

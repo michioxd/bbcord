@@ -16,9 +16,13 @@ HEADERS += third_party/mongoose/mongoose.h
 
 INCLUDEPATH += $$PWD/third_party/mongoose
 DEFINES += MG_TLS=MG_TLS_OPENSSL
+DEFINES += MG_ENABLE_POLL=1
+DEFINES += MG_ENABLE_LOG=0
 QMAKE_CFLAGS += -Wc,-std=gnu99
 QMAKE_CFLAGS += -Wc,"-DMG_TLS=MG_TLS_OPENSSL"
 QMAKE_CFLAGS += -Wc,"-DMG_ENABLE_OPENSSL=1"
+QMAKE_CFLAGS += -Wc,"-DMG_ENABLE_POLL=1"
+QMAKE_CFLAGS += -Wc,"-DMG_ENABLE_LOG=0"
 
 simulator {
     INCLUDEPATH += $$PWD/third_party/prebuilt/simulator/openssl/include
