@@ -10,8 +10,11 @@ Page {
     property real messagesHeight: 0
     property real bottomFillPadding: 0
     property bool pendingScrollToBottom: false
+    property string replyAuthor: ""
+    property string replyMessage: ""
 
     signal backRequested()
+    signal memberListRequested()
 
     actionBarVisibility: ChromeVisibility.Hidden
 
@@ -21,10 +24,18 @@ Page {
         visibility: ChromeVisibility.Visible
 
         dismissAction: ActionItem {
-            title: qsTr("Back")
+            imageSource: "asset:///images/icons/accent/caret-left.png"
 
             onTriggered: {
                 chatPage.backRequested()
+            }
+        }
+
+        acceptAction: ActionItem {
+            imageSource: "asset:///images/icons/accent/users.png"
+
+            onTriggered: {
+                chatPage.memberListRequested()
             }
         }
     }
@@ -101,40 +112,92 @@ Page {
             horizontalAlignment: HorizontalAlignment.Fill
             background: Color.create("#18191C")
 
-            layout: StackLayout {
-                orientation: LayoutOrientation.LeftToRight
-            }
+            layout: StackLayout {}
 
             topPadding: ui.du(1.5)
             bottomPadding: ui.du(1.5)
             leftPadding: ui.du(1.5)
             rightPadding: ui.du(1.5)
-            ImageButton {
-                verticalAlignment: VerticalAlignment.Center
-                preferredWidth: ui.du(7.0)
-                preferredHeight: ui.du(7.0)
-                
-                onClicked: {
-                    console.log("attach file")
+
+            Container {
+                visible: chatPage.replyAuthor !== ""
+                horizontalAlignment: HorizontalAlignment.Fill
+                bottomMargin: ui.du(1.0)
+
+                layout: StackLayout {
+                    orientation: LayoutOrientation.LeftToRight
                 }
-                defaultImageSource: "asset:///images/icons/paperclip.png"
+
+                ImageButton {
+                    preferredWidth: ui.du(5.0)
+                    preferredHeight: ui.du(5.0)
+                    verticalAlignment: VerticalAlignment.Center
+                    defaultImageSource: "asset:///images/icons/x.png"
+
+                    onClicked: {
+                        chatPage.clearReply()
+                    }
+                    pressedImageSource: "asset:///images/icons/x-hold.png"
+                    disabledImageSource: "asset:///images/icons/x-disabled.png"
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Center
+
+                    Label {
+                        text: qsTr("Replying to ") + chatPage.replyAuthor
+                        textStyle.fontSize: FontSize.XXSmall
+                        textStyle.fontWeight: FontWeight.Bold
+                        textStyle.color: Color.create("#F2F3F5")
+                    }
+
+                    Label {
+                        text: chatPage.replyMessage
+                        topMargin: ui.du(-0.3)
+                        textStyle.fontSize: FontSize.XXSmall
+                        textStyle.color: Color.create("#B5BAC1")
+                    }
+                }
+                
             }
 
-            TextArea {
-                id: inputMessage
-
-                hintText: qsTr("Message #") + chatPage.channelName
-                inputMode: TextAreaInputMode.Text
-                textFormat: TextFormat.Plain
-
+            Container {
                 horizontalAlignment: HorizontalAlignment.Fill
-                verticalAlignment: VerticalAlignment.Center
 
-                input {
-                    submitKey: SubmitKey.Send
+                layout: StackLayout {
+                    orientation: LayoutOrientation.LeftToRight
+                }
 
-                    onSubmitted: {
-                        chatPage.sendCurrentMessage()
+                ImageButton {
+                    verticalAlignment: VerticalAlignment.Center
+                    preferredWidth: ui.du(7.0)
+                    preferredHeight: ui.du(7.0)
+                    
+                    onClicked: {
+                        console.log("attach file")
+                    }
+                    defaultImageSource: "asset:///images/icons/paperclip.png"
+                    pressedImageSource: "asset:///images/icons/paperclip-hold.png"
+                    disabledImageSource: "asset:///images/icons/paperclip-disabled.png"
+                }
+
+                TextArea {
+                    id: inputMessage
+
+                    hintText: qsTr("Message #") + chatPage.channelName
+                    inputMode: TextAreaInputMode.Text
+                    textFormat: TextFormat.Plain
+
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Center
+
+                    input {
+                        submitKey: SubmitKey.Send
+
+                        onSubmitted: {
+                            chatPage.sendCurrentMessage()
+                        }
                     }
                 }
             }
@@ -166,9 +229,19 @@ Page {
         bubble.avatarColor = message.avatarColor
         bubble.time = message.time
         bubble.message = message.message
+        bubble.replyAuthor = message.replyAuthor || ""
+        bubble.replyMessage = message.replyMessage || ""
         bubble.image = message.image
         bubble.imageWidth = message.imageWidth
         bubble.imageHeight = message.imageHeight
+        bubble.deleteRequested.connect(function() {
+                messagesContainer.remove(bubble)
+                bubble.destroy()
+                updateBottomPadding()
+            })
+        bubble.replyRequested.connect(function(author, replyText) {
+                chatPage.setReply(author, replyText)
+            })
 
         messagesContainer.add(bubble)
 
@@ -177,6 +250,17 @@ Page {
 
     function requestScrollToBottom() {
         pendingScrollToBottom = true
+    }
+
+    function setReply(author, message) {
+        replyAuthor = author
+        replyMessage = message
+        inputMessage.requestFocus()
+    }
+
+    function clearReply() {
+        replyAuthor = ""
+        replyMessage = ""
     }
 
     function scrollToBottomNow() {
@@ -206,12 +290,15 @@ Page {
             "avatarColor": "#5865F2",
             "time": "Now",
             "message": text,
+            "replyAuthor": replyAuthor,
+            "replyMessage": replyMessage,
             "image": "",
             "imageWidth": 0,
             "imageHeight": 0
         })
 
         inputMessage.text = ""
+        clearReply()
     }
 
     onCreationCompleted: {
@@ -221,6 +308,8 @@ Page {
             "avatarColor": "#5865F2",
             "time": "Today 20:10",
             "message": "yo guys",
+            "replyAuthor": "",
+            "replyMessage": "",
             "image": "",
             "imageWidth": 0,
             "imageHeight": 0
@@ -232,6 +321,8 @@ Page {
             "avatarColor": "#43B581",
             "time": "Today 20:12",
             "message": "play some genshit?",
+            "replyAuthor": "michioxd",
+            "replyMessage": "yo guys",
             "image": "asset:///images/demo.png",
             "imageWidth": 32,
             "imageHeight": 20
@@ -243,6 +334,8 @@ Page {
             "avatarColor": "#FAA61A",
             "time": "Today 20:15",
             "message": "hell nah nooooo...",
+            "replyAuthor": "BerryBot",
+            "replyMessage": "play some genshit?",
             "image": "",
             "imageWidth": 0,
             "imageHeight": 0

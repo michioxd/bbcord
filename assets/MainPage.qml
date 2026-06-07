@@ -5,233 +5,195 @@ NavigationPane {
 
     Page {
         id: mainPage
+
+        property variant activeContent: null
     
-    Container {
-        layout: StackLayout {
-            orientation: LayoutOrientation.LeftToRight
-        }
-        
         Container {
-            preferredWidth: ui.du(12)
-            verticalAlignment: VerticalAlignment.Fill
-            background: Color.create("#111111")
-            
-            ListView {
-                dataModel: serverModel
-                
-                listItemComponents: [
-                    ListItemComponent {
-                        type: ""
-
-                        Container {
-                            preferredWidth: ui.du(10)
-                            preferredHeight: ui.du(10)
-
-                            topMargin: ui.du(1)
-                            bottomMargin: ui.du(1)
-
-                            background: Color.create("#333333")
-
-                            layout: DockLayout {}
-
-                            ImageView {
-                                imageSource: ListItemData.icon
-                                visible: ListItemData.icon !== ""
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                verticalAlignment: VerticalAlignment.Fill
-                                scalingMethod: ScalingMethod.AspectFit
-                            }
-
-                            Label {
-                                text: ListItemData.name
-
-                                visible: ListItemData.icon === ""
-
-                                horizontalAlignment: HorizontalAlignment.Center
-                                verticalAlignment: VerticalAlignment.Center
-
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.fontSize: FontSize.Large
-                            }
-                        }
-                    }
-                ]
-                leftPadding: ui.du(1.0)
-                topPadding: ui.du(1.0)
+            layout: StackLayout {
+                orientation: LayoutOrientation.LeftToRight
             }
-        }
-
-        Container {
-            horizontalAlignment: HorizontalAlignment.Fill
-            verticalAlignment: VerticalAlignment.Fill
-
-            layout: StackLayout {}
             
             Container {
-                preferredHeight: ui.du(10)
-                leftPadding: ui.du(2)
-                rightPadding: ui.du(2)
+                preferredWidth: ui.du(12)
+                verticalAlignment: VerticalAlignment.Fill
                 background: Color.create("#111111")
-                horizontalAlignment: HorizontalAlignment.Fill
                 
-                layout: StackLayout {
-                    orientation: LayoutOrientation.LeftToRight
-                }
-                
-                Label {
-                    text: "lmao server"
-                    verticalAlignment: VerticalAlignment.Center
-                    textStyle.fontSize: FontSize.Medium
-                    textStyle.fontWeight: FontWeight.Bold
-                    horizontalAlignment: HorizontalAlignment.Fill
-                }
-            }            
+                ListView {
+                    dataModel: serverModel
 
-            ListView {
-                dataModel: channelModel
+                    onTriggered: {
+                        var item = serverModel.data(indexPath)
 
-                onTriggered: {
-                    var item = channelModel.data(indexPath)
-
-                    if (item.type == "channel") {
-                        var page = chatCardDefinition.createObject()
-
-                        if (page) {
-                            page.channelName = item.name
-                            page.title = "# " + item.name
-                            page.backRequested.connect(function() {
-                                    nav.pop()
-                                })
-                            nav.push(page)
-                        } else {
-                            console.log("Could not create ChatCard.qml")
+                        if (item.type == "dm") {
+                            mainPage.loadDmList()
+                        } else if (item.type == "server") {
+                            mainPage.loadServerList(item.name)
                         }
                     }
-                }
-
-                listItemComponents: [
-                    ListItemComponent {
-                        type: "category"
-
-                        Container {
-                            preferredHeight: 2.0
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            leftPadding: ui.du(2)
-                            rightPadding: ui.du(2)
-
-                            layout: DockLayout {}
-
-                            topPadding: ui.du(2.0)
-                            Label {
-                                text: ListItemData.name.toUpperCase()
-                                verticalAlignment: VerticalAlignment.Center
-                                opacity: 0.45
-                                textStyle.fontSize: FontSize.XSmall
-                            }
-                        }
-                    },
-
-                    ListItemComponent {
-                        type: "channel"
-
-                        Container {
-                            preferredHeight: ui.du(7.0)
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            leftPadding: ui.du(2)
-                            rightPadding: ui.du(2)
-
-                            layout: DockLayout {}
+                    
+                    listItemComponents: [
+                        ListItemComponent {
+                            type: ""
 
                             Container {
-                                layout: StackLayout {
-                                    orientation: LayoutOrientation.LeftToRight
-                                }
-                                
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                verticalAlignment: VerticalAlignment.Center
+                                preferredWidth: ui.du(10)
+                                preferredHeight: ui.du(10)
+
+                                topMargin: ui.du(1)
+                                bottomMargin: ui.du(1)
+
+                                background: Color.create("#333333")
+
+                                layout: DockLayout {}
 
                                 ImageView {
-                                    imageSource: "asset:///images/icons/hash.png"
-
-                                    preferredWidth: ui.du(4)
-                                    preferredHeight: ui.du(4)
-
-                                    verticalAlignment: VerticalAlignment.Bottom
-                                    opacity: 0.45
-
+                                    imageSource: ListItemData.icon
+                                    visible: ListItemData.icon !== ""
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
                                     scalingMethod: ScalingMethod.AspectFit
                                 }
 
                                 Label {
                                     text: ListItemData.name
-                                    textStyle.fontSize: FontSize.Medium
+
+                                    visible: ListItemData.icon === ""
+
+                                    horizontalAlignment: HorizontalAlignment.Center
+                                    verticalAlignment: VerticalAlignment.Center
+
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.fontSize: FontSize.Large
                                 }
                             }
                         }
-                    }
-                ]
-
-                function itemType(data, indexPath) {
-                    return data.type
+                    ]
+                    leftPadding: ui.du(1.0)
+                    topPadding: ui.du(1.0)
                 }
+            }
+
+            Container {
+                id: contentHost
+
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+
+                layout: StackLayout {}
             }
         }
-    }
 
-    attachedObjects: [
-        Sheet {
-            id: userSheet
+        attachedObjects: [
+            Sheet {
+                id: userSheet
 
-            Page {
-                titleBar: TitleBar {
-                    title: "User"
-                }
-
-                Container {
-                    Label {
-                        text: "User menu"
+                Page {
+                    titleBar: TitleBar {
+                        title: "User"
                     }
 
-                    Button {
-                        text: "Close"
-                        onClicked: userSheet.close()
+                    Container {
+                        Label {
+                            text: "User menu"
+                        }
+
+                        Button {
+                            text: "Close"
+                            onClicked: userSheet.close()
+                        }
                     }
                 }
+            },
+            ArrayDataModel {
+                id: serverModel
             }
-        },
-        ArrayDataModel {
-            id: serverModel
-        },
+        ]
+
+        function openChat(channelName) {
+            var page = chatCardDefinition.createObject()
+
+            if (page) {
+                page.channelName = channelName
+                page.title = "# " + channelName
+                page.backRequested.connect(function() {
+                        nav.pop()
+                    })
+                page.memberListRequested.connect(function() {
+                        var memberPage = channelMemberListDefinition.createObject()
+
+                        if (memberPage) {
+                            memberPage.channelName = channelName
+                            memberPage.title = "Members #" + channelName
+                            memberPage.backRequested.connect(function() {
+                                    nav.pop()
+                                })
+                            nav.push(memberPage)
+                        } else {
+                            console.log("Could not create ChannelMemberList.qml")
+                        }
+                    })
+                nav.push(page)
+            } else {
+                console.log("Could not create ChatCard.qml")
+            }
+        }
+
+        function replaceContent(content) {
+            if (activeContent) {
+                contentHost.remove(activeContent)
+                activeContent.destroy()
+            }
+
+            activeContent = content
+            contentHost.add(activeContent)
+        }
+
+        function loadDmList() {
+            var page = dmListDefinition.createObject()
+
+            if (page) {
+                page.dmSelected.connect(function(channelName) {
+                        mainPage.openChat(channelName)
+                    })
+                replaceContent(page)
+            } else {
+                console.log("Could not create DmList.qml")
+            }
+        }
+
+        function loadServerList(serverName) {
+            var page = serverListDefinition.createObject()
+
+            if (page) {
+                page.serverName = serverName
+                page.channelSelected.connect(function(channelName) {
+                        mainPage.openChat(channelName)
+                    })
+                replaceContent(page)
+            } else {
+                console.log("Could not create ServerList.qml")
+            }
+        }
         
-        ArrayDataModel {
-            id: channelModel
+        onCreationCompleted: {
+            serverModel.append({
+                    "type": "dm",
+                    "name": "Home",
+                    "icon": "asset:///images/icons/first.png"
+            })
+            serverModel.append({
+                    "type": "server",
+                    "name": "lmao server",
+                    "icon": "asset:///images/demo.png"
+            })
+            serverModel.append({
+                    "type": "server",
+                    "name": "D",
+                    "icon": ""
+            })
+
+            loadDmList()
         }
-    ]
-    
-    onCreationCompleted: {
-        serverModel.append({
-                "name": "Home",
-                "icon": "asset:///images/icons/house.png"
-        })
-        serverModel.append({
-                "name": "D",
-                "icon": "asset:///images/demo.png"
-        })
-        serverModel.append({
-                "name": "D",
-                "icon": ""
-        })
-
-        channelModel.append({"type": "category", "name": "Text Channels"})
-        channelModel.append({"type": "channel", "name": "general"})
-        channelModel.append({"type": "channel", "name": "random"})
-        channelModel.append({"type": "channel", "name": "dev"})
-
-        channelModel.append({"type": "category", "name": "Voice Channels"})
-        channelModel.append({"type": "channel", "name": "lounge"})
-        channelModel.append({"type": "channel", "name": "music"})
-    }
-
     }
 
     Menu.definition: MenuDefinition {
@@ -272,6 +234,21 @@ NavigationPane {
         ComponentDefinition {
             id: chatCardDefinition
             source: "asset:///ChatCard.qml"
+        },
+
+        ComponentDefinition {
+            id: channelMemberListDefinition
+            source: "asset:///ChannelMemberList.qml"
+        },
+
+        ComponentDefinition {
+            id: serverListDefinition
+            source: "asset:///ServerList.qml"
+        },
+
+        ComponentDefinition {
+            id: dmListDefinition
+            source: "asset:///DmList.qml"
         }
     ]
 }

@@ -36,10 +36,13 @@ simulator {
 
 config_pri_assets {
     OTHER_FILES += \
+        $$quote($$BASEDIR/assets/ChannelMemberList.qml) \
         $$quote($$BASEDIR/assets/ChatCard.qml) \
+        $$quote($$BASEDIR/assets/DmList.qml) \
         $$quote($$BASEDIR/assets/LoginPage.qml) \
         $$quote($$BASEDIR/assets/MainPage.qml) \
         $$quote($$BASEDIR/assets/MessageBubble.qml) \
+        $$quote($$BASEDIR/assets/ServerList.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icon.png) \
@@ -47,13 +50,21 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icon86.png) \
         $$quote($$BASEDIR/assets/images/icon90.png) \
         $$quote($$BASEDIR/assets/images/icon96.png) \
+        $$quote($$BASEDIR/assets/images/icons/accent/caret-left.png) \
+        $$quote($$BASEDIR/assets/images/icons/accent/users.png) \
         $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
+        $$quote($$BASEDIR/assets/images/icons/first.png) \
         $$quote($$BASEDIR/assets/images/icons/hash.png) \
         $$quote($$BASEDIR/assets/images/icons/house.png) \
+        $$quote($$BASEDIR/assets/images/icons/paperclip-disabled.png) \
+        $$quote($$BASEDIR/assets/images/icons/paperclip-hold.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip.png) \
         $$quote($$BASEDIR/assets/images/icons/send.png) \
         $$quote($$BASEDIR/assets/images/icons/sign-out.png) \
         $$quote($$BASEDIR/assets/images/icons/speaker.png) \
+        $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
+        $$quote($$BASEDIR/assets/images/icons/x-hold.png) \
+        $$quote($$BASEDIR/assets/images/icons/x.png) \
         $$quote($$BASEDIR/assets/images/splaash720x1280.png) \
         $$quote($$BASEDIR/assets/images/splash.png) \
         $$quote($$BASEDIR/assets/images/splash1280x720.png) \
@@ -90,7 +101,10 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/images/*.qs) \
         $$quote($$BASEDIR/../assets/images/icons/*.qml) \
         $$quote($$BASEDIR/../assets/images/icons/*.js) \
-        $$quote($$BASEDIR/../assets/images/icons/*.qs)
+        $$quote($$BASEDIR/../assets/images/icons/*.qs) \
+        $$quote($$BASEDIR/../assets/images/icons/accent/*.qml) \
+        $$quote($$BASEDIR/../assets/images/icons/accent/*.js) \
+        $$quote($$BASEDIR/../assets/images/icons/accent/*.qs)
 
     HEADERS += \
         $$quote($$BASEDIR/../src/*.h) \
