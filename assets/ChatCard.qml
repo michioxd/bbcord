@@ -6,10 +6,11 @@ Page {
     property string channelName: "general"
     property alias title: titleBar.title
 
+    property bool pendingScrollToBottom: false
     property real viewportHeight: 0
     property real messagesHeight: 0
     property real bottomFillPadding: 0
-    property bool pendingScrollToBottom: false
+    property int messageIdCounter: 0
     property string replyAuthor: ""
     property string replyMessage: ""
 
@@ -65,7 +66,6 @@ Page {
 
             ScrollView {
                 id: messageScroll
-
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
 
@@ -76,7 +76,6 @@ Page {
 
                 Container {
                     id: scrollContent
-
                     horizontalAlignment: HorizontalAlignment.Fill
                     topPadding: chatPage.bottomFillPadding
 
@@ -84,7 +83,6 @@ Page {
 
                     Container {
                         id: messagesContainer
-
                         horizontalAlignment: HorizontalAlignment.Fill
 
                         layout: StackLayout {
@@ -222,34 +220,31 @@ Page {
     }
 
     function appendMessage(message) {
-        var bubble = messageBubbleDefinition.createObject()
+        var item = normalizeMessage(message)
+        var lastIndex = messagesContainer.controls.length - 1
 
-        bubble.author = message.author
-        bubble.initials = message.initials
-        bubble.avatarColor = message.avatarColor
-        bubble.time = message.time
-        bubble.message = message.message
-        bubble.replyAuthor = message.replyAuthor || ""
-        bubble.replyMessage = message.replyMessage || ""
-        bubble.image = message.image
-        bubble.imageWidth = message.imageWidth
-        bubble.imageHeight = message.imageHeight
-        bubble.deleteRequested.connect(function() {
-                messagesContainer.remove(bubble)
-                bubble.destroy()
-                updateBottomPadding()
-            })
-        bubble.replyRequested.connect(function(author, replyText) {
-                chatPage.setReply(author, replyText)
-            })
+        if (lastIndex >= 0) {
+            var previousBubble = messagesContainer.controls[lastIndex]
+            var previous = messageFromBubble(previousBubble)
 
-        messagesContainer.add(bubble)
+            if (shouldGroup(previous, item)) {
+                previousBubble.isGroupEnd = false
+
+                item.isGroupStart = false
+                item.showAvatar = false
+                item.showUsername = false
+                item.showTimestamp = false
+            }
+        }
+
+        addMessageBubble(item)
 
         requestScrollToBottom()
     }
 
     function requestScrollToBottom() {
         pendingScrollToBottom = true
+        scrollToBottomNow()
     }
 
     function setReply(author, message) {
@@ -261,6 +256,116 @@ Page {
     function clearReply() {
         replyAuthor = ""
         replyMessage = ""
+    }
+
+    function addMessageBubble(item) {
+        var bubble = messageBubbleDefinition.createObject()
+
+        bubble.author = item.author
+        bubble.initials = item.initials
+        bubble.avatarColor = item.avatarColor
+        bubble.time = item.time
+        bubble.timestampMs = item.timestampMs
+        bubble.message = item.message
+        bubble.replyAuthor = item.replyAuthor
+        bubble.replyMessage = item.replyMessage
+        bubble.image = item.image
+        bubble.imageWidth = item.imageWidth
+        bubble.imageHeight = item.imageHeight
+        bubble.isGroupStart = item.isGroupStart
+        bubble.isGroupEnd = item.isGroupEnd
+        bubble.showAvatar = item.showAvatar
+        bubble.showUsername = item.showUsername
+        bubble.showTimestamp = item.showTimestamp
+        bubble.deleteRequested.connect(function() {
+                chatPage.deleteMessageBubble(bubble)
+            })
+        bubble.replyRequested.connect(function(author, replyText) {
+                chatPage.setReply(author, replyText)
+            })
+
+        messagesContainer.add(bubble)
+    }
+
+    function messageFromBubble(bubble) {
+        if (!bubble) {
+            return null
+        }
+
+        return {
+            "author": bubble.author,
+            "timestampMs": bubble.timestampMs
+        }
+    }
+
+    function normalizeMessage(message) {
+        var timestampMs = message.timestampMs || new Date().getTime()
+
+        return {
+            "id": ++messageIdCounter,
+            "author": message.author || "",
+            "initials": message.initials || "",
+            "avatarColor": message.avatarColor || "#5865F2",
+            "time": message.time || "Now",
+            "timestampMs": timestampMs,
+            "message": message.message || "",
+            "replyAuthor": message.replyAuthor || "",
+            "replyMessage": message.replyMessage || "",
+            "image": message.image || "",
+            "imageWidth": message.imageWidth || 0,
+            "imageHeight": message.imageHeight || 0,
+            "isGroupStart": true,
+            "isGroupEnd": true,
+            "showAvatar": true,
+            "showUsername": true,
+            "showTimestamp": true
+        }
+    }
+
+    function shouldGroup(previous, current) {
+        if (!previous || !current) {
+            return false
+        }
+
+        if (previous.author != current.author) {
+            return false
+        }
+
+        return current.timestampMs - previous.timestampMs < 7 * 60 * 1000
+    }
+
+    function refreshGroupingAround(index) {
+        refreshGroupingAt(index - 1)
+        refreshGroupingAt(index)
+        refreshGroupingAt(index + 1)
+    }
+
+    function refreshGroupingAt(index) {
+        if (index < 0 || index >= messagesContainer.controls.length) {
+            return
+        }
+
+        var bubble = messagesContainer.controls[index]
+        var item = messageFromBubble(bubble)
+        var previous = index > 0 ? messageFromBubble(messagesContainer.controls[index - 1]) : null
+        var next = index < messagesContainer.controls.length - 1 ? messageFromBubble(messagesContainer.controls[index + 1]) : null
+        var groupedWithPrevious = shouldGroup(previous, item)
+        var groupedWithNext = shouldGroup(item, next)
+
+        bubble.isGroupStart = !groupedWithPrevious
+        bubble.isGroupEnd = !groupedWithNext
+        bubble.showAvatar = bubble.isGroupStart
+        bubble.showUsername = bubble.isGroupStart
+        bubble.showTimestamp = bubble.isGroupStart
+    }
+
+    function deleteMessageBubble(bubble) {
+        var index = messagesContainer.controls.indexOf(bubble)
+
+        messagesContainer.remove(bubble)
+        bubble.destroy()
+        refreshGroupingAround(index)
+        updateBottomPadding()
     }
 
     function scrollToBottomNow() {
@@ -294,7 +399,8 @@ Page {
             "replyMessage": replyMessage,
             "image": "",
             "imageWidth": 0,
-            "imageHeight": 0
+            "imageHeight": 0,
+            "timestampMs": new Date().getTime()
         })
 
         inputMessage.text = ""
@@ -312,7 +418,8 @@ Page {
             "replyMessage": "",
             "image": "",
             "imageWidth": 0,
-            "imageHeight": 0
+            "imageHeight": 0,
+            "timestampMs": 1000000
         })
 
         appendMessage({
@@ -325,7 +432,8 @@ Page {
             "replyMessage": "yo guys",
             "image": "asset:///images/demo.png",
             "imageWidth": 32,
-            "imageHeight": 20
+            "imageHeight": 20,
+            "timestampMs": 1000000 + 2 * 60 * 1000
         })
 
         appendMessage({
@@ -338,7 +446,8 @@ Page {
             "replyMessage": "play some genshit?",
             "image": "",
             "imageWidth": 0,
-            "imageHeight": 0
+            "imageHeight": 0,
+            "timestampMs": 1000000 + 5 * 60 * 1000
         })
     }
 }

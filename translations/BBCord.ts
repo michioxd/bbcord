@@ -12,12 +12,12 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="136"/>
+        <location filename="../assets/ChatCard.qml" line="147"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="187"/>
+        <location filename="../assets/ChatCard.qml" line="186"/>
         <source>Message #</source>
         <translation type="unfinished"></translation>
     </message>
@@ -48,12 +48,12 @@
 <context>
     <name>MessageBubble</name>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="37"/>
+        <location filename="../assets/MessageBubble.qml" line="43"/>
         <source>Reply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="45"/>
+        <location filename="../assets/MessageBubble.qml" line="51"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>

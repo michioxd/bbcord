@@ -7,12 +7,18 @@ Container {
     property string initials: ""
     property string avatarColor: "#5865F2"
     property string time: ""
+    property real timestampMs: 0
     property string message: ""
     property string replyAuthor: ""
     property string replyMessage: ""
     property string image: ""
     property int imageWidth: 0
     property int imageHeight: 0
+    property bool isGroupStart: true
+    property bool isGroupEnd: true
+    property bool showAvatar: true
+    property bool showUsername: true
+    property bool showTimestamp: true
 
     signal deleteRequested()
     signal replyRequested(string author, string message)
@@ -20,8 +26,8 @@ Container {
     horizontalAlignment: HorizontalAlignment.Fill
     leftPadding: ui.du(2.0)
     rightPadding: ui.du(2.0)
-    topPadding: ui.du(1.5)
-    bottomPadding: ui.du(1.0)
+    topPadding: root.isGroupStart ? ui.du(1.5) : ui.du(0.1)
+    bottomPadding: root.isGroupEnd ? ui.du(1.0) : ui.du(0.2)
 
     layout: StackLayout {
         orientation: LayoutOrientation.LeftToRight
@@ -58,6 +64,7 @@ Container {
         verticalAlignment: VerticalAlignment.Top
 
         Container {
+            visible: root.showAvatar
             preferredWidth: ui.du(7.0)
             preferredHeight: ui.du(7.0)
             maxWidth: ui.du(7.0)
@@ -85,6 +92,7 @@ Container {
 
         Container {
             horizontalAlignment: HorizontalAlignment.Fill
+            visible: root.showUsername || root.showTimestamp
 
             layout: StackLayout {
                 orientation: LayoutOrientation.LeftToRight
@@ -92,6 +100,7 @@ Container {
 
             Label {
                 text: root.author
+                visible: root.showUsername
                 textStyle.fontSize: FontSize.Small
                 textStyle.fontWeight: FontWeight.Normal
                 textStyle.color: Color.create("#F2F3F5")
@@ -100,6 +109,7 @@ Container {
 
             Label {
                 text: root.time
+                visible: root.showTimestamp
                 leftMargin: ui.du(0.2)
                 opacity: 0.5
                 textStyle.fontSize: FontSize.XXSmall
@@ -155,7 +165,7 @@ Container {
 
         Label {
             text: root.message
-            topMargin: ui.du(-0.6)
+            topMargin: root.isGroupStart ? ui.du(-0.6) : ui.du(-0.2)
             multiline: true
             textStyle.fontSize: FontSize.XSmall
             textStyle.color: Color.create("#DCDDDE")
