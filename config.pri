@@ -39,6 +39,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/ChatCard.qml) \
         $$quote($$BASEDIR/assets/LoginPage.qml) \
         $$quote($$BASEDIR/assets/MainPage.qml) \
+        $$quote($$BASEDIR/assets/MessageBubble.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icon.png) \

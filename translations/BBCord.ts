@@ -4,12 +4,12 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="16"/>
+        <location filename="../assets/ChatCard.qml" line="24"/>
         <source>Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="160"/>
+        <location filename="../assets/ChatCard.qml" line="126"/>
         <source>Message #</source>
         <translation type="unfinished"></translation>
     </message>
