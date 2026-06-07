@@ -4,7 +4,9 @@
 #include <bb/system/SystemToast>
 
 #include <QDebug>
+#include <QObject>
 #include <QString>
+#include <QTimerEvent>
 
 extern "C" {
 #include "mongoose.h"
@@ -14,6 +16,56 @@ using namespace bb::cascades;
 
 static uint64_t s_next_heartbeat_ms = 0;
 static long s_heartbeat_interval_ms = 0;
+static struct mg_connection *s_ws_conn = NULL;
+
+class MongoosePoller : public QObject {
+public:
+  explicit MongoosePoller(struct mg_mgr *mgr)
+      : QObject(), m_mgr(mgr), m_timerId(0), m_closed(false) {
+    m_timerId = startTimer(50);
+  }
+
+  ~MongoosePoller() { closeWebSocket(); }
+
+  void closeWebSocket() {
+    if (m_closed) {
+      return;
+    }
+
+    m_closed = true;
+
+    if (m_timerId != 0) {
+      killTimer(m_timerId);
+      m_timerId = 0;
+    }
+
+    if (s_ws_conn != NULL && !s_ws_conn->is_closing) {
+      qDebug() << "[mg] closing websocket";
+
+      if (s_ws_conn->is_websocket) {
+        mg_ws_send(s_ws_conn, "", 0, WEBSOCKET_OP_CLOSE);
+      }
+
+      s_ws_conn->is_closing = 1;
+
+      for (int i = 0; i < 10 && s_ws_conn != NULL; ++i) {
+        mg_mgr_poll(m_mgr, 50);
+      }
+    }
+  }
+
+protected:
+  void timerEvent(QTimerEvent *) {
+    if (!m_closed) {
+      mg_mgr_poll(m_mgr, 0);
+    }
+  }
+
+private:
+  struct mg_mgr *m_mgr;
+  int m_timerId;
+  bool m_closed;
+};
 
 static void toast(const QString &s) {
   qDebug() << "[toast]" << s;
@@ -133,6 +185,9 @@ static void wsfn(struct mg_connection *c, int ev, void *ev_data) {
 
   case MG_EV_CLOSE:
     qDebug() << "[mg] closed";
+    s_ws_conn = NULL;
+    s_heartbeat_interval_ms = 0;
+    s_next_heartbeat_ms = 0;
     toast("Mongoose: closed");
     break;
   }
@@ -164,16 +219,17 @@ Q_DECL_EXPORT int main(int argc, char **argv) {
     toast("mg_ws_connect returned NULL");
   } else {
     qDebug() << "mg_ws_connect OK, conn =" << conn;
+    s_ws_conn = conn;
   }
+
+  MongoosePoller poller(&mgr);
 
   ApplicationUI appui;
 
-  while (true) {
-    mg_mgr_poll(&mgr, 100);
-    app.processEvents();
-  }
+  int rc = Application::exec();
 
+  poller.closeWebSocket();
   mg_mgr_free(&mgr);
 
-  return Application::exec();
+  return rc;
 }
