@@ -74,7 +74,7 @@ NavigationPane {
     Menu.definition: MenuDefinition {
         actions: [
             ActionItem {
-                title: appStore.currentUserName.length > 0 ? appStore.currentUserName : "User"
+                title: "Me"
                 imageSource: appStore.currentUserAvatarSource
                 enabled: appStore.loggedIn
 

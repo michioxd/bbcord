@@ -68,9 +68,14 @@ Container {
                     horizontalAlignment: HorizontalAlignment.Fill
                     leftPadding: ui.du(2)
                     rightPadding: ui.du(2)
+                    property string lastAvatarRequestId: ""
 
                     function requestAvatar() {
+                        if (lastAvatarRequestId == ListItemData.id) {
+                            return;
+                        }
                         if ((ListItemData.avatar === "" && ListItemData.avatarHash !== "") || (ListItemData.avatar2 === "" && ListItemData.avatarHash2 !== "")) {
+                            lastAvatarRequestId = ListItemData.id;
                             ListItem.view.loadVisibleDmAvatar(ListItemData.id);
                         }
                     }
@@ -81,6 +86,16 @@ Container {
 
                     function safeColor(value, fallback) {
                         return value === undefined || value === null || value === "" ? fallback : value;
+                    }
+
+                    onCreationCompleted: {
+                        requestAvatar();
+                    }
+
+                    ListItem.onDataChanged: {
+                        if (lastAvatarRequestId != ListItemData.id) {
+                            requestAvatar();
+                        }
                     }
 
                     layout: StackLayout {

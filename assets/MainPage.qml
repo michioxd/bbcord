@@ -5,6 +5,8 @@ Page {
 
     property variant navigationPane: null
     property variant activeContent: null
+    property string activeContentType: ""
+    property string activeServerId: ""
 
     Container {
         layout: StackLayout {
@@ -29,8 +31,8 @@ Page {
                     var item = serverModel.data(indexPath);
 
                     if (item.type == "dm") {
-                        mainPageController.selectHome();
                         mainPage.loadDmList();
+                        mainPageController.selectHome();
                     } else if (item.type == "server") {
                         mainPageController.selectGuild(item.id);
                         mainPage.loadServerList(item.id, item.name);
@@ -44,6 +46,7 @@ Page {
                         Container {
                             preferredWidth: ui.du(10)
                             preferredHeight: ui.du(10)
+                            property string lastIconRequestId: ""
 
                             topMargin: ui.du(1)
                             bottomMargin: ui.du(1)
@@ -52,17 +55,12 @@ Page {
 
                             layout: DockLayout {}
 
-                            Container {
-                                preferredWidth: ui.du(1.0)
-                                preferredHeight: ui.du(4.0)
-                                horizontalAlignment: HorizontalAlignment.Left
-                                verticalAlignment: VerticalAlignment.Center
-                                background: Color.create("#FFFFFF")
-                                visible: ListItemData.type == "server" && ListItemData.unread == true
-                            }
-
                             function requestIcon() {
+                                if (lastIconRequestId == ListItemData.id) {
+                                    return;
+                                }
                                 if (ListItemData.type == "server" && ListItemData.icon === "" && ListItemData.iconHash !== "") {
+                                    lastIconRequestId = ListItemData.id;
                                     ListItem.view.loadVisibleGuildIcon(ListItemData.id);
                                 }
                             }
@@ -72,7 +70,9 @@ Page {
                             }
 
                             ListItem.onDataChanged: {
-                                requestIcon();
+                                if (lastIconRequestId != ListItemData.id) {
+                                    requestIcon();
+                                }
                             }
 
                             ImageView {
@@ -93,6 +93,15 @@ Page {
 
                                 textStyle.fontWeight: FontWeight.Bold
                                 textStyle.fontSize: FontSize.Large
+                            }
+
+                            Container {
+                                preferredWidth: ui.du(1.0)
+                                preferredHeight: ui.du(4.0)
+                                horizontalAlignment: HorizontalAlignment.Left
+                                verticalAlignment: VerticalAlignment.Center
+                                background: Color.create("#FFFFFF")
+                                visible: ListItemData.type == "server" && ListItemData.unread == true
                             }
 
                             Container {
@@ -185,6 +194,10 @@ Page {
     }
 
     function loadDmList() {
+        if (activeContentType == "dm") {
+            return;
+        }
+
         var page = dmListDefinition.createObject();
 
         if (page) {
@@ -192,12 +205,18 @@ Page {
                 mainPage.openChat(channelName);
             });
             replaceContent(page);
+            activeContentType = "dm";
+            activeServerId = "";
         } else {
             console.log("Could not create DmList.qml");
         }
     }
 
     function loadServerList(serverId, serverName) {
+        if (activeContentType == "server" && activeServerId == serverId) {
+            return;
+        }
+
         var page = serverListDefinition.createObject();
 
         if (page) {
@@ -207,6 +226,8 @@ Page {
                 mainPage.openChat(channelName);
             });
             replaceContent(page);
+            activeContentType = "server";
+            activeServerId = serverId;
         } else {
             console.log("Could not create ServerList.qml");
         }

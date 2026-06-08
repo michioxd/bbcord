@@ -10,6 +10,56 @@ extern "C" {
 #include "mongoose.h"
 }
 
+namespace {
+int extractSequence(const QByteArray &bytes) {
+  int pos = bytes.indexOf("\"s\"");
+  if (pos < 0) {
+    return -1;
+  }
+
+  pos = bytes.indexOf(':', pos + 3);
+  if (pos < 0) {
+    return -1;
+  }
+
+  ++pos;
+  while (pos < bytes.size() &&
+         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+    ++pos;
+  }
+
+  if (pos < bytes.size() && bytes.mid(pos, 4) == "null") {
+    return -1;
+  }
+
+  bool negative = false;
+  if (pos < bytes.size() && bytes.at(pos) == '-') {
+    negative = true;
+    ++pos;
+  }
+
+  int value = 0;
+  bool foundDigit = false;
+  while (pos < bytes.size() && bytes.at(pos) >= '0' && bytes.at(pos) <= '9') {
+    foundDigit = true;
+    value = value * 10 + (bytes.at(pos) - '0');
+    ++pos;
+  }
+
+  if (!foundDigit) {
+    return -1;
+  }
+  return negative ? -value : value;
+}
+
+bool shouldParseDispatch(const QString &eventName) {
+  return eventName == "MESSAGE_CREATE" || eventName == "READY" ||
+         eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
+         eventName == "USER_SETTINGS_PROTO_UPDATE";
+}
+} // namespace
+
 void DiscordGateway::eventHandler(struct mg_connection *connection, int event,
                                   void *eventData) {
   DiscordGateway *gateway = static_cast<DiscordGateway *>(connection->fn_data);
@@ -20,7 +70,8 @@ void DiscordGateway::eventHandler(struct mg_connection *connection, int event,
 
 void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
                                  void *eventData) {
-  if (event != MG_EV_POLL && event != MG_EV_READ && event != MG_EV_WRITE) {
+  if (event != MG_EV_POLL && event != MG_EV_READ && event != MG_EV_WRITE &&
+      event != MG_EV_WS_MSG) {
     qDebug() << "[discord-gateway] event" << event << "fd=" << connection->fd
              << "tls=" << connection->is_tls
              << "ws=" << connection->is_websocket
@@ -121,7 +172,6 @@ void DiscordGateway::handleCompressedMessage(const char *data, int length) {
 
 void DiscordGateway::handleTextMessage(const char *data, int length) {
   QByteArray bytes(data, length);
-  qDebug() << "[discord] websocket message bytes" << length;
 
   if (DiscordJsonParser::isLargeReadyPayload(bytes)) {
     m_sequence = DiscordJsonParser::valueToInt(
@@ -147,6 +197,15 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     return;
   }
 
+  QString fastEventName = DiscordJsonParser::extractStringField(bytes, "t");
+  if (!fastEventName.isEmpty() && !shouldParseDispatch(fastEventName)) {
+    int sequence = extractSequence(bytes);
+    if (sequence >= 0) {
+      m_sequence = sequence;
+    }
+    return;
+  }
+
   DiscordJsonParser::GatewayPayload payload =
       DiscordJsonParser::parseGatewayPayload(bytes);
   if (!payload.valid) {
@@ -154,10 +213,6 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
         QString("Gateway JSON parse error: %1").arg(payload.errorMessage));
     return;
   }
-
-  qDebug() << "[discord] gateway payload op" << payload.op << "event"
-           << payload.eventName << "sequence" << payload.sequence;
-
   if (payload.sequence >= 0) {
     m_sequence = payload.sequence;
   }

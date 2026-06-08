@@ -62,7 +62,9 @@ public:
   void updateDmAvatar(const QString &channelId, const QString &avatarSource);
   void updateDmAvatar2(const QString &channelId, const QString &avatarSource);
   void setDmChannels(const QVariantList &dmChannels);
+  void appendDmChannels(const QVariantList &channels);
   void setGuildChannels(const QVariantList &channels);
+  void appendGuildChannels(const QVariantList &channels);
 
 Q_SIGNALS:
   void loggedInChanged(bool loggedIn);

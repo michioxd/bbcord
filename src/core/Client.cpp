@@ -15,8 +15,8 @@
 #include <QDebug>
 #include <QMetaObject>
 #include <QMetaType>
-#include <QSettings>
 #include <QSet>
+#include <QSettings>
 #include <QThread>
 #include <QTimer>
 
@@ -51,8 +51,7 @@ DiscordClient::DiscordClient(QObject *parent)
       m_lastGuildId(m_state.lastGuildId),
       m_lastDmChannelId(m_state.lastDmChannelId),
       m_selectedGuildId(m_state.selectedGuildId), m_guilds(m_state.guilds),
-      m_allDmChannels(m_state.allDmChannels),
-      m_dmChannels(m_state.dmChannels),
+      m_allDmChannels(m_state.allDmChannels), m_dmChannels(m_state.dmChannels),
       m_allGuildChannels(m_state.allGuildChannels),
       m_visibleGuildChannels(m_state.visibleGuildChannels),
       m_pendingMentionCountsByGuildId(m_state.pendingMentionCountsByGuildId),
@@ -106,8 +105,7 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
       m_lastGuildId(m_state.lastGuildId),
       m_lastDmChannelId(m_state.lastDmChannelId),
       m_selectedGuildId(m_state.selectedGuildId), m_guilds(m_state.guilds),
-      m_allDmChannels(m_state.allDmChannels),
-      m_dmChannels(m_state.dmChannels),
+      m_allDmChannels(m_state.allDmChannels), m_dmChannels(m_state.dmChannels),
       m_allGuildChannels(m_state.allGuildChannels),
       m_visibleGuildChannels(m_state.visibleGuildChannels),
       m_pendingMentionCountsByGuildId(m_state.pendingMentionCountsByGuildId),
@@ -403,8 +401,8 @@ void DiscordClient::loadGuildIcon(const QString &guildId) {
 }
 
 void DiscordClient::loadMoreDmChannels() {
-  if (m_loadingGuilds || m_loadingDmChannels || m_loadingGuildChannels ||
-      !m_dmChannelsHasMore || m_token.trimmed().isEmpty()) {
+  if (m_loadingGuilds || m_loadingDmChannels || !m_dmChannelsHasMore ||
+      m_token.trimmed().isEmpty()) {
     return;
   }
 
@@ -414,9 +412,11 @@ void DiscordClient::loadMoreDmChannels() {
       nextCount = m_allDmChannels.size();
     }
 
+    QVariantList appendedChannels;
     for (int i = m_visibleDmChannelCount; i < nextCount; ++i) {
       QVariantMap channel = m_allDmChannels.at(i).toMap();
       m_dmChannels.append(channel);
+      appendedChannels.append(channel);
       QString channelId = channel.value("id").toString();
       if (!channelId.isEmpty()) {
         m_dmChannelsById.insert(channelId, channel);
@@ -424,26 +424,12 @@ void DiscordClient::loadMoreDmChannels() {
         indexDmChannelRecipients(channel);
       }
       m_lastDmChannelId = channelId;
-      m_avatarManager->queueDmAvatar(
-          channelId, channel.value("avatarUserId").toString(),
-          channel.value("avatarHash").toString(), m_loadedAvatarUserIds,
-          m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
-          m_loadingAvatarUserId2, m_pendingAvatars);
-      m_avatarManager->queueDmAvatar(
-          channelId, channel.value("avatarUserId2").toString(),
-          channel.value("avatarHash2").toString(), m_loadedAvatarUserIds,
-          m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
-          m_loadingAvatarUserId2, m_pendingAvatars);
     }
-
-    m_avatarManager->loadNextAvatar(m_loadingAvatarUserId,
-                                    m_loadingAvatarUserId2, m_pendingAvatars,
-                                    m_queuedAvatarUserIds);
 
     m_visibleDmChannelCount = nextCount;
     m_dmChannelsHasMore = m_visibleDmChannelCount < m_allDmChannels.size();
     if (m_store) {
-      m_store->setDmChannels(m_dmChannels);
+      m_store->appendDmChannels(appendedChannels);
     }
     return;
   }
@@ -485,8 +471,8 @@ void DiscordClient::loadDmAvatar(const QString &channelId) {
 }
 
 void DiscordClient::loadGuildChannels(const QString &guildId) {
-  if (m_loadingGuilds || m_loadingDmChannels || m_loadingGuildChannels ||
-      guildId.trimmed().isEmpty() || m_token.trimmed().isEmpty()) {
+  if (m_loadingGuilds || m_loadingDmChannels || guildId.trimmed().isEmpty() ||
+      m_token.trimmed().isEmpty()) {
     return;
   }
 
@@ -526,9 +512,10 @@ void DiscordClient::selectHome() {
   if (m_store) {
     m_store->selectHome();
   }
-  saveGuildsCache();
-  saveDmChannelsCache();
-  loadMoreDmChannels();
+  scheduleDmChannelsCacheSave();
+  if (m_dmChannels.isEmpty()) {
+    loadMoreDmChannels();
+  }
 }
 
 void DiscordClient::selectGuild(const QString &guildId) {
@@ -542,8 +529,7 @@ void DiscordClient::selectGuild(const QString &guildId) {
   if (m_store) {
     m_store->selectGuild(safeGuildId);
   }
-  saveGuildsCache();
-  saveDmChannelsCache();
+  scheduleDmChannelsCacheSave();
   if (!sameGuild || m_allGuildChannels.isEmpty()) {
     loadGuildChannels(safeGuildId);
   }
@@ -1475,15 +1461,17 @@ void DiscordClient::appendVisibleGuildChannels() {
     nextCount = m_allGuildChannels.size();
   }
 
+  QVariantList appendedChannels;
   for (int i = m_visibleGuildChannelCount; i < nextCount; ++i) {
     m_visibleGuildChannels.append(m_allGuildChannels.at(i));
+    appendedChannels.append(m_allGuildChannels.at(i));
   }
 
   m_visibleGuildChannelCount = nextCount;
   m_guildChannelsHasMore =
       m_visibleGuildChannelCount < m_allGuildChannels.size();
   if (m_store) {
-    m_store->setGuildChannels(m_visibleGuildChannels);
+    m_store->appendGuildChannels(appendedChannels);
   }
 }
 

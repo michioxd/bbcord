@@ -46,11 +46,6 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/UserSheet.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
-        $$quote($$BASEDIR/assets/images/icon.png) \
-        $$quote($$BASEDIR/assets/images/icon110.png) \
-        $$quote($$BASEDIR/assets/images/icon86.png) \
-        $$quote($$BASEDIR/assets/images/icon90.png) \
-        $$quote($$BASEDIR/assets/images/icon96.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/caret-left.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/users.png) \
         $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
@@ -66,12 +61,6 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/x-hold.png) \
         $$quote($$BASEDIR/assets/images/icons/x.png) \
-        $$quote($$BASEDIR/assets/images/splaash720x1280.png) \
-        $$quote($$BASEDIR/assets/images/splash.png) \
-        $$quote($$BASEDIR/assets/images/splash1280x720.png) \
-        $$quote($$BASEDIR/assets/images/splash1280x768.png) \
-        $$quote($$BASEDIR/assets/images/splash720.png) \
-        $$quote($$BASEDIR/assets/images/splash768x1280.png) \
         $$quote($$BASEDIR/assets/main.qml)
 }
 

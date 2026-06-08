@@ -205,6 +205,30 @@ void AppStore::updateDmAvatar2(const QString &channelId,
 }
 
 void AppStore::setDmChannels(const QVariantList &dmChannels) {
+  if (dmChannels.size() == m_dmChannels.size()) {
+    bool same = true;
+    for (int i = 0; i < dmChannels.size(); ++i) {
+      QVariantMap oldChannel = m_dmChannels.at(i).toMap();
+      QVariantMap newChannel = dmChannels.at(i).toMap();
+      if (oldChannel.value("id").toString() !=
+              newChannel.value("id").toString() ||
+          oldChannel.value("name").toString() !=
+              newChannel.value("name").toString() ||
+          oldChannel.value("avatar").toString() !=
+              newChannel.value("avatar").toString() ||
+          oldChannel.value("avatar2").toString() !=
+              newChannel.value("avatar2").toString() ||
+          oldChannel.value("statusColor").toString() !=
+              newChannel.value("statusColor").toString()) {
+        same = false;
+        break;
+      }
+    }
+    if (same) {
+      return;
+    }
+  }
+
   QVariantList appended;
   bool appendOnly = dmChannels.size() > m_dmChannels.size();
   if (appendOnly) {
@@ -234,17 +258,70 @@ void AppStore::setDmChannels(const QVariantList &dmChannels) {
   emit dmChannelsChanged();
 }
 
+void AppStore::appendDmChannels(const QVariantList &channels) {
+  if (channels.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < channels.size(); ++i) {
+    m_dmChannels.append(channels.at(i));
+  }
+  emit dmChannelsAppended(channels);
+}
+
 void AppStore::setGuildChannels(const QVariantList &channels) {
+  if (channels.size() == m_guildChannels.size()) {
+    bool same = true;
+    for (int i = 0; i < channels.size(); ++i) {
+      QVariantMap oldChannel = m_guildChannels.at(i).toMap();
+      QVariantMap newChannel = channels.at(i).toMap();
+      if (oldChannel.value("id").toString() !=
+              newChannel.value("id").toString() ||
+          oldChannel.value("unread").toBool() !=
+              newChannel.value("unread").toBool()) {
+        same = false;
+        break;
+      }
+    }
+    if (same) {
+      return;
+    }
+  }
+
   QVariantList appended;
   if (channels.size() >= m_guildChannels.size()) {
-    for (int i = m_guildChannels.size(); i < channels.size(); ++i) {
-      appended.append(channels.at(i));
+    bool appendOnly = true;
+    for (int i = 0; i < m_guildChannels.size(); ++i) {
+      QVariantMap oldChannel = m_guildChannels.at(i).toMap();
+      QVariantMap newChannel = channels.at(i).toMap();
+      if (oldChannel.value("id").toString() !=
+          newChannel.value("id").toString()) {
+        appendOnly = false;
+        break;
+      }
+    }
+    if (appendOnly) {
+      for (int i = m_guildChannels.size(); i < channels.size(); ++i) {
+        appended.append(channels.at(i));
+      }
     }
   }
 
   m_guildChannels = channels;
   if (!appended.isEmpty()) {
     emit guildChannelsAppended(appended);
+    return;
   }
   emit guildChannelsChanged();
+}
+
+void AppStore::appendGuildChannels(const QVariantList &channels) {
+  if (channels.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < channels.size(); ++i) {
+    m_guildChannels.append(channels.at(i));
+  }
+  emit guildChannelsAppended(channels);
 }

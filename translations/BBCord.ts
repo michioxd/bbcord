@@ -67,12 +67,7 @@
     <name>UserSheet</name>
     <message>
         <location filename="../assets/UserSheet.qml" line="8"/>
-        <source>User</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/UserSheet.qml" line="10"/>
-        <source>Close</source>
+        <source>Me</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -81,7 +76,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/UserSheet.qml" line="46"/>
+        <location filename="../assets/UserSheet.qml" line="47"/>
         <source>User ID: </source>
         <translation type="unfinished"></translation>
     </message>

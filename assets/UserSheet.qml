@@ -5,9 +5,9 @@ Sheet {
 
     Page {
         titleBar: TitleBar {
-            title: qsTr("User")
+            title: qsTr("Me")
             dismissAction: ActionItem {
-                title: qsTr("Close")
+                imageSource: "asset:///images/icons/accent/caret-left.png"
                 onTriggered: userSheet.close()
             }
         }
@@ -38,6 +38,7 @@ Sheet {
                 horizontalAlignment: HorizontalAlignment.Center
                 textStyle.fontSize: FontSize.XSmall
                 opacity: 0.5
+                topMargin: ui.du(-0.5)
             }
 
             Divider {}
