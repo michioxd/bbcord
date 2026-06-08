@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QList>
+#include <QTimerEvent>
 #include <QUrl>
 
 extern "C" {
@@ -17,16 +19,6 @@ const int kPreviewWidth = 240;
 const int kPreviewQuality = 55;
 const int kPollIntervalMs = 50;
 const int kRequestTimeoutTicks = 300;
-
-struct ImageDownloadContext {
-  QString host;
-  QString path;
-  QByteArray body;
-  int status;
-  bool requestSent;
-  bool finished;
-  bool failed;
-};
 
 void sendImageRequest(struct mg_connection *connection,
                       ImageDownloadContext *context) {
@@ -45,9 +37,228 @@ void sendImageRequest(struct mg_connection *connection,
             path.constData(), host.constData());
   context->requestSent = true;
 }
+} // namespace
 
-void imageEventHandler(struct mg_connection *connection, int event,
-                       void *eventData) {
+AttachmentImageCacheWorker::AttachmentImageCacheWorker(QObject *parent)
+    : QObject(parent), m_timerId(0) {
+  m_mgr = new mg_mgr;
+  mg_mgr_init(m_mgr);
+  mg_log_set(MG_LL_NONE);
+}
+
+AttachmentImageCacheWorker::~AttachmentImageCacheWorker() {
+  cancelAll();
+  mg_mgr_free(m_mgr);
+  delete m_mgr;
+}
+
+void AttachmentImageCacheWorker::requestImage(const QString &url,
+                                              const QString &path,
+                                              qint64 maxBytes) {
+  QString safeUrl = url.trimmed();
+  QString safePath = path.trimmed();
+  if (safeUrl.isEmpty() || safePath.isEmpty()) {
+    emit imageFailed(safeUrl);
+    return;
+  }
+
+  QFileInfo cachedFile(safePath);
+  if (cachedFile.exists() && cachedFile.size() > 0) {
+    emit imageCached(safeUrl, safePath);
+    return;
+  }
+
+  QDir dir = cachedFile.dir();
+  if (!dir.exists() && !dir.mkpath(".")) {
+    emit imageFailed(safeUrl);
+    return;
+  }
+
+  m_cancelledUrls.remove(safeUrl);
+
+  QUrl parsed(previewUrl(safeUrl));
+  QString host = parsed.host().trimmed();
+  QString requestPath = parsed.encodedPath();
+  QString query = parsed.encodedQuery();
+  if (host.isEmpty() || requestPath.isEmpty()) {
+    emit imageFailed(safeUrl);
+    return;
+  }
+
+  if (!query.isEmpty()) {
+    requestPath += "?" + query;
+  }
+
+  QString scheme = parsed.scheme().toLower();
+  QString connectHost = host;
+  if (parsed.port() > 0) {
+    connectHost += QString(":%1").arg(parsed.port());
+  }
+  QByteArray connectUrl = QString("%1://%2")
+                              .arg(scheme == "http" ? "http" : "https")
+                              .arg(connectHost)
+                              .toUtf8();
+
+  ImageDownloadContext *context = new ImageDownloadContext;
+  context->url = safeUrl;
+  context->filePath = safePath;
+  context->host = connectHost;
+  context->path = requestPath;
+  context->maxBytes = maxBytes;
+  context->status = 0;
+  context->ticks = 0;
+  context->requestSent = false;
+  context->finished = false;
+  context->failed = false;
+  context->worker = this;
+
+  struct mg_connection *connection =
+      mg_http_connect(m_mgr, connectUrl.constData(),
+                      AttachmentImageCacheWorker::imageEventHandler, context);
+  if (connection == NULL) {
+    delete context;
+    emit imageFailed(safeUrl);
+    return;
+  }
+
+  m_activeDownloads.insert(connection, context);
+  startTimerIfNeeded();
+}
+
+void AttachmentImageCacheWorker::cancelImage(const QString &url) {
+  QString safeUrl = url.trimmed();
+  if (safeUrl.isEmpty()) {
+    return;
+  }
+
+  m_cancelledUrls.insert(safeUrl);
+  QList<struct mg_connection *> connections;
+  QMap<struct mg_connection *, ImageDownloadContext *>::const_iterator it;
+  for (it = m_activeDownloads.constBegin(); it != m_activeDownloads.constEnd();
+       ++it) {
+    if (it.value()->url == safeUrl) {
+      connections.append(it.key());
+    }
+  }
+
+  for (int i = 0; i < connections.size(); ++i) {
+    finishDownload(connections.at(i), false);
+  }
+}
+
+void AttachmentImageCacheWorker::cancelAll() {
+  QList<struct mg_connection *> connections = m_activeDownloads.keys();
+  for (int i = 0; i < connections.size(); ++i) {
+    ImageDownloadContext *context = m_activeDownloads.value(connections.at(i));
+    if (context != 0) {
+      m_cancelledUrls.insert(context->url);
+    }
+    finishDownload(connections.at(i), false);
+  }
+  stopTimerIfIdle();
+}
+
+void AttachmentImageCacheWorker::onReadyRead() {}
+
+void AttachmentImageCacheWorker::onFinished() {}
+
+QString AttachmentImageCacheWorker::previewUrl(const QString &url) const {
+  QUrl parsed(url);
+  if (!parsed.isValid()) {
+    return url;
+  }
+
+  parsed.addQueryItem("width", QString::number(kPreviewWidth));
+  parsed.addQueryItem("quality", QString::number(kPreviewQuality));
+  return parsed.toString();
+}
+
+void AttachmentImageCacheWorker::timerEvent(QTimerEvent *event) {
+  if (event != 0 && event->timerId() != m_timerId) {
+    QObject::timerEvent(event);
+    return;
+  }
+
+  mg_mgr_poll(m_mgr, 0);
+
+  QList<struct mg_connection *> timedOut;
+  QMap<struct mg_connection *, ImageDownloadContext *>::iterator it;
+  for (it = m_activeDownloads.begin(); it != m_activeDownloads.end(); ++it) {
+    ImageDownloadContext *context = it.value();
+    if (context != 0 && !context->finished) {
+      ++context->ticks;
+      if (context->ticks > kRequestTimeoutTicks) {
+        timedOut.append(it.key());
+      }
+    }
+  }
+
+  for (int i = 0; i < timedOut.size(); ++i) {
+    finishDownload(timedOut.at(i), false);
+  }
+
+  stopTimerIfIdle();
+}
+
+void AttachmentImageCacheWorker::startTimerIfNeeded() {
+  if (m_timerId == 0) {
+    m_timerId = startTimer(kPollIntervalMs);
+  }
+}
+
+void AttachmentImageCacheWorker::stopTimerIfIdle() {
+  if (m_timerId != 0 && m_activeDownloads.isEmpty()) {
+    killTimer(m_timerId);
+    m_timerId = 0;
+  }
+}
+
+void AttachmentImageCacheWorker::finishDownload(
+    struct mg_connection *connection, bool success) {
+  ImageDownloadContext *context = m_activeDownloads.take(connection);
+  if (context == 0) {
+    return;
+  }
+
+  context->finished = true;
+  if (connection != NULL) {
+    connection->fn_data = NULL;
+    connection->is_closing = 1;
+  }
+
+  bool wasCancelled = m_cancelledUrls.contains(context->url);
+  bool ok =
+      success && !context->failed && context->status == 200 &&
+      !context->body.isEmpty() &&
+      (context->maxBytes <= 0 || context->body.size() <= context->maxBytes) &&
+      !wasCancelled;
+
+  if (ok) {
+    QFile file(context->filePath);
+    if (file.open(QIODevice::WriteOnly)) {
+      qint64 written = file.write(context->body);
+      file.close();
+      ok = written == context->body.size();
+    } else {
+      ok = false;
+    }
+  }
+
+  if (ok) {
+    emit imageCached(context->url, context->filePath);
+  } else {
+    QFile::remove(context->filePath);
+    if (!wasCancelled) {
+      emit imageFailed(context->url);
+    }
+  }
+
+  delete context;
+  stopTimerIfIdle();
+}
+
+void AttachmentImageCacheWorker::imageEventHandler(
+    struct mg_connection *connection, int event, void *eventData) {
   ImageDownloadContext *context =
       static_cast<ImageDownloadContext *>(connection->fn_data);
   if (context == 0) {
@@ -80,173 +291,17 @@ void imageEventHandler(struct mg_connection *connection, int event,
       context->body =
           QByteArray(message->body.buf, static_cast<int>(message->body.len));
     }
-    context->finished = true;
-    connection->is_closing = 1;
+    context->worker->finishDownload(connection, true);
     break;
   }
 
   case MG_EV_ERROR:
   case MG_EV_CLOSE:
-    if (!context->finished) {
-      context->failed = true;
-      context->finished = true;
-    }
+    context->failed = true;
+    context->worker->finishDownload(connection, false);
     break;
 
   default:
     break;
   }
-}
-} // namespace
-
-AttachmentImageCacheWorker::AttachmentImageCacheWorker(QObject *parent)
-    : QObject(parent) {}
-
-AttachmentImageCacheWorker::~AttachmentImageCacheWorker() { cancelAll(); }
-
-void AttachmentImageCacheWorker::requestImage(const QString &url,
-                                              const QString &path,
-                                              qint64 maxBytes) {
-  QString safeUrl = url.trimmed();
-  QString safePath = path.trimmed();
-  if (safeUrl.isEmpty() || safePath.isEmpty()) {
-    emit imageFailed(safeUrl);
-    return;
-  }
-
-  QFileInfo cachedFile(safePath);
-  if (cachedFile.exists() && cachedFile.size() > 0) {
-    emit imageCached(safeUrl, safePath);
-    return;
-  }
-
-  QDir dir = cachedFile.dir();
-  if (!dir.exists() && !dir.mkpath(".")) {
-    emit imageFailed(safeUrl);
-    return;
-  }
-
-  m_activeUrl = safeUrl;
-  m_activePath = safePath;
-  m_cancelledUrls.remove(safeUrl);
-
-  bool ok = downloadImage(previewUrl(safeUrl), safePath, maxBytes);
-
-  m_activeUrl.clear();
-  m_activePath.clear();
-
-  if (ok) {
-    emit imageCached(safeUrl, safePath);
-  } else {
-    QFile::remove(safePath);
-    emit imageFailed(safeUrl);
-  }
-}
-
-void AttachmentImageCacheWorker::cancelImage(const QString &url) {
-  QString safeUrl = url.trimmed();
-  if (safeUrl.isEmpty()) {
-    return;
-  }
-
-  m_cancelledUrls.insert(safeUrl);
-  if (safeUrl == m_activeUrl && !m_activePath.isEmpty()) {
-    QFile::remove(m_activePath);
-  }
-}
-
-void AttachmentImageCacheWorker::cancelAll() {
-  if (!m_activeUrl.isEmpty()) {
-    m_cancelledUrls.insert(m_activeUrl);
-  }
-  if (!m_activePath.isEmpty()) {
-    QFile::remove(m_activePath);
-  }
-}
-
-void AttachmentImageCacheWorker::onReadyRead() {}
-
-void AttachmentImageCacheWorker::onFinished() {}
-
-QString AttachmentImageCacheWorker::previewUrl(const QString &url) const {
-  QUrl parsed(url);
-  if (!parsed.isValid()) {
-    return url;
-  }
-
-  parsed.addQueryItem("width", QString::number(kPreviewWidth));
-  parsed.addQueryItem("quality", QString::number(kPreviewQuality));
-  return parsed.toString();
-}
-
-bool AttachmentImageCacheWorker::downloadImage(const QString &url,
-                                               const QString &path,
-                                               qint64 maxBytes) {
-  QUrl parsed(url);
-  QString host = parsed.host().trimmed();
-  QString requestPath = parsed.encodedPath();
-  QString query = parsed.encodedQuery();
-  if (host.isEmpty() || requestPath.isEmpty()) {
-    return false;
-  }
-
-  if (!query.isEmpty()) {
-    requestPath += "?" + query;
-  }
-
-  ImageDownloadContext context;
-  context.host = host;
-  context.path = requestPath;
-  context.status = 0;
-  context.requestSent = false;
-  context.finished = false;
-  context.failed = false;
-
-  QString scheme = parsed.scheme().toLower();
-  QByteArray connectUrl = QString("%1://%2")
-                              .arg(scheme == "http" ? "http" : "https")
-                              .arg(host)
-                              .toUtf8();
-
-  struct mg_mgr mgr;
-  mg_mgr_init(&mgr);
-  mg_log_set(MG_LL_NONE);
-  struct mg_connection *connection = mg_http_connect(
-      &mgr, connectUrl.constData(), imageEventHandler, &context);
-  if (connection == NULL) {
-    mg_mgr_free(&mgr);
-    return false;
-  }
-
-  int ticks = 0;
-  while (!context.finished && ticks < kRequestTimeoutTicks &&
-         !m_cancelledUrls.contains(m_activeUrl)) {
-    mg_mgr_poll(&mgr, kPollIntervalMs);
-    ++ticks;
-  }
-
-  mg_mgr_free(&mgr);
-
-  if (m_cancelledUrls.contains(m_activeUrl) || context.failed ||
-      context.status != 200 || context.body.isEmpty()) {
-    return false;
-  }
-
-  if (maxBytes > 0 && context.body.size() > maxBytes) {
-    return false;
-  }
-
-  QFile file(path);
-  if (!file.open(QIODevice::WriteOnly)) {
-    return false;
-  }
-
-  qint64 written = file.write(context.body);
-  file.close();
-  if (written != context.body.size()) {
-    QFile::remove(path);
-    return false;
-  }
-
-  return true;
 }
