@@ -8,11 +8,11 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "discord/Gateway.hpp"
-#include "discord/RestClient.hpp"
 #include "models/Models.hpp"
 
 class AppStore;
+class DiscordNetworkWorker;
+class QThread;
 
 class DiscordClient : public QObject {
   Q_OBJECT
@@ -96,15 +96,12 @@ private:
                                  const QVariantMap &payload);
   void appendVisibleGuildChannels();
   void updateDataLoading();
+  void initializeNetworkWorker();
+  void shutdownNetworkWorker();
 
   AppStore *m_store;
-  DiscordRestClient m_restClient;
-  DiscordRestClient m_dataClient;
-  DiscordRestClient m_avatarClient;
-  DiscordRestClient m_avatarClient2;
-  DiscordRestClient m_guildIconClient;
-  DiscordRestClient m_guildIconClient2;
-  DiscordGateway m_gateway;
+  QThread *m_networkThread;
+  DiscordNetworkWorker *m_networkWorker;
   QQueue<QVariantMap> m_pendingAvatars;
   QQueue<QVariantMap> m_pendingGuildIcons;
   QString m_loadingAvatarUserId;

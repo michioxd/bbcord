@@ -1,366 +1,118 @@
 #include "Client.hpp"
 
 #include "AppStore.hpp"
+#include "discord/DiscordUtils.hpp"
+#include "discord/NetworkWorker.hpp"
 #include "models/Models.hpp"
 
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QMap>
+#include <QMetaObject>
+#include <QMetaType>
 #include <QSettings>
 #include <QStringList>
+#include <QThread>
 
 namespace {
 const int kPageSize = 25;
 const int kGuildPageSize = 100;
-const int kProtoFieldGuildFolders = 14;
-const int kProtoFieldGuildFolderItems = 1;
-const int kProtoFieldGuildFolderGuildIds = 1;
-
-QString firstLetter(const QString &text) {
-  if (text.isEmpty()) {
-    return "?";
-  }
-
-  return text.left(1).toUpper();
-}
-
-QString firstTwoWordLetters(const QString &text) {
-  QStringList parts = text.split(' ', QString::SkipEmptyParts);
-  QString initials;
-  for (int i = 0; i < parts.size() && initials.size() < 2; ++i) {
-    initials += parts.at(i).left(1).toUpper();
-  }
-
-  if (initials.size() < 2 && parts.size() == 1 && parts.first().size() > 1) {
-    initials = parts.first().left(2).toUpper();
-  }
-
-  if (initials.isEmpty()) {
-    return firstLetter(text);
-  }
-
-  return initials;
-}
-
-QString cleanSnowflake(const QVariant &value) {
-  return value.toString().trimmed();
-}
-
-void appendUniqueGuildId(QStringList *guildIds, const QString &guildId) {
-  QString cleanGuildId = guildId.trimmed();
-  if (guildIds == 0 || cleanGuildId.isEmpty() ||
-      guildIds->contains(cleanGuildId)) {
-    return;
-  }
-
-  guildIds->append(cleanGuildId);
-}
-
-bool readProtoVarint(const QByteArray &bytes, int *offset, quint64 *value) {
-  if (offset == 0 || value == 0 || *offset < 0 || *offset >= bytes.size()) {
-    return false;
-  }
-
-  quint64 result = 0;
-  int shift = 0;
-  while (*offset < bytes.size() && shift < 64) {
-    unsigned char ch = static_cast<unsigned char>(bytes.at(*offset));
-    ++(*offset);
-    result |= (static_cast<quint64>(ch & 0x7f) << shift);
-    if ((ch & 0x80) == 0) {
-      *value = result;
-      return true;
-    }
-    shift += 7;
-  }
-
-  return false;
-}
-
-bool readProtoLengthDelimited(const QByteArray &bytes, int *offset,
-                              QByteArray *value) {
-  quint64 length = 0;
-  if (offset == 0 || value == 0 || !readProtoVarint(bytes, offset, &length) ||
-      length > static_cast<quint64>(bytes.size() - *offset)) {
-    return false;
-  }
-
-  *value = bytes.mid(*offset, static_cast<int>(length));
-  *offset += static_cast<int>(length);
-  return true;
-}
-
-bool skipProtoField(const QByteArray &bytes, int *offset, int wireType) {
-  if (offset == 0) {
-    return false;
-  }
-
-  switch (wireType) {
-  case 0: {
-    quint64 ignored = 0;
-    return readProtoVarint(bytes, offset, &ignored);
-  }
-  case 1:
-    if (*offset + 8 > bytes.size()) {
-      return false;
-    }
-    *offset += 8;
-    return true;
-  case 2: {
-    QByteArray ignored;
-    return readProtoLengthDelimited(bytes, offset, &ignored);
-  }
-  case 5:
-    if (*offset + 4 > bytes.size()) {
-      return false;
-    }
-    *offset += 4;
-    return true;
-  default:
-    return false;
-  }
-}
-
-void appendGuildIdsFromProtoBytes(QStringList *orderedGuildIds,
-                                  const QByteArray &guildBytes) {
-  for (int i = 0; i + 7 < guildBytes.size(); i += 8) {
-    quint64 guildId = 0;
-    for (int j = 0; j < 8; ++j) {
-      guildId |= (static_cast<quint64>(
-                      static_cast<unsigned char>(guildBytes.at(i + j)))
-                  << (j * 8));
-    }
-    appendUniqueGuildId(orderedGuildIds, QString::number(guildId));
-  }
-}
-
-void appendGuildIdsFromProtoFolderItem(QStringList *orderedGuildIds,
-                                       const QByteArray &itemBytes) {
-  int offset = 0;
-  while (offset < itemBytes.size()) {
-    quint64 tag = 0;
-    if (!readProtoVarint(itemBytes, &offset, &tag)) {
-      return;
-    }
-
-    int fieldNumber = static_cast<int>(tag >> 3);
-    int wireType = static_cast<int>(tag & 0x07);
-
-    if (fieldNumber == kProtoFieldGuildFolderGuildIds && wireType == 2) {
-      QByteArray guildBytes;
-      if (!readProtoLengthDelimited(itemBytes, &offset, &guildBytes)) {
-        return;
-      }
-      appendGuildIdsFromProtoBytes(orderedGuildIds, guildBytes);
-    } else if (!skipProtoField(itemBytes, &offset, wireType)) {
-      return;
-    }
-  }
-}
-
-void appendGuildIdsFromUserSettingsProto(QStringList *orderedGuildIds,
-                                         const QString &base64Proto) {
-  QByteArray settings = QByteArray::fromBase64(base64Proto.toLatin1());
-  if (orderedGuildIds == 0 || settings.isEmpty()) {
-    return;
-  }
-
-  int offset = 0;
-  while (offset < settings.size()) {
-    quint64 tag = 0;
-    if (!readProtoVarint(settings, &offset, &tag)) {
-      return;
-    }
-
-    int fieldNumber = static_cast<int>(tag >> 3);
-    int wireType = static_cast<int>(tag & 0x07);
-
-    if (fieldNumber == kProtoFieldGuildFolders && wireType == 2) {
-      QByteArray guildFolders;
-      if (!readProtoLengthDelimited(settings, &offset, &guildFolders)) {
-        return;
-      }
-
-      int foldersOffset = 0;
-      while (foldersOffset < guildFolders.size()) {
-        quint64 folderTag = 0;
-        if (!readProtoVarint(guildFolders, &foldersOffset, &folderTag)) {
-          return;
-        }
-
-        int folderFieldNumber = static_cast<int>(folderTag >> 3);
-        int folderWireType = static_cast<int>(folderTag & 0x07);
-
-        if (folderFieldNumber == kProtoFieldGuildFolderItems &&
-            folderWireType == 2) {
-          QByteArray itemBytes;
-          if (!readProtoLengthDelimited(guildFolders, &foldersOffset,
-                                        &itemBytes)) {
-            return;
-          }
-          appendGuildIdsFromProtoFolderItem(orderedGuildIds, itemBytes);
-        } else if (!skipProtoField(guildFolders, &foldersOffset,
-                                   folderWireType)) {
-          return;
-        }
-      }
-    } else if (!skipProtoField(settings, &offset, wireType)) {
-      return;
-    }
-  }
-}
-
-bool snowflakeNewerThan(const QString &left, const QString &right) {
-  if (left.isEmpty()) {
-    return false;
-  }
-
-  if (right.isEmpty()) {
-    return true;
-  }
-
-  if (left.size() != right.size()) {
-    return left.size() > right.size();
-  }
-
-  return left > right;
-}
-
-bool positionShouldMoveBefore(const QVariantMap &left,
-                              const QVariantMap &right) {
-  if (!left.contains("position") || !right.contains("position")) {
-    return false;
-  }
-
-  int leftPosition = left.value("position").toInt();
-  int rightPosition = right.value("position").toInt();
-  return leftPosition < rightPosition;
-}
-
-bool dmShouldMoveBefore(const QVariantMap &left, const QVariantMap &right) {
-  return snowflakeNewerThan(cleanSnowflake(left.value("lastMessageId")),
-                            cleanSnowflake(right.value("lastMessageId")));
-}
-
-void stableSortItems(QVariantList *items,
-                     bool (*shouldMoveBefore)(const QVariantMap &left,
-                                              const QVariantMap &right)) {
-  if (items == 0 || items->size() < 2 || shouldMoveBefore == 0) {
-    return;
-  }
-
-  for (int i = 1; i < items->size(); ++i) {
-    QVariant current = items->at(i);
-    QVariantMap currentMap = current.toMap();
-    int j = i - 1;
-    while (j >= 0 && shouldMoveBefore(currentMap, items->at(j).toMap())) {
-      items->replace(j + 1, items->at(j));
-      --j;
-    }
-    items->replace(j + 1, current);
-  }
-}
 } // namespace
 
 DiscordClient::DiscordClient(QObject *parent)
-    : QObject(parent), m_store(0), m_restClient(this), m_dataClient(this),
-      m_avatarClient(this), m_avatarClient2(this), m_guildIconClient(this),
-      m_guildIconClient2(this), m_gateway(this), m_visibleDmChannelCount(0),
-      m_visibleGuildChannelCount(0), m_loadingGuilds(false),
-      m_loadingDmChannels(false), m_loadingGuildChannels(false),
-      m_guildsHasMore(true), m_dmChannelsHasMore(true),
-      m_guildChannelsHasMore(false), m_loggedIn(false), m_busy(false),
-      m_statusText("Disconnected") {
-  connect(&m_restClient, SIGNAL(loginSucceeded(QVariantMap)), this,
-          SLOT(onRestLoginSucceeded(QVariantMap)));
-  connect(&m_restClient, SIGNAL(loginFailed(QString)), this,
-          SLOT(onRestLoginFailed(QString)));
-  connect(&m_dataClient, SIGNAL(guildsLoaded(QVariantList)), this,
-          SLOT(onGuildsLoaded(QVariantList)));
-  connect(&m_dataClient, SIGNAL(dmChannelsLoaded(QVariantList)), this,
-          SLOT(onDmChannelsLoaded(QVariantList)));
-  connect(&m_dataClient, SIGNAL(guildChannelsLoaded(QString, QVariantList)),
-          this, SLOT(onGuildChannelsLoaded(QString, QVariantList)));
-  connect(&m_dataClient, SIGNAL(requestFailed(QString)), this,
-          SLOT(onDataRequestFailed(QString)));
-  connect(&m_avatarClient, SIGNAL(avatarDownloaded(QString, QString)), this,
-          SLOT(onAvatarDownloaded(QString, QString)));
-  connect(&m_avatarClient2, SIGNAL(avatarDownloaded(QString, QString)), this,
-          SLOT(onAvatarDownloaded(QString, QString)));
-  connect(&m_avatarClient, SIGNAL(avatarDownloadFailed(QString, QString)), this,
-          SLOT(onAvatarDownloadFailed(QString, QString)));
-  connect(&m_avatarClient2, SIGNAL(avatarDownloadFailed(QString, QString)),
-          this, SLOT(onAvatarDownloadFailed(QString, QString)));
-  connect(&m_guildIconClient, SIGNAL(guildIconDownloaded(QString, QString)),
-          this, SLOT(onGuildIconDownloaded(QString, QString)));
-  connect(&m_guildIconClient2, SIGNAL(guildIconDownloaded(QString, QString)),
-          this, SLOT(onGuildIconDownloaded(QString, QString)));
-  connect(&m_guildIconClient, SIGNAL(guildIconDownloadFailed(QString, QString)),
-          this, SLOT(onGuildIconDownloadFailed(QString, QString)));
-  connect(&m_guildIconClient2,
-          SIGNAL(guildIconDownloadFailed(QString, QString)), this,
-          SLOT(onGuildIconDownloadFailed(QString, QString)));
-  connect(&m_gateway, SIGNAL(dispatchReceived(QString, QVariantMap)), this,
-          SLOT(onGatewayDispatch(QString, QVariantMap)));
+    : QObject(parent), m_store(0), m_networkThread(0), m_networkWorker(0),
+      m_visibleDmChannelCount(0), m_visibleGuildChannelCount(0),
+      m_loadingGuilds(false), m_loadingDmChannels(false),
+      m_loadingGuildChannels(false), m_guildsHasMore(true),
+      m_dmChannelsHasMore(true), m_guildChannelsHasMore(false),
+      m_loggedIn(false), m_busy(false), m_statusText("Disconnected") {
+  initializeNetworkWorker();
 
   QSettings settings;
   m_token = settings.value("auth/token").toString();
 }
 
 DiscordClient::DiscordClient(AppStore *store, QObject *parent)
-    : QObject(parent), m_store(store), m_restClient(this), m_dataClient(this),
-      m_avatarClient(this), m_avatarClient2(this), m_guildIconClient(this),
-      m_guildIconClient2(this), m_gateway(this), m_visibleDmChannelCount(0),
-      m_visibleGuildChannelCount(0), m_loadingGuilds(false),
-      m_loadingDmChannels(false), m_loadingGuildChannels(false),
-      m_guildsHasMore(true), m_dmChannelsHasMore(true),
-      m_guildChannelsHasMore(false), m_loggedIn(false), m_busy(false),
-      m_statusText("Disconnected") {
-  connect(&m_restClient, SIGNAL(loginSucceeded(QVariantMap)), this,
-          SLOT(onRestLoginSucceeded(QVariantMap)));
-  connect(&m_restClient, SIGNAL(loginFailed(QString)), this,
-          SLOT(onRestLoginFailed(QString)));
-  connect(&m_dataClient, SIGNAL(guildsLoaded(QVariantList)), this,
-          SLOT(onGuildsLoaded(QVariantList)));
-  connect(&m_dataClient, SIGNAL(dmChannelsLoaded(QVariantList)), this,
-          SLOT(onDmChannelsLoaded(QVariantList)));
-  connect(&m_dataClient, SIGNAL(guildChannelsLoaded(QString, QVariantList)),
-          this, SLOT(onGuildChannelsLoaded(QString, QVariantList)));
-  connect(&m_dataClient, SIGNAL(requestFailed(QString)), this,
-          SLOT(onDataRequestFailed(QString)));
-  connect(&m_avatarClient, SIGNAL(avatarDownloaded(QString, QString)), this,
-          SLOT(onAvatarDownloaded(QString, QString)));
-  connect(&m_avatarClient2, SIGNAL(avatarDownloaded(QString, QString)), this,
-          SLOT(onAvatarDownloaded(QString, QString)));
-  connect(&m_avatarClient, SIGNAL(avatarDownloadFailed(QString, QString)), this,
-          SLOT(onAvatarDownloadFailed(QString, QString)));
-  connect(&m_avatarClient2, SIGNAL(avatarDownloadFailed(QString, QString)),
-          this, SLOT(onAvatarDownloadFailed(QString, QString)));
-  connect(&m_guildIconClient, SIGNAL(guildIconDownloaded(QString, QString)),
-          this, SLOT(onGuildIconDownloaded(QString, QString)));
-  connect(&m_guildIconClient2, SIGNAL(guildIconDownloaded(QString, QString)),
-          this, SLOT(onGuildIconDownloaded(QString, QString)));
-  connect(&m_guildIconClient, SIGNAL(guildIconDownloadFailed(QString, QString)),
-          this, SLOT(onGuildIconDownloadFailed(QString, QString)));
-  connect(&m_guildIconClient2,
-          SIGNAL(guildIconDownloadFailed(QString, QString)), this,
-          SLOT(onGuildIconDownloadFailed(QString, QString)));
-  connect(&m_gateway, SIGNAL(dispatchReceived(QString, QVariantMap)), this,
-          SLOT(onGatewayDispatch(QString, QVariantMap)));
+    : QObject(parent), m_store(store), m_networkThread(0), m_networkWorker(0),
+      m_visibleDmChannelCount(0), m_visibleGuildChannelCount(0),
+      m_loadingGuilds(false), m_loadingDmChannels(false),
+      m_loadingGuildChannels(false), m_guildsHasMore(true),
+      m_dmChannelsHasMore(true), m_guildChannelsHasMore(false),
+      m_loggedIn(false), m_busy(false), m_statusText("Disconnected") {
+  initializeNetworkWorker();
 
   QSettings settings;
   m_token = settings.value("auth/token").toString();
 }
 
-DiscordClient::~DiscordClient() {
-  m_restClient.cancel();
-  m_dataClient.cancel();
-  m_avatarClient.cancel();
-  m_avatarClient2.cancel();
-  m_guildIconClient.cancel();
-  m_guildIconClient2.cancel();
-  m_gateway.disconnectFromGateway();
+DiscordClient::~DiscordClient() { shutdownNetworkWorker(); }
+
+void DiscordClient::initializeNetworkWorker() {
+  qRegisterMetaType<QVariantMap>("QVariantMap");
+  qRegisterMetaType<QVariantList>("QVariantList");
+
+  if (m_networkThread != 0 || m_networkWorker != 0) {
+    return;
+  }
+
+  m_networkThread = new QThread(this);
+  m_networkWorker = new DiscordNetworkWorker();
+  m_networkWorker->moveToThread(m_networkThread);
+
+  connect(m_networkThread, SIGNAL(finished()), m_networkWorker,
+          SLOT(deleteLater()));
+  connect(m_networkWorker, SIGNAL(loginSucceeded(QVariantMap)), this,
+          SLOT(onRestLoginSucceeded(QVariantMap)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(loginFailed(QString)), this,
+          SLOT(onRestLoginFailed(QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(guildsLoaded(QVariantList)), this,
+          SLOT(onGuildsLoaded(QVariantList)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(dmChannelsLoaded(QVariantList)), this,
+          SLOT(onDmChannelsLoaded(QVariantList)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(guildChannelsLoaded(QString, QVariantList)),
+          this, SLOT(onGuildChannelsLoaded(QString, QVariantList)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(requestFailed(QString)), this,
+          SLOT(onDataRequestFailed(QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(avatarDownloaded(QString, QString)), this,
+          SLOT(onAvatarDownloaded(QString, QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(avatarDownloadFailed(QString, QString)), this,
+          SLOT(onAvatarDownloadFailed(QString, QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(guildIconDownloaded(QString, QString)), this,
+          SLOT(onGuildIconDownloaded(QString, QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(guildIconDownloadFailed(QString, QString)),
+          this, SLOT(onGuildIconDownloadFailed(QString, QString)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker,
+          SIGNAL(gatewayDispatchReceived(QString, QVariantMap)), this,
+          SLOT(onGatewayDispatch(QString, QVariantMap)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(cancelAllFinished()), m_networkThread,
+          SLOT(quit()), Qt::DirectConnection);
+
+  m_networkThread->start();
+}
+
+void DiscordClient::shutdownNetworkWorker() {
+  if (m_networkWorker != 0 && m_networkThread != 0 &&
+      m_networkThread->isRunning()) {
+    QMetaObject::invokeMethod(m_networkWorker, "cancelAll",
+                              Qt::QueuedConnection);
+    m_networkThread->wait();
+  } else if (m_networkWorker != 0) {
+    delete m_networkWorker;
+  }
+
+  m_networkWorker = 0;
+
+  if (m_networkThread != 0) {
+    if (!m_networkThread->isFinished()) {
+      m_networkThread->quit();
+      m_networkThread->wait();
+    }
+    delete m_networkThread;
+    m_networkThread = 0;
+  }
 }
 
 void DiscordClient::login(const QString &token) {
@@ -376,7 +128,14 @@ void DiscordClient::login(const QString &token) {
   setStatusText("Checking Discord token...");
 
   m_token = trimmedToken;
-  m_restClient.loginWithToken(trimmedToken);
+  if (m_networkWorker == 0 || m_networkThread == 0) {
+    initializeNetworkWorker();
+  }
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "loginWithToken",
+                              Qt::QueuedConnection,
+                              Q_ARG(QString, trimmedToken));
+  }
 }
 
 void DiscordClient::autoLogin() {
@@ -390,13 +149,7 @@ void DiscordClient::autoLogin() {
 
 void DiscordClient::logout() {
   clearSavedToken();
-  m_restClient.cancel();
-  m_dataClient.cancel();
-  m_avatarClient.cancel();
-  m_avatarClient2.cancel();
-  m_guildIconClient.cancel();
-  m_guildIconClient2.cancel();
-  m_gateway.disconnectFromGateway();
+  shutdownNetworkWorker();
   m_pendingAvatars.clear();
   m_pendingGuildIcons.clear();
   m_loadingAvatarUserId.clear();
@@ -459,7 +212,12 @@ void DiscordClient::loadGuilds() {
   m_loadingGuilds = true;
   updateDataLoading();
   setStatusText("Loading servers...");
-  m_dataClient.fetchGuilds(m_token, kGuildPageSize, m_lastGuildId);
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "fetchGuilds",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(int, kGuildPageSize),
+                              Q_ARG(QString, m_lastGuildId));
+  }
 }
 
 void DiscordClient::loadGuildIcon(const QString &guildId) {
@@ -506,7 +264,12 @@ void DiscordClient::loadMoreDmChannels() {
   m_loadingDmChannels = true;
   updateDataLoading();
   setStatusText("Loading DMs...");
-  m_dataClient.fetchDmChannels(m_token, kPageSize, m_lastDmChannelId);
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "fetchDmChannels",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(int, kPageSize),
+                              Q_ARG(QString, m_lastDmChannelId));
+  }
 }
 
 void DiscordClient::loadDmAvatar(const QString &channelId) {
@@ -548,8 +311,12 @@ void DiscordClient::loadGuildChannels(const QString &guildId) {
   m_loadingGuildChannels = true;
   updateDataLoading();
   setStatusText("Loading channels...");
-  m_dataClient.fetchGuildChannels(m_token, m_selectedGuildId, kPageSize,
-                                  QString());
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "fetchGuildChannels",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(QString, m_selectedGuildId),
+                              Q_ARG(int, kPageSize), Q_ARG(QString, QString()));
+  }
 }
 
 void DiscordClient::loadMoreGuildChannels() {
@@ -628,7 +395,11 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
   setBusy(false);
   setLoggedIn(true);
   setStatusText("Connected");
-  m_gateway.connectToGateway(m_token);
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token));
+  }
+  loadGuilds();
   emit loginSucceeded();
 }
 
@@ -636,7 +407,10 @@ void DiscordClient::onRestLoginFailed(const QString &message) {
   qDebug() << "[discord-client] REST login failed" << message;
   setBusy(false);
   setLoggedIn(false);
-  m_gateway.disconnectFromGateway();
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "disconnectGateway",
+                              Qt::QueuedConnection);
+  }
   setStatusText(message);
   emit loginFailed(message);
 }
@@ -654,7 +428,12 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
   if (guilds.size() >= kGuildPageSize && !m_lastGuildId.isEmpty()) {
     m_guildsHasMore = true;
     setStatusText("Loading servers...");
-    m_dataClient.fetchGuilds(m_token, kGuildPageSize, m_lastGuildId);
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "fetchGuilds",
+                                Qt::QueuedConnection, Q_ARG(QString, m_token),
+                                Q_ARG(int, kGuildPageSize),
+                                Q_ARG(QString, m_lastGuildId));
+    }
     return;
   }
 
@@ -682,7 +461,8 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
       m_allDmChannels.append(item);
     }
   }
-  stableSortItems(&m_allDmChannels, dmShouldMoveBefore);
+  DiscordUtils::stableSortItems(&m_allDmChannels,
+                                DiscordUtils::dmShouldMoveBefore);
 
   m_dmChannelsHasMore = !m_allDmChannels.isEmpty();
   loadMoreDmChannels();
@@ -891,10 +671,20 @@ void DiscordClient::loadCurrentUserAvatar(const DiscordUser &user) {
 
   if (m_loadingAvatarUserId.isEmpty()) {
     m_loadingAvatarUserId = user.id;
-    m_avatarClient.downloadAvatar(user.id, user.avatarHash, path);
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "downloadAvatar",
+                                Qt::QueuedConnection, Q_ARG(QString, user.id),
+                                Q_ARG(QString, user.avatarHash),
+                                Q_ARG(QString, path));
+    }
   } else if (m_loadingAvatarUserId2.isEmpty()) {
     m_loadingAvatarUserId2 = user.id;
-    m_avatarClient2.downloadAvatar(user.id, user.avatarHash, path);
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "downloadAvatar2",
+                                Qt::QueuedConnection, Q_ARG(QString, user.id),
+                                Q_ARG(QString, user.avatarHash),
+                                Q_ARG(QString, path));
+    }
   } else {
     QVariantMap request;
     request["channelId"] = QString();
@@ -955,18 +745,26 @@ void DiscordClient::loadNextAvatar() {
     QVariantMap request = m_pendingAvatars.dequeue();
     m_loadingAvatarUserId = request.value("userId").toString();
     m_queuedAvatarUserIds.removeAll(m_loadingAvatarUserId);
-    m_avatarClient.downloadAvatar(m_loadingAvatarUserId,
-                                  request.value("avatarHash").toString(),
-                                  request.value("path").toString());
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(
+          m_networkWorker, "downloadAvatar", Qt::QueuedConnection,
+          Q_ARG(QString, m_loadingAvatarUserId),
+          Q_ARG(QString, request.value("avatarHash").toString()),
+          Q_ARG(QString, request.value("path").toString()));
+    }
   }
 
   if (m_loadingAvatarUserId2.isEmpty() && !m_pendingAvatars.isEmpty()) {
     QVariantMap request = m_pendingAvatars.dequeue();
     m_loadingAvatarUserId2 = request.value("userId").toString();
     m_queuedAvatarUserIds.removeAll(m_loadingAvatarUserId2);
-    m_avatarClient2.downloadAvatar(m_loadingAvatarUserId2,
-                                   request.value("avatarHash").toString(),
-                                   request.value("path").toString());
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(
+          m_networkWorker, "downloadAvatar2", Qt::QueuedConnection,
+          Q_ARG(QString, m_loadingAvatarUserId2),
+          Q_ARG(QString, request.value("avatarHash").toString()),
+          Q_ARG(QString, request.value("path").toString()));
+    }
   }
 }
 
@@ -1026,18 +824,26 @@ void DiscordClient::loadNextGuildIcon() {
     QVariantMap request = m_pendingGuildIcons.dequeue();
     m_loadingGuildIconId = request.value("guildId").toString();
     m_queuedGuildIconIds.removeAll(m_loadingGuildIconId);
-    m_guildIconClient.downloadGuildIcon(m_loadingGuildIconId,
-                                        request.value("iconHash").toString(),
-                                        request.value("path").toString());
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(
+          m_networkWorker, "downloadGuildIcon", Qt::QueuedConnection,
+          Q_ARG(QString, m_loadingGuildIconId),
+          Q_ARG(QString, request.value("iconHash").toString()),
+          Q_ARG(QString, request.value("path").toString()));
+    }
   }
 
   if (m_loadingGuildIconId2.isEmpty() && !m_pendingGuildIcons.isEmpty()) {
     QVariantMap request = m_pendingGuildIcons.dequeue();
     m_loadingGuildIconId2 = request.value("guildId").toString();
     m_queuedGuildIconIds.removeAll(m_loadingGuildIconId2);
-    m_guildIconClient2.downloadGuildIcon(m_loadingGuildIconId2,
-                                         request.value("iconHash").toString(),
-                                         request.value("path").toString());
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(
+          m_networkWorker, "downloadGuildIcon2", Qt::QueuedConnection,
+          Q_ARG(QString, m_loadingGuildIconId2),
+          Q_ARG(QString, request.value("iconHash").toString()),
+          Q_ARG(QString, request.value("path").toString()));
+    }
   }
 }
 
@@ -1077,7 +883,7 @@ QVariantMap DiscordClient::guildToItem(const QVariantMap &guild) const {
   if (guild.contains("position")) {
     item["position"] = guild.value("position").toInt();
   }
-  item["initials"] = firstTwoWordLetters(name);
+  item["initials"] = DiscordUtils::firstTwoWordLetters(name);
   item["iconHash"] = iconHash;
   item["icon"] = QString();
   if (!guildId.isEmpty() && !iconHash.isEmpty()) {
@@ -1132,12 +938,12 @@ bool DiscordClient::applyGuildOrderFromGatewayPayload(
     const QVariantMap &payload) {
   QStringList orderedGuildIds;
 
-  appendGuildIdsFromUserSettingsProto(
+  DiscordUtils::appendGuildIdsFromUserSettingsProto(
       &orderedGuildIds, payload.value("user_settings_proto").toString());
 
   QVariantMap settings = payload.value("settings").toMap();
-  appendGuildIdsFromUserSettingsProto(&orderedGuildIds,
-                                      settings.value("proto").toString());
+  DiscordUtils::appendGuildIdsFromUserSettingsProto(
+      &orderedGuildIds, settings.value("proto").toString());
 
   QVariantList folders = payload.value("guild_folders").toList();
   if (folders.isEmpty()) {
@@ -1149,7 +955,8 @@ bool DiscordClient::applyGuildOrderFromGatewayPayload(
     QVariantMap folder = folders.at(i).toMap();
     QVariantList guildIds = folder.value("guild_ids").toList();
     for (int j = 0; j < guildIds.size(); ++j) {
-      appendUniqueGuildId(&orderedGuildIds, guildIds.at(j).toString());
+      DiscordUtils::appendUniqueGuildId(&orderedGuildIds,
+                                        guildIds.at(j).toString());
     }
   }
 
@@ -1237,7 +1044,7 @@ QVariantMap DiscordClient::dmChannelToItem(const QVariantMap &channel) const {
   item["id"] = channel.value("id").toString();
   item["name"] = name;
   item["lastMessageId"] = channel.value("last_message_id").toString();
-  item["initials"] = firstLetter(name);
+  item["initials"] = DiscordUtils::firstLetter(name);
   item["avatarColor"] = "#5865F2";
   item["avatarUserId"] = recipient.value("id").toString();
   item["avatarHash"] = recipient.value("avatar").toString();
@@ -1309,8 +1116,10 @@ QVariantList DiscordClient::sortedAccessibleGuildChannels(
     }
   }
 
-  stableSortItems(&categories, positionShouldMoveBefore);
-  stableSortItems(&rootChannels, positionShouldMoveBefore);
+  DiscordUtils::stableSortItems(&categories,
+                                DiscordUtils::positionShouldMoveBefore);
+  DiscordUtils::stableSortItems(&rootChannels,
+                                DiscordUtils::positionShouldMoveBefore);
 
   QVariantList result;
   int rootIndex = 0;
@@ -1318,7 +1127,8 @@ QVariantList DiscordClient::sortedAccessibleGuildChannels(
     QVariantMap item = categories.at(i).toMap();
 
     while (rootIndex < rootChannels.size() &&
-           positionShouldMoveBefore(rootChannels.at(rootIndex).toMap(), item)) {
+           DiscordUtils::positionShouldMoveBefore(
+               rootChannels.at(rootIndex).toMap(), item)) {
       result.append(rootChannels.at(rootIndex));
       ++rootIndex;
     }
@@ -1327,7 +1137,8 @@ QVariantList DiscordClient::sortedAccessibleGuildChannels(
 
     QVariantList categoryChannels =
         channelsByCategory.value(item.value("id").toString());
-    stableSortItems(&categoryChannels, positionShouldMoveBefore);
+    DiscordUtils::stableSortItems(&categoryChannels,
+                                  DiscordUtils::positionShouldMoveBefore);
     for (int j = 0; j < categoryChannels.size(); ++j) {
       result.append(categoryChannels.at(j));
     }
@@ -1398,8 +1209,10 @@ void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
     if (!orderChanged) {
       sortGuilds();
     }
-    stableSortItems(&m_allDmChannels, dmShouldMoveBefore);
-    stableSortItems(&m_dmChannels, dmShouldMoveBefore);
+    DiscordUtils::stableSortItems(&m_allDmChannels,
+                                  DiscordUtils::dmShouldMoveBefore);
+    DiscordUtils::stableSortItems(&m_dmChannels,
+                                  DiscordUtils::dmShouldMoveBefore);
     if (m_store) {
       m_store->setGuilds(m_guilds);
       m_store->setDmChannels(m_dmChannels);

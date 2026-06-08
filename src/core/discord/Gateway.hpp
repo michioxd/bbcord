@@ -48,6 +48,7 @@ private:
   void sendHeartbeat();
   void sendIdentify();
   void sendJsonText(const QString &text);
+  void initializeTls(struct mg_connection *connection);
   void setState(ConnectionState state);
   void resetSession();
 
