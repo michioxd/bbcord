@@ -79,6 +79,7 @@ void DiscordGateway::disconnectFromGateway() {
       mg_ws_send(m_connection, "", 0, WEBSOCKET_OP_CLOSE);
     }
 
+    m_connection->fn_data = NULL;
     m_connection->is_closing = 1;
 
     for (int i = 0; i < 10 && m_connection != NULL; ++i) {
