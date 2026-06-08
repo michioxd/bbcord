@@ -73,6 +73,16 @@ private:
   void clearSavedToken();
   void loadCurrentUserAvatar(const DiscordUser &user);
   void loadGuilds();
+  void loadBootstrapCache();
+  void saveGuildsCache() const;
+  void saveDmChannelsCache() const;
+  void clearBootstrapCache() const;
+  QString guildsCachePath() const;
+  QString dmChannelsCachePath() const;
+  bool loadCacheFile(const QString &path, QVariantMap *root) const;
+  bool saveCacheFile(const QString &path, const QVariantMap &root) const;
+  QVariantList dmChannelsForCache() const;
+  QVariantList dmChannelsFromCache(const QVariantList &channels) const;
   void queueDmAvatar(const QString &channelId, const QString &userId,
                      const QString &avatarHash);
   void loadNextAvatar();
@@ -146,6 +156,7 @@ private:
   bool m_busy;
   bool m_gatewayUiUpdateQueued;
   bool m_pendingDmUiUpdate;
+  bool m_bootstrapCacheLoaded;
   QString m_statusText;
 };
 

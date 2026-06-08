@@ -213,14 +213,7 @@ Page {
     }
 
     onCreationCompleted: {
-        serverModel.append({
-            "type": "dm",
-            "name": "Home",
-            "id": "home",
-            "icon": "asset:///images/icons/first.png",
-            "mentionCount": 0,
-            "unread": false
-        });
+        resetServers();
 
         loadDmList();
         appStore.guildIconChanged.connect(updateServerIcon);
