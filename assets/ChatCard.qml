@@ -19,6 +19,7 @@ Page {
     property variant avatarSourceCache: ({})
     property variant requestedAvatarIds: ({})
     property variant failedAttachmentImages: ({})
+    property variant loadingAttachmentImages: ({})
     property string replyMessageId: ""
     property string replyAuthor: ""
     property string replyMessage: ""
@@ -524,6 +525,7 @@ Page {
         bubble.replyAuthor = item.replyAuthor;
         bubble.replyMessage = item.replyMessage;
         bubble.image = item.image;
+        bubble.imageLoading = item.imageLoading;
         bubble.imageLoadFailed = item.imageLoadFailed;
         bubble.imageWidth = item.imageWidth;
         bubble.imageHeight = item.imageHeight;
@@ -554,6 +556,10 @@ Page {
             chatPage.loadAttachmentImage(url);
         });
 
+        if (bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "" && !bubble.imageLoadFailed) {
+            chatPage.loadAttachmentImage(bubble.attachmentUrl);
+        }
+
     }
 
     function messageFromBubble(bubble) {
@@ -575,7 +581,8 @@ Page {
         var attachmentUrl = message.attachmentUrl || "";
         var attachmentIsImage = message.attachmentIsImage == true;
         var imageSource = message.image || "";
-        var imageLoadFailed = attachmentIsImage && attachmentUrl !== "";
+        var imageLoadFailed = attachmentIsImage && attachmentUrl !== "" && failedAttachmentImages[attachmentUrl] == true;
+        var imageLoading = attachmentIsImage && attachmentUrl !== "" && loadingAttachmentImages[attachmentUrl] == true;
 
         if (isRemoteImageSource(imageSource)) {
             if (attachmentUrl === "") {
@@ -585,8 +592,14 @@ Page {
         }
 
         if (attachmentIsImage) {
-            imageSource = "";
-            imageLoadFailed = true;
+            if (attachmentUrl !== "" && !isRemoteImageSource(attachmentUrl)) {
+                imageSource = attachmentUrl;
+                imageLoading = false;
+                imageLoadFailed = false;
+            } else {
+                imageSource = cachedAttachmentImageSource(attachmentUrl);
+                imageLoading = imageSource === "" && !imageLoadFailed;
+            }
         }
 
         if (authorId !== "") {
@@ -619,6 +632,7 @@ Page {
             "attachmentUrl": attachmentUrl,
             "attachmentName": message.attachmentName || "",
             "attachmentIsImage": attachmentIsImage,
+            "imageLoading": imageLoading,
             "imageLoadFailed": imageLoadFailed,
             "pending": message.pending == true,
             "failed": message.failed == true,
@@ -650,6 +664,19 @@ Page {
 
         var lower = source.toLowerCase();
         return lower.indexOf("https://") == 0 || lower.indexOf("http://") == 0;
+    }
+
+    function cachedAttachmentImageSource(url) {
+        if (url === "") {
+            return "";
+        }
+
+        try {
+            var imageSource = chatController.cachedImageSource(url);
+            return isRemoteImageSource(imageSource) ? "" : imageSource;
+        } catch (e) {
+            return "";
+        }
     }
 
     function regroupVisibleMessages() {
@@ -849,18 +876,20 @@ Page {
             return;
         }
 
-        var imageSource = "";
-        try {
-            imageSource = chatController.cachedImageSource(url);
-        } catch (e) {
-            imageSource = "";
+        if (failedAttachmentImages[url] == true) {
+            markAttachmentImageFailed(url);
+            return;
         }
 
-        if (imageSource !== "" && !isRemoteImageSource(imageSource)) {
+        var imageSource = "";
+        imageSource = cachedAttachmentImageSource(url);
+
+        if (imageSource !== "") {
             updateCachedAttachmentImage(url, imageSource);
             return;
         }
 
+        beginAttachmentImageLoading(url);
         try {
             chatController.requestCachedImage(url);
         } catch (e2) {
@@ -873,25 +902,40 @@ Page {
             return;
         }
 
+        loadingAttachmentImages[url] = false;
         for (var i = 0; i < messagesContainer.controls.length; ++i) {
             var bubble = messagesContainer.controls[i];
             if (bubble.attachmentUrl == url) {
+                bubble.imageLoading = false;
                 bubble.imageLoadFailed = false;
                 bubble.image = imageSource;
             }
         }
     }
 
-    function requestVisibleImagePreviews() {
-        return;
+    function beginAttachmentImageLoading(url) {
+        if (url === "") {
+            return;
+        }
 
+        loadingAttachmentImages[url] = true;
+        for (var i = 0; i < messagesContainer.controls.length; ++i) {
+            var bubble = messagesContainer.controls[i];
+            if (bubble.attachmentUrl == url && bubble.image === "") {
+                bubble.imageLoading = true;
+                bubble.imageLoadFailed = false;
+            }
+        }
+    }
+
+    function requestVisibleImagePreviews() {
         var requested = 0;
 
         for (var i = messagesContainer.controls.length - 1; i >= 0 && requested < maxAutoImagePreviews; --i) {
             var bubble = messagesContainer.controls[i];
             if (bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "" && !bubble.imageLoadFailed) {
                 try {
-                    chatController.requestCachedImage(bubble.attachmentUrl);
+                    loadAttachmentImage(bubble.attachmentUrl);
                     ++requested;
                 } catch (e) {
                     bubble.imageLoadFailed = true;
@@ -907,10 +951,12 @@ Page {
         }
 
         failedAttachmentImages[url] = true;
+        loadingAttachmentImages[url] = false;
         for (var i = 0; i < messagesContainer.controls.length; ++i) {
             var bubble = messagesContainer.controls[i];
             if (bubble.attachmentUrl == url) {
                 bubble.image = "";
+                bubble.imageLoading = false;
                 bubble.imageLoadFailed = true;
             }
         }
@@ -918,6 +964,7 @@ Page {
 
     function cancelBubbleImageRequest(bubble) {
         if (bubble && bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "") {
+            loadingAttachmentImages[bubble.attachmentUrl] = false;
             chatController.cancelCachedImage(bubble.attachmentUrl);
         }
     }

@@ -28,6 +28,7 @@ Container {
     property bool pending: false
     property bool failed: false
     property bool edited: false
+    property bool imageLoading: false
     property bool imageLoadFailed: false
     property bool previewVisible: false
     property real maxImageWidthDu: 42.0
@@ -226,7 +227,7 @@ Container {
         }
 
         Container {
-            visible: root.image !== ""
+            visible: root.image !== "" || root.imageLoading
             preferredWidth: ui.du(root.displayImageWidth())
             preferredHeight: ui.du(root.displayImageHeight())
             maxWidth: ui.du(root.maxImageWidthDu)
@@ -236,25 +237,29 @@ Container {
             layout: DockLayout {}
 
             ImageView {
+                visible: root.image !== ""
                 imageSource: root.image
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
                 scalingMethod: ScalingMethod.AspectFit
             }
+
+            ActivityIndicator {
+                visible: root.imageLoading && root.image === ""
+                running: root.imageLoading && root.image === ""
+                horizontalAlignment: HorizontalAlignment.Center
+                verticalAlignment: VerticalAlignment.Center
+            }
         }
 
         Button {
             visible: root.attachmentUrl !== "" && (!root.attachmentIsImage || root.imageLoadFailed)
-            text: (root.attachmentIsImage ? qsTr("Load image: ") : qsTr("Open attachment: ")) + root.attachmentName
+            text: (root.attachmentIsImage ? qsTr("Open image: ") : qsTr("Open attachment: ")) + root.attachmentName
             topMargin: ui.du(1.0)
             horizontalAlignment: HorizontalAlignment.Left
 
             onClicked: {
-                if (root.attachmentIsImage && root.image === "") {
-                    root.attachmentImageLoadRequested(root.attachmentUrl);
-                } else {
-                    root.attachmentOpenRequested(root.attachmentUrl);
-                }
+                root.attachmentOpenRequested(root.attachmentUrl);
             }
         }
     }
