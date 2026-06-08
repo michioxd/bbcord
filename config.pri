@@ -82,7 +82,9 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/AvatarCacheWorker.cpp) \
         $$quote($$BASEDIR/src/core/Client.cpp) \
         $$quote($$BASEDIR/src/core/client/AvatarManager.cpp) \
+        $$quote($$BASEDIR/src/core/client/AvatarState.cpp) \
         $$quote($$BASEDIR/src/core/client/CacheManager.cpp) \
+        $$quote($$BASEDIR/src/core/client/ClientState.cpp) \
         $$quote($$BASEDIR/src/core/client/GatewayHandler.cpp) \
         $$quote($$BASEDIR/src/core/client/ItemMapper.cpp) \
         $$quote($$BASEDIR/src/core/client/SortUtils.cpp) \
@@ -105,7 +107,9 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/AvatarCacheWorker.hpp) \
         $$quote($$BASEDIR/src/core/Client.hpp) \
         $$quote($$BASEDIR/src/core/client/AvatarManager.hpp) \
+        $$quote($$BASEDIR/src/core/client/AvatarState.hpp) \
         $$quote($$BASEDIR/src/core/client/CacheManager.hpp) \
+        $$quote($$BASEDIR/src/core/client/ClientState.hpp) \
         $$quote($$BASEDIR/src/core/client/GatewayHandler.hpp) \
         $$quote($$BASEDIR/src/core/client/ItemMapper.hpp) \
         $$quote($$BASEDIR/src/core/client/SortUtils.hpp) \

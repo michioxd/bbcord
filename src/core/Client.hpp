@@ -8,6 +8,8 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "client/AvatarState.hpp"
+#include "client/ClientState.hpp"
 #include "models/Models.hpp"
 
 class AppStore;
@@ -122,52 +124,55 @@ private:
   ItemMapper *m_itemMapper;
   SortUtils *m_sortUtils;
 
-  QQueue<QVariantMap> m_pendingAvatars;
-  QQueue<QVariantMap> m_pendingGuildIcons;
-  QVariantMap m_avatarCacheRequests;
-  QVariantMap m_guildIconCacheRequests;
-  QVariantMap m_avatarSourcesByUserId;
-  QVariantMap m_dmChannelsById;
-  QVariantMap m_dmChannelIdsByRecipientId;
-  QVariantMap m_allDmChannelIndexById;
-  QVariantMap m_visibleDmChannelIndexById;
-  QString m_loadingAvatarUserId;
-  QString m_loadingAvatarUserId2;
-  QString m_loadingGuildIconId;
-  QString m_loadingGuildIconId2;
-  QStringList m_queuedAvatarUserIds;
-  QStringList m_loadedAvatarUserIds;
-  QStringList m_queuedGuildIconIds;
-  QStringList m_loadedGuildIconIds;
-  QStringList m_orderedGuildIds;
-  QVariantMap m_dmPresenceByUserId;
+  ClientState m_state;
+  AvatarState m_avatarState;
+
+  QQueue<QVariantMap> &m_pendingAvatars;
+  QQueue<QVariantMap> &m_pendingGuildIcons;
+  QVariantMap &m_avatarCacheRequests;
+  QVariantMap &m_guildIconCacheRequests;
+  QVariantMap &m_avatarSourcesByUserId;
+  QVariantMap &m_dmChannelsById;
+  QVariantMap &m_dmChannelIdsByRecipientId;
+  QVariantMap &m_allDmChannelIndexById;
+  QVariantMap &m_visibleDmChannelIndexById;
+  QString &m_loadingAvatarUserId;
+  QString &m_loadingAvatarUserId2;
+  QString &m_loadingGuildIconId;
+  QString &m_loadingGuildIconId2;
+  QStringList &m_queuedAvatarUserIds;
+  QStringList &m_loadedAvatarUserIds;
+  QStringList &m_queuedGuildIconIds;
+  QStringList &m_loadedGuildIconIds;
+  QStringList &m_orderedGuildIds;
+  QVariantMap &m_dmPresenceByUserId;
   QString m_token;
-  QString m_lastGuildId;
-  QString m_lastDmChannelId;
-  QString m_selectedGuildId;
-  QVariantList m_guilds;
-  QVariantList m_allDmChannels;
-  QVariantList m_dmChannels;
-  QVariantList m_allGuildChannels;
-  QVariantList m_visibleGuildChannels;
-  QVariantMap m_pendingMentionCountsByGuildId;
-  QStringList m_pendingUnreadGuildIds;
-  QStringList m_pendingUnreadChannelIds;
-  QStringList m_pendingDmPresenceUserIds;
-  int m_visibleDmChannelCount;
-  int m_visibleGuildChannelCount;
-  bool m_loadingGuilds;
-  bool m_loadingDmChannels;
-  bool m_loadingGuildChannels;
-  bool m_guildsHasMore;
-  bool m_dmChannelsHasMore;
-  bool m_guildChannelsHasMore;
+  QString &m_lastGuildId;
+  QString &m_lastDmChannelId;
+  QString &m_selectedGuildId;
+  QVariantList &m_guilds;
+  QVariantList &m_allDmChannels;
+  QVariantList &m_dmChannels;
+  QVariantList &m_allGuildChannels;
+  QVariantList &m_visibleGuildChannels;
+  QVariantMap &m_pendingMentionCountsByGuildId;
+  QStringList &m_pendingUnreadGuildIds;
+  QStringList &m_pendingUnreadChannelIds;
+  QStringList &m_pendingDmPresenceUserIds;
+  int &m_visibleDmChannelCount;
+  int &m_visibleGuildChannelCount;
+  bool &m_loadingGuilds;
+  bool &m_loadingDmChannels;
+  bool &m_loadingGuildChannels;
+  bool &m_guildsHasMore;
+  bool &m_dmChannelsHasMore;
+  bool &m_guildChannelsHasMore;
   bool m_loggedIn;
   bool m_busy;
-  bool m_gatewayUiUpdateQueued;
-  bool m_pendingDmUiUpdate;
-  bool m_dmCacheSaveQueued;
-  bool m_bootstrapCacheLoaded;
+  bool &m_gatewayUiUpdateQueued;
+  bool &m_pendingDmUiUpdate;
+  bool &m_dmCacheSaveQueued;
+  bool &m_bootstrapCacheLoaded;
   QString m_statusText;
 };
 
