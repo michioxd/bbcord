@@ -11,8 +11,8 @@ bool isInObjectThread(const QObject *object) {
 
 DiscordNetworkWorker::DiscordNetworkWorker(QObject *parent)
     : QObject(parent), m_loginClient(this), m_dataClient(this),
-      m_avatarClient(this), m_avatarClient2(this), m_guildIconClient(this),
-      m_guildIconClient2(this), m_gateway(this) {
+      m_chatClient(this), m_avatarClient(this), m_avatarClient2(this),
+      m_guildIconClient(this), m_guildIconClient2(this), m_gateway(this) {
   connect(&m_loginClient, SIGNAL(loginSucceeded(QVariantMap)), this,
           SIGNAL(loginSucceeded(QVariantMap)));
   connect(&m_loginClient, SIGNAL(loginFailed(QString)), this,
@@ -26,6 +26,20 @@ DiscordNetworkWorker::DiscordNetworkWorker(QObject *parent)
           this, SIGNAL(guildChannelsLoaded(QString, QVariantList)));
   connect(&m_dataClient, SIGNAL(requestFailed(QString)), this,
           SIGNAL(requestFailed(QString)));
+
+  connect(&m_chatClient,
+          SIGNAL(channelMessagesLoaded(QString, QString, QVariantList)), this,
+          SIGNAL(channelMessagesLoaded(QString, QString, QVariantList)));
+  connect(&m_chatClient,
+          SIGNAL(channelMessageSent(QString, QString, QVariantMap)), this,
+          SIGNAL(channelMessageSent(QString, QString, QVariantMap)));
+  connect(&m_chatClient, SIGNAL(channelMessageEdited(QString, QVariantMap)),
+          this, SIGNAL(channelMessageEdited(QString, QVariantMap)));
+  connect(&m_chatClient, SIGNAL(channelMessageDeleted(QString, QString)), this,
+          SIGNAL(channelMessageDeleted(QString, QString)));
+  connect(&m_chatClient,
+          SIGNAL(chatRequestFailed(QString, QString, QString, QString)), this,
+          SIGNAL(chatRequestFailed(QString, QString, QString, QString)));
 
   connect(&m_avatarClient, SIGNAL(avatarDownloaded(QString, QString)), this,
           SIGNAL(avatarDownloaded(QString, QString)));
@@ -102,6 +116,68 @@ void DiscordNetworkWorker::fetchGuildChannels(const QString &token,
   }
 
   m_dataClient.fetchGuildChannels(token, guildId, limit, afterId);
+}
+
+void DiscordNetworkWorker::fetchChannelMessages(
+    const QString &token, const QString &channelId, int limit,
+    const QString &beforeMessageId) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "fetchChannelMessages",
+                              Qt::QueuedConnection, Q_ARG(QString, token),
+                              Q_ARG(QString, channelId), Q_ARG(int, limit),
+                              Q_ARG(QString, beforeMessageId));
+    return;
+  }
+
+  m_chatClient.fetchChannelMessages(token, channelId, limit, beforeMessageId);
+}
+
+void DiscordNetworkWorker::sendChannelMessage(const QString &token,
+                                              const QString &channelId,
+                                              const QString &content,
+                                              const QString &nonce,
+                                              const QString &replyMessageId,
+                                              const QString &attachmentPath) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "sendChannelMessage", Qt::QueuedConnection,
+                              Q_ARG(QString, token), Q_ARG(QString, channelId),
+                              Q_ARG(QString, content), Q_ARG(QString, nonce),
+                              Q_ARG(QString, replyMessageId),
+                              Q_ARG(QString, attachmentPath));
+    return;
+  }
+
+  m_chatClient.sendChannelMessage(token, channelId, content, nonce,
+                                  replyMessageId, attachmentPath);
+}
+
+void DiscordNetworkWorker::editChannelMessage(const QString &token,
+                                              const QString &channelId,
+                                              const QString &messageId,
+                                              const QString &content) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "editChannelMessage", Qt::QueuedConnection,
+                              Q_ARG(QString, token), Q_ARG(QString, channelId),
+                              Q_ARG(QString, messageId),
+                              Q_ARG(QString, content));
+    return;
+  }
+
+  m_chatClient.editChannelMessage(token, channelId, messageId, content);
+}
+
+void DiscordNetworkWorker::deleteChannelMessage(const QString &token,
+                                                const QString &channelId,
+                                                const QString &messageId) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "deleteChannelMessage",
+                              Qt::QueuedConnection, Q_ARG(QString, token),
+                              Q_ARG(QString, channelId),
+                              Q_ARG(QString, messageId));
+    return;
+  }
+
+  m_chatClient.deleteChannelMessage(token, channelId, messageId);
 }
 
 void DiscordNetworkWorker::downloadAvatar(const QString &userId,
@@ -183,6 +259,7 @@ void DiscordNetworkWorker::cancelAll() {
 
   m_loginClient.cancel();
   m_dataClient.cancel();
+  m_chatClient.cancel();
   m_avatarClient.cancel();
   m_avatarClient2.cancel();
   m_guildIconClient.cancel();

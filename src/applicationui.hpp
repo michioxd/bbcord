@@ -27,6 +27,7 @@ class LocaleHandler;
 
 class QTranslator;
 class AppStore;
+class ChatController;
 class DiscordClient;
 class DmListController;
 class MainPageController;
@@ -51,6 +52,7 @@ private:
   bb::cascades::LocaleHandler *m_pLocaleHandler;
   AppStore *m_appStore;
   DiscordClient *m_discordClient;
+  ChatController *m_chatController;
   DmListController *m_dmListController;
   MainPageController *m_mainPageController;
   ServerListController *m_serverListController;

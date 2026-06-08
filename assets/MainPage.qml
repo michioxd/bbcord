@@ -146,10 +146,11 @@ Page {
         }
     }
 
-    function openChat(channelName) {
+    function openChat(channelId, guildId, channelName) {
         var page = chatCardDefinition.createObject();
 
         if (page) {
+            chatController.openChannel(channelId, guildId, channelName);
             page.channelName = channelName;
             page.title = channelName;
             page.backRequested.connect(function () {
@@ -201,8 +202,8 @@ Page {
         var page = dmListDefinition.createObject();
 
         if (page) {
-            page.dmSelected.connect(function (channelName) {
-                mainPage.openChat(channelName);
+            page.dmSelected.connect(function (channelId, channelName) {
+                mainPage.openChat(channelId, "", channelName);
             });
             replaceContent(page);
             activeContentType = "dm";
@@ -222,8 +223,8 @@ Page {
         if (page) {
             page.serverId = serverId;
             page.serverName = serverName;
-            page.channelSelected.connect(function (channelName) {
-                mainPage.openChat(channelName);
+            page.channelSelected.connect(function (channelId, guildId, channelName) {
+                mainPage.openChat(channelId, guildId, channelName);
             });
             replaceContent(page);
             activeContentType = "server";

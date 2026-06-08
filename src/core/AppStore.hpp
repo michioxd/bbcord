@@ -4,6 +4,9 @@
 #include <QObject>
 #include <QString>
 #include <QVariantList>
+#include <QVariantMap>
+
+#include "client/MessageCache.hpp"
 
 #include "models/Models.hpp"
 
@@ -28,6 +31,20 @@ class AppStore : public QObject {
       QString selectedGuildId READ selectedGuildId NOTIFY selectionChanged)
   Q_PROPERTY(
       QString selectedChannelId READ selectedChannelId NOTIFY selectionChanged)
+  Q_PROPERTY(QVariantList currentChannelMessages READ currentChannelMessages
+                 NOTIFY currentChannelMessagesChanged)
+  Q_PROPERTY(bool chatInitialLoaded READ chatInitialLoaded NOTIFY
+                 currentChatStateChanged)
+  Q_PROPERTY(bool chatLoadingInitial READ chatLoadingInitial NOTIFY
+                 currentChatStateChanged)
+  Q_PROPERTY(bool chatLoadingBefore READ chatLoadingBefore NOTIFY
+                 currentChatStateChanged)
+  Q_PROPERTY(bool chatHasMoreBefore READ chatHasMoreBefore NOTIFY
+                 currentChatStateChanged)
+  Q_PROPERTY(QString chatOldestMessageId READ chatOldestMessageId NOTIFY
+                 currentChatStateChanged)
+  Q_PROPERTY(QString chatNewestMessageId READ chatNewestMessageId NOTIFY
+                 currentChatStateChanged)
 
 public:
   explicit AppStore(QObject *parent = 0);
@@ -45,10 +62,24 @@ public:
   QVariantList guildChannels() const;
   QString selectedGuildId() const;
   QString selectedChannelId() const;
+  QVariantList currentChannelMessages() const;
+  bool chatInitialLoaded() const;
+  bool chatLoadingInitial() const;
+  bool chatLoadingBefore() const;
+  bool chatHasMoreBefore() const;
+  QString chatOldestMessageId() const;
+  QString chatNewestMessageId() const;
 
   Q_INVOKABLE void selectHome();
   Q_INVOKABLE void selectGuild(const QString &guildId);
   Q_INVOKABLE void selectChannel(const QString &channelId);
+  Q_INVOKABLE QVariantList messagesForChannel(const QString &channelId) const;
+  Q_INVOKABLE bool isChatInitialLoaded(const QString &channelId) const;
+  Q_INVOKABLE bool isChatLoadingInitial(const QString &channelId) const;
+  Q_INVOKABLE bool isChatLoadingBefore(const QString &channelId) const;
+  Q_INVOKABLE bool hasMoreChatBefore(const QString &channelId) const;
+  Q_INVOKABLE QString oldestChatMessageId(const QString &channelId) const;
+  Q_INVOKABLE QString newestChatMessageId(const QString &channelId) const;
   Q_INVOKABLE void clearSession();
 
   void setLoggedIn(bool loggedIn);
@@ -61,10 +92,28 @@ public:
   void updateGuildIcon(const QString &guildId, const QString &iconSource);
   void updateDmAvatar(const QString &channelId, const QString &avatarSource);
   void updateDmAvatar2(const QString &channelId, const QString &avatarSource);
+  void notifyChatAvatarChanged(const QString &userId,
+                               const QString &avatarSource);
   void setDmChannels(const QVariantList &dmChannels);
   void appendDmChannels(const QVariantList &channels);
   void setGuildChannels(const QVariantList &channels);
   void appendGuildChannels(const QVariantList &channels);
+  void setChatLoadingInitial(const QString &channelId, bool loading);
+  void setChatLoadingBefore(const QString &channelId, bool loading);
+  void setChatHasMoreBefore(const QString &channelId, bool hasMore);
+  void setInitialChatMessages(const QString &channelId, const QString &guildId,
+                              const QList<DiscordMessage> &messages,
+                              bool hasMoreBefore);
+  void prependOlderChatMessages(const QString &channelId,
+                                const QList<DiscordMessage> &messages,
+                                bool hasMoreBefore);
+  void addOrReplaceChatMessage(const DiscordMessage &message);
+  void updateChatMessage(const DiscordMessage &message);
+  void deleteChatMessage(const QString &channelId, const QString &messageId);
+  QString addPendingChatMessage(const DiscordMessage &message);
+  void markPendingChatMessageFailed(const QString &channelId,
+                                    const QString &messageId);
+  void clearChatCache();
 
 Q_SIGNALS:
   void loggedInChanged(bool loggedIn);
@@ -81,6 +130,16 @@ Q_SIGNALS:
   void guildChannelsChanged();
   void guildChannelsAppended(const QVariantList &channels);
   void selectionChanged();
+  void currentChannelMessagesChanged();
+  void currentChatStateChanged();
+  void chatMessagesReset(const QString &channelId,
+                         const QVariantList &messages);
+  void chatMessagesPrepended(const QString &channelId,
+                             const QVariantList &messages);
+  void chatMessageAdded(const QString &channelId, const QVariantMap &message);
+  void chatMessageUpdated(const QString &channelId, const QVariantMap &message);
+  void chatMessageDeleted(const QString &channelId, const QString &messageId);
+  void chatAvatarChanged(const QString &userId, const QString &avatarSource);
 
 private:
   bool m_loggedIn;
@@ -94,6 +153,7 @@ private:
   QVariantList m_guildChannels;
   QString m_selectedGuildId;
   QString m_selectedChannelId;
+  MessageCache m_messageCache;
 };
 
 #endif /* AppStore_HPP_ */

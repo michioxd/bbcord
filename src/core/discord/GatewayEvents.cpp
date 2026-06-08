@@ -54,7 +54,8 @@ int extractSequence(const QByteArray &bytes) {
 }
 
 bool shouldParseDispatch(const QString &eventName) {
-  return eventName == "MESSAGE_CREATE" || eventName == "READY" ||
+  return eventName == "MESSAGE_CREATE" || eventName == "MESSAGE_UPDATE" ||
+         eventName == "MESSAGE_DELETE" || eventName == "READY" ||
          eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
          eventName == "USER_SETTINGS_PROTO_UPDATE";
 }

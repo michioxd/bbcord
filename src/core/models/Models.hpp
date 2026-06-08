@@ -1,7 +1,27 @@
 #ifndef Models_HPP_
 #define Models_HPP_
 
+#include <QList>
 #include <QString>
+#include <QVariantList>
+#include <QVariantMap>
+
+struct DiscordAttachment {
+  QString id;
+  QString filename;
+  QString url;
+  QString proxyUrl;
+  QString contentType;
+  int size;
+  int width;
+  int height;
+
+  DiscordAttachment() : size(0), width(0), height(0) {}
+
+  bool isImage() const;
+  QVariantMap toVariantMap() const;
+  static DiscordAttachment fromVariantMap(const QVariantMap &data);
+};
 
 struct DiscordUser {
   QString id;
@@ -51,10 +71,24 @@ struct DiscordMessage {
   QString guildId;
   DiscordUser author;
   QString content;
+  QString nonce;
   QString timestamp;
   QString editedTimestamp;
+  QString replyMessageId;
+  QString replyAuthor;
+  QString replyContent;
+  QList<DiscordAttachment> attachments;
+  bool pending;
+  bool failed;
+
+  DiscordMessage() : pending(false), failed(false) {}
 
   bool isEdited() const;
+  qint64 timestampMs() const;
+  QString displayTime() const;
+  QString authorInitials() const;
+  QVariantMap toVariantMap() const;
+  static DiscordMessage fromVariantMap(const QVariantMap &data);
 };
 
 #endif /* Models_HPP_ */

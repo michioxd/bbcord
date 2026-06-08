@@ -12,13 +12,56 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="147"/>
+        <location filename="../assets/ChatCard.qml" line="177"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="185"/>
+        <location filename="../assets/ChatCard.qml" line="234"/>
+        <source>Attachment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="280"/>
         <source>Message #</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="307"/>
+        <source>Editing message</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="335"/>
+        <source>Attach file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="338"/>
+        <source>/accounts/1000/shared/...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="339"/>
+        <source>Attach</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="340"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ChatController</name>
+    <message>
+        <location filename="../src/ui/ChatController.cpp" line="206"/>
+        <source>Attachment file not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChatController.cpp" line="212"/>
+        <source>Attachment is too large</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -53,13 +96,48 @@
 <context>
     <name>MessageBubble</name>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="43"/>
+        <location filename="../assets/MessageBubble.qml" line="60"/>
         <source>Reply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="51"/>
+        <location filename="../assets/MessageBubble.qml" line="67"/>
+        <source>Open attachment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="75"/>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="83"/>
         <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="165"/>
+        <source>failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="165"/>
+        <source>sending</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="165"/>
+        <source>edited</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="248"/>
+        <source>Open attachment: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/MessageBubble.qml" line="248"/>
+        <source>Load image: </source>
         <translation type="unfinished"></translation>
     </message>
 </context>

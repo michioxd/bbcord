@@ -22,6 +22,16 @@ public:
   void fetchDmChannels(const QString &token, int limit, const QString &afterId);
   void fetchGuildChannels(const QString &token, const QString &guildId,
                           int limit, const QString &afterId);
+  void fetchChannelMessages(const QString &token, const QString &channelId,
+                            int limit, const QString &beforeMessageId);
+  void sendChannelMessage(const QString &token, const QString &channelId,
+                          const QString &content, const QString &nonce,
+                          const QString &replyMessageId,
+                          const QString &attachmentPath);
+  void editChannelMessage(const QString &token, const QString &channelId,
+                          const QString &messageId, const QString &content);
+  void deleteChannelMessage(const QString &token, const QString &channelId,
+                            const QString &messageId);
   void downloadAvatar(const QString &userId, const QString &avatarHash,
                       const QString &outputPath);
   void downloadGuildIcon(const QString &guildId, const QString &iconHash,
@@ -35,6 +45,17 @@ Q_SIGNALS:
   void dmChannelsLoaded(const QVariantList &channels);
   void guildChannelsLoaded(const QString &guildId,
                            const QVariantList &channels);
+  void channelMessagesLoaded(const QString &channelId,
+                             const QString &beforeMessageId,
+                             const QVariantList &messages);
+  void channelMessageSent(const QString &channelId, const QString &nonce,
+                          const QVariantMap &message);
+  void channelMessageEdited(const QString &channelId,
+                            const QVariantMap &message);
+  void channelMessageDeleted(const QString &channelId,
+                             const QString &messageId);
+  void chatRequestFailed(const QString &operation, const QString &channelId,
+                         const QString &nonce, const QString &message);
   void requestFailed(const QString &message);
   void avatarDownloaded(const QString &userId, const QString &localPath);
   void avatarDownloadFailed(const QString &userId, const QString &message);
@@ -51,6 +72,11 @@ private:
     GuildsRequest,
     DmChannelsRequest,
     GuildChannelsRequest,
+    ChannelMessagesRequest,
+    SendMessageRequest,
+    UploadMessageRequest,
+    EditMessageRequest,
+    DeleteMessageRequest,
     AvatarRequest,
     GuildIconRequest
   };
@@ -64,11 +90,18 @@ private:
   void finishRequest();
   void failWithMessage(const QString &message);
   void failDataRequest(const QString &message);
+  void failChatRequest(const QString &message);
   void succeedWithUser(const QVariantMap &user);
   void sendGetMeRequest(struct mg_connection *connection);
   void sendApiRequest(struct mg_connection *connection);
   void sendAvatarRequest(struct mg_connection *connection);
   void sendGuildIconRequest(struct mg_connection *connection);
+  QByteArray buildMultipartMessageBody(const QString &content,
+                                       const QString &nonce,
+                                       const QString &replyMessageId,
+                                       const QString &attachmentPath,
+                                       QString *contentType,
+                                       QString *errorMessage) const;
 
   mg_mgr *m_mgr;
   mg_connection *m_connection;
@@ -77,12 +110,19 @@ private:
   RequestType m_requestType;
   QString m_token;
   QString m_requestPath;
+  QString m_requestMethod;
+  QByteArray m_requestBody;
   QString m_guildId;
+  QString m_channelId;
+  QString m_messageId;
+  QString m_beforeMessageId;
+  QString m_nonce;
   QString m_avatarUserId;
   QString m_avatarHash;
   QString m_iconGuildId;
   QString m_iconHash;
   QString m_outputPath;
+  QString m_contentType;
   bool m_requestSent;
   bool m_finished;
 };

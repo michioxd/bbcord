@@ -22,6 +22,16 @@ public Q_SLOTS:
   void fetchDmChannels(const QString &token, int limit, const QString &afterId);
   void fetchGuildChannels(const QString &token, const QString &guildId,
                           int limit, const QString &afterId);
+  void fetchChannelMessages(const QString &token, const QString &channelId,
+                            int limit, const QString &beforeMessageId);
+  void sendChannelMessage(const QString &token, const QString &channelId,
+                          const QString &content, const QString &nonce,
+                          const QString &replyMessageId,
+                          const QString &attachmentPath);
+  void editChannelMessage(const QString &token, const QString &channelId,
+                          const QString &messageId, const QString &content);
+  void deleteChannelMessage(const QString &token, const QString &channelId,
+                            const QString &messageId);
   void downloadAvatar(const QString &userId, const QString &avatarHash,
                       const QString &outputPath);
   void downloadAvatar2(const QString &userId, const QString &avatarHash,
@@ -41,6 +51,17 @@ Q_SIGNALS:
   void dmChannelsLoaded(const QVariantList &channels);
   void guildChannelsLoaded(const QString &guildId,
                            const QVariantList &channels);
+  void channelMessagesLoaded(const QString &channelId,
+                             const QString &beforeMessageId,
+                             const QVariantList &messages);
+  void channelMessageSent(const QString &channelId, const QString &nonce,
+                          const QVariantMap &message);
+  void channelMessageEdited(const QString &channelId,
+                            const QVariantMap &message);
+  void channelMessageDeleted(const QString &channelId,
+                             const QString &messageId);
+  void chatRequestFailed(const QString &operation, const QString &channelId,
+                         const QString &nonce, const QString &message);
   void requestFailed(const QString &message);
   void avatarDownloaded(const QString &userId, const QString &localPath);
   void avatarDownloadFailed(const QString &userId, const QString &message);
@@ -56,6 +77,7 @@ Q_SIGNALS:
 private:
   DiscordRestClient m_loginClient;
   DiscordRestClient m_dataClient;
+  DiscordRestClient m_chatClient;
   DiscordRestClient m_avatarClient;
   DiscordRestClient m_avatarClient2;
   DiscordRestClient m_guildIconClient;

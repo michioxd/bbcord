@@ -69,6 +69,7 @@ config_pri_source_group1 {
     SOURCES += \
         $$quote($$BASEDIR/src/applicationui.cpp) \
         $$quote($$BASEDIR/src/core/AppStore.cpp) \
+        $$quote($$BASEDIR/src/core/AttachmentImageCacheWorker.cpp) \
         $$quote($$BASEDIR/src/core/AvatarCacheWorker.cpp) \
         $$quote($$BASEDIR/src/core/Client.cpp) \
         $$quote($$BASEDIR/src/core/client/AvatarManager.cpp) \
@@ -77,6 +78,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/client/ClientState.cpp) \
         $$quote($$BASEDIR/src/core/client/GatewayHandler.cpp) \
         $$quote($$BASEDIR/src/core/client/ItemMapper.cpp) \
+        $$quote($$BASEDIR/src/core/client/MessageCache.cpp) \
         $$quote($$BASEDIR/src/core/client/SortUtils.cpp) \
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.cpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.cpp) \
@@ -87,6 +89,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/RestClientRequests.cpp) \
         $$quote($$BASEDIR/src/core/models/Models.cpp) \
         $$quote($$BASEDIR/src/main.cpp) \
+        $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.cpp)
@@ -94,6 +97,7 @@ config_pri_source_group1 {
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \
         $$quote($$BASEDIR/src/core/AppStore.hpp) \
+        $$quote($$BASEDIR/src/core/AttachmentImageCacheWorker.hpp) \
         $$quote($$BASEDIR/src/core/AvatarCacheWorker.hpp) \
         $$quote($$BASEDIR/src/core/Client.hpp) \
         $$quote($$BASEDIR/src/core/client/AvatarManager.hpp) \
@@ -102,6 +106,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/client/ClientState.hpp) \
         $$quote($$BASEDIR/src/core/client/GatewayHandler.hpp) \
         $$quote($$BASEDIR/src/core/client/ItemMapper.hpp) \
+        $$quote($$BASEDIR/src/core/client/MessageCache.hpp) \
         $$quote($$BASEDIR/src/core/client/SortUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.hpp) \
@@ -109,6 +114,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/NetworkWorker.hpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.hpp) \
         $$quote($$BASEDIR/src/core/models/Models.hpp) \
+        $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.hpp)

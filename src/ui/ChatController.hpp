@@ -1,0 +1,128 @@
+#ifndef ChatController_HPP_
+#define ChatController_HPP_
+
+#include <QHash>
+#include <QObject>
+#include <QSet>
+#include <QString>
+#include <QVariantList>
+#include <QVariantMap>
+
+class AppStore;
+class AttachmentImageCacheWorker;
+class DiscordClient;
+class QThread;
+
+class ChatController : public QObject {
+  Q_OBJECT
+  Q_PROPERTY(QString currentChannelId READ currentChannelId NOTIFY
+                 currentChannelChanged)
+  Q_PROPERTY(
+      QString currentGuildId READ currentGuildId NOTIFY currentChannelChanged)
+  Q_PROPERTY(QString currentChannelName READ currentChannelName NOTIFY
+                 currentChannelChanged)
+  Q_PROPERTY(bool hasPendingAttachment READ hasPendingAttachment NOTIFY
+                 pendingAttachmentChanged)
+  Q_PROPERTY(QString pendingAttachmentName READ pendingAttachmentName NOTIFY
+                 pendingAttachmentChanged)
+  Q_PROPERTY(QString pendingAttachmentPreview READ pendingAttachmentPreview
+                 NOTIFY pendingAttachmentChanged)
+  Q_PROPERTY(bool pendingAttachmentIsImage READ pendingAttachmentIsImage NOTIFY
+                 pendingAttachmentChanged)
+  Q_PROPERTY(QString pendingAttachmentError READ pendingAttachmentError NOTIFY
+                 pendingAttachmentChanged)
+
+public:
+  explicit ChatController(DiscordClient *client, AppStore *store,
+                          QObject *parent = 0);
+  ~ChatController();
+
+  QString currentChannelId() const;
+  QString currentGuildId() const;
+  QString currentChannelName() const;
+  bool hasPendingAttachment() const;
+  QString pendingAttachmentName() const;
+  QString pendingAttachmentPreview() const;
+  bool pendingAttachmentIsImage() const;
+  QString pendingAttachmentError() const;
+
+  Q_INVOKABLE void openChannel(const QString &channelId, const QString &guildId,
+                               const QString &channelName);
+  Q_INVOKABLE void closeChannel();
+  Q_INVOKABLE QVariantList currentMessages() const;
+  Q_INVOKABLE QVariantList messagesForChannel(const QString &channelId) const;
+  Q_INVOKABLE bool isInitialLoaded() const;
+  Q_INVOKABLE bool isLoadingInitial() const;
+  Q_INVOKABLE bool isLoadingBefore() const;
+  Q_INVOKABLE bool hasMoreBefore() const;
+  Q_INVOKABLE QString oldestMessageId() const;
+  Q_INVOKABLE QString newestMessageId() const;
+
+  Q_INVOKABLE void requestInitialMessages();
+  Q_INVOKABLE void requestOlderMessages();
+  Q_INVOKABLE bool setPendingAttachment(const QString &filePath);
+  Q_INVOKABLE void clearPendingAttachment();
+  Q_INVOKABLE QString sendMessage(const QString &content,
+                                  const QString &replyMessageId,
+                                  const QString &replyAuthor,
+                                  const QString &replyMessage);
+  Q_INVOKABLE void editMessage(const QString &messageId,
+                               const QString &content);
+  Q_INVOKABLE void deleteMessage(const QString &messageId);
+  Q_INVOKABLE void markPendingFailed(const QString &messageId);
+  Q_INVOKABLE void openAttachment(const QString &url);
+  Q_INVOKABLE QString avatarSource(const QString &userId,
+                                   const QString &avatarHash);
+  Q_INVOKABLE QString cachedImageSource(const QString &url);
+  Q_INVOKABLE void requestCachedImage(const QString &url);
+  Q_INVOKABLE void cancelCachedImage(const QString &url);
+
+Q_SIGNALS:
+  void currentChannelChanged();
+  void pendingAttachmentChanged();
+  void attachmentImageCached(const QString &url, const QString &imageSource);
+  void attachmentImageFailed(const QString &url);
+  void initialMessagesRequested(const QString &channelId,
+                                const QString &guildId);
+  void olderMessagesRequested(const QString &channelId,
+                              const QString &beforeMessageId);
+  void sendMessageRequested(const QString &channelId, const QString &content,
+                            const QString &nonce, const QString &replyMessageId,
+                            const QString &attachmentPath);
+  void editMessageRequested(const QString &channelId, const QString &messageId,
+                            const QString &content);
+  void deleteMessageRequested(const QString &channelId,
+                              const QString &messageId);
+
+private Q_SLOTS:
+  void onAttachmentImageCached(const QString &url, const QString &path);
+  void onAttachmentImageFailed(const QString &url);
+
+private:
+  QString safeCurrentChannelId() const;
+  QString buildPendingMessageId() const;
+  QVariantMap findCachedMessage(const QString &messageId) const;
+  QString filePreviewSource(const QString &filePath) const;
+  QString fileContentType(const QString &filePath) const;
+  bool isImageFile(const QString &filePath) const;
+  bool isRemoteImageUrl(const QString &url) const;
+  QString attachmentImageCachePath(const QString &url) const;
+  void ensureAttachmentImageWorker();
+
+  DiscordClient *m_client;
+  AppStore *m_store;
+  QThread *m_imageThread;
+  AttachmentImageCacheWorker *m_imageWorker;
+  QHash<QString, QString> m_cachedAttachmentImages;
+  QSet<QString> m_loadingAttachmentImages;
+  QString m_currentChannelId;
+  QString m_currentGuildId;
+  QString m_currentChannelName;
+  QString m_pendingAttachmentPath;
+  QString m_pendingAttachmentName;
+  QString m_pendingAttachmentPreview;
+  QString m_pendingAttachmentError;
+  bool m_pendingAttachmentIsImage;
+};
+
+#endif /* ChatController_HPP_ */

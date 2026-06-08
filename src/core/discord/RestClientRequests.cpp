@@ -35,15 +35,39 @@ void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
   QByteArray pathBytes = m_requestPath.toUtf8();
   QByteArray tokenBytes = m_token.toUtf8();
   QByteArray userAgent = DiscordUtils::desktopUserAgent();
+  QByteArray methodBytes =
+      m_requestMethod.isEmpty() ? QByteArray("GET") : m_requestMethod.toUtf8();
+  if (m_requestBody.isEmpty()) {
+    mg_printf(connection,
+              "%s %s HTTP/1.1\r\n"
+              "Host: discord.com\r\n"
+              "Authorization: %s\r\n"
+              "User-Agent: %s\r\n"
+              "Accept: application/json\r\n"
+              "Connection: close\r\n\r\n",
+              methodBytes.constData(), pathBytes.constData(),
+              tokenBytes.constData(), userAgent.constData());
+    return;
+  }
+
+  QByteArray contentTypeBytes = m_contentType.isEmpty()
+                                    ? QByteArray("application/json")
+                                    : m_contentType.toUtf8();
   mg_printf(connection,
-            "GET %s HTTP/1.1\r\n"
+            "%s %s HTTP/1.1\r\n"
             "Host: discord.com\r\n"
             "Authorization: %s\r\n"
             "User-Agent: %s\r\n"
             "Accept: application/json\r\n"
+            "Content-Type: %s\r\n"
+            "Content-Length: %d\r\n"
             "Connection: close\r\n\r\n",
-            pathBytes.constData(), tokenBytes.constData(),
-            userAgent.constData());
+            methodBytes.constData(), pathBytes.constData(),
+            tokenBytes.constData(), userAgent.constData(),
+            contentTypeBytes.constData(),
+            static_cast<int>(m_requestBody.size()));
+  mg_send(connection, m_requestBody.constData(),
+          static_cast<size_t>(m_requestBody.size()));
 }
 
 void DiscordRestClient::sendAvatarRequest(struct mg_connection *connection) {

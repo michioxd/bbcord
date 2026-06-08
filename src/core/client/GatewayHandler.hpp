@@ -30,6 +30,8 @@ public:
   bool gatewayMessageMentionsCurrentUser(const QVariantMap &payload) const;
 
 private:
+  bool shouldApplyChatEvent(const QString &channelId) const;
+
   DiscordClient *m_client;
 
   AppStore *m_store;

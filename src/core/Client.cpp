@@ -23,6 +23,20 @@
 namespace {
 const int kPageSize = 25;
 const int kGuildPageSize = 100;
+const int kChatPageSize = 50;
+
+QList<DiscordMessage>
+variantMessagesToDiscordMessages(const QVariantList &items) {
+  QList<DiscordMessage> messages;
+  for (int i = 0; i < items.size(); ++i) {
+    DiscordMessage message =
+        DiscordMessage::fromVariantMap(items.at(i).toMap());
+    if (!message.id.isEmpty() && !message.channelId.isEmpty()) {
+      messages.append(message);
+    }
+  }
+  return messages;
+}
 } // namespace
 
 DiscordClient::DiscordClient(QObject *parent)
@@ -171,6 +185,24 @@ void DiscordClient::initializeNetworkWorker() {
           SLOT(onDmChannelsLoaded(QVariantList)), Qt::QueuedConnection);
   connect(m_networkWorker, SIGNAL(guildChannelsLoaded(QString, QVariantList)),
           this, SLOT(onGuildChannelsLoaded(QString, QVariantList)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker,
+          SIGNAL(channelMessagesLoaded(QString, QString, QVariantList)), this,
+          SLOT(onChannelMessagesLoaded(QString, QString, QVariantList)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker,
+          SIGNAL(channelMessageSent(QString, QString, QVariantMap)), this,
+          SLOT(onChannelMessageSent(QString, QString, QVariantMap)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(channelMessageEdited(QString, QVariantMap)),
+          this, SLOT(onChannelMessageEdited(QString, QVariantMap)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(channelMessageDeleted(QString, QString)),
+          this, SLOT(onChannelMessageDeleted(QString, QString)),
+          Qt::QueuedConnection);
+  connect(m_networkWorker,
+          SIGNAL(chatRequestFailed(QString, QString, QString, QString)), this,
+          SLOT(onChatRequestFailed(QString, QString, QString, QString)),
           Qt::QueuedConnection);
   connect(m_networkWorker, SIGNAL(requestFailed(QString)), this,
           SLOT(onDataRequestFailed(QString)), Qt::QueuedConnection);
@@ -549,6 +581,134 @@ void DiscordClient::selectChannel(const QString &channelId) {
   saveDmChannelsCache();
 }
 
+void DiscordClient::loadInitialChatMessages(const QString &channelId,
+                                            const QString &guildId) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty() || m_token.trimmed().isEmpty()) {
+    if (m_store) {
+      m_store->setChatLoadingInitial(safeChannelId, false);
+    }
+    return;
+  }
+
+  if (!guildId.trimmed().isEmpty()) {
+    m_chatGuildByChannelId.insert(safeChannelId, guildId.trimmed());
+  }
+
+  if (m_store) {
+    m_store->setChatLoadingInitial(safeChannelId, true);
+  }
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(
+        m_networkWorker, "fetchChannelMessages", Qt::QueuedConnection,
+        Q_ARG(QString, m_token), Q_ARG(QString, safeChannelId),
+        Q_ARG(int, kChatPageSize), Q_ARG(QString, QString()));
+  }
+}
+
+void DiscordClient::loadOlderChatMessages(const QString &channelId,
+                                          const QString &beforeMessageId) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeBeforeMessageId = beforeMessageId.trimmed();
+  if (safeChannelId.isEmpty() || safeBeforeMessageId.isEmpty() ||
+      m_token.trimmed().isEmpty()) {
+    if (m_store) {
+      m_store->setChatLoadingBefore(safeChannelId, false);
+    }
+    return;
+  }
+
+  if (m_store) {
+    m_store->setChatLoadingBefore(safeChannelId, true);
+  }
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(
+        m_networkWorker, "fetchChannelMessages", Qt::QueuedConnection,
+        Q_ARG(QString, m_token), Q_ARG(QString, safeChannelId),
+        Q_ARG(int, kChatPageSize), Q_ARG(QString, safeBeforeMessageId));
+  }
+}
+
+void DiscordClient::sendChatMessage(const QString &channelId,
+                                    const QString &content,
+                                    const QString &nonce,
+                                    const QString &replyMessageId,
+                                    const QString &attachmentPath) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeNonce = nonce.trimmed();
+  if (safeChannelId.isEmpty() || safeNonce.isEmpty() ||
+      m_token.trimmed().isEmpty()) {
+    if (m_store) {
+      m_store->markPendingChatMessageFailed(safeChannelId, safeNonce);
+    }
+    return;
+  }
+
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(
+        m_networkWorker, "sendChannelMessage", Qt::QueuedConnection,
+        Q_ARG(QString, m_token), Q_ARG(QString, safeChannelId),
+        Q_ARG(QString, content), Q_ARG(QString, safeNonce),
+        Q_ARG(QString, replyMessageId), Q_ARG(QString, attachmentPath));
+  }
+}
+
+QString DiscordClient::avatarSourceForUser(const QString &userId) const {
+  return m_avatarSourcesByUserId.value(userId.trimmed()).toString();
+}
+
+void DiscordClient::loadUserAvatar(const QString &userId,
+                                   const QString &avatarHash) {
+  QString safeUserId = userId.trimmed();
+  QString safeAvatarHash = avatarHash.trimmed();
+  if (safeUserId.isEmpty() || safeAvatarHash.isEmpty() ||
+      m_avatarManager == 0) {
+    return;
+  }
+
+  m_avatarManager->queueDmAvatar(QString("chat"), safeUserId, safeAvatarHash,
+                                 m_loadedAvatarUserIds, m_avatarCacheRequests,
+                                 m_queuedAvatarUserIds, m_loadingAvatarUserId,
+                                 m_loadingAvatarUserId2, m_pendingAvatars);
+  m_avatarManager->loadNextAvatar(m_loadingAvatarUserId, m_loadingAvatarUserId2,
+                                  m_pendingAvatars, m_queuedAvatarUserIds);
+}
+
+void DiscordClient::editChatMessage(const QString &channelId,
+                                    const QString &messageId,
+                                    const QString &content) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeMessageId = messageId.trimmed();
+  if (safeChannelId.isEmpty() || safeMessageId.isEmpty() ||
+      m_token.trimmed().isEmpty()) {
+    return;
+  }
+
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(
+        m_networkWorker, "editChannelMessage", Qt::QueuedConnection,
+        Q_ARG(QString, m_token), Q_ARG(QString, safeChannelId),
+        Q_ARG(QString, safeMessageId), Q_ARG(QString, content));
+  }
+}
+
+void DiscordClient::deleteChatMessage(const QString &channelId,
+                                      const QString &messageId) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeMessageId = messageId.trimmed();
+  if (safeChannelId.isEmpty() || safeMessageId.isEmpty() ||
+      m_token.trimmed().isEmpty()) {
+    return;
+  }
+
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "deleteChannelMessage",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(QString, safeChannelId),
+                              Q_ARG(QString, safeMessageId));
+  }
+}
+
 void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
   qDebug() << "[discord-client] REST login succeeded"
            << user.value("id").toString();
@@ -783,6 +943,74 @@ void DiscordClient::onGuildChannelsLoaded(const QString &guildId,
   setStatusText("Connected");
 }
 
+void DiscordClient::onChannelMessagesLoaded(const QString &channelId,
+                                            const QString &beforeMessageId,
+                                            const QVariantList &messages) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty() || m_store == 0) {
+    return;
+  }
+
+  QList<DiscordMessage> parsedMessages =
+      variantMessagesToDiscordMessages(messages);
+  bool hasMoreBefore = messages.size() >= kChatPageSize;
+  if (beforeMessageId.trimmed().isEmpty()) {
+    m_store->setInitialChatMessages(safeChannelId,
+                                    m_chatGuildByChannelId.value(safeChannelId),
+                                    parsedMessages, hasMoreBefore);
+  } else {
+    m_store->prependOlderChatMessages(safeChannelId, parsedMessages,
+                                      hasMoreBefore);
+  }
+}
+
+void DiscordClient::onChannelMessageSent(const QString &channelId,
+                                         const QString &nonce,
+                                         const QVariantMap &message) {
+  Q_UNUSED(channelId);
+  DiscordMessage parsedMessage = DiscordMessage::fromVariantMap(message);
+  if (parsedMessage.nonce.isEmpty()) {
+    parsedMessage.nonce = nonce;
+  }
+  if (!parsedMessage.channelId.isEmpty() && m_store != 0) {
+    m_store->addOrReplaceChatMessage(parsedMessage);
+  }
+}
+
+void DiscordClient::onChannelMessageEdited(const QString &channelId,
+                                           const QVariantMap &message) {
+  Q_UNUSED(channelId);
+  DiscordMessage parsedMessage = DiscordMessage::fromVariantMap(message);
+  if (!parsedMessage.channelId.isEmpty() && m_store != 0) {
+    m_store->updateChatMessage(parsedMessage);
+  }
+}
+
+void DiscordClient::onChannelMessageDeleted(const QString &channelId,
+                                            const QString &messageId) {
+  if (m_store != 0) {
+    m_store->deleteChatMessage(channelId, messageId);
+  }
+}
+
+void DiscordClient::onChatRequestFailed(const QString &operation,
+                                        const QString &channelId,
+                                        const QString &nonce,
+                                        const QString &message) {
+  qDebug() << "[discord-client] chat request failed" << operation << message;
+  if (m_store == 0) {
+    return;
+  }
+
+  if (operation == "messages") {
+    m_store->setChatLoadingInitial(channelId, false);
+    m_store->setChatLoadingBefore(channelId, false);
+  } else if (operation == "send") {
+    m_store->markPendingChatMessageFailed(channelId, nonce);
+  }
+  setStatusText(message);
+}
+
 void DiscordClient::onDataRequestFailed(const QString &message) {
   m_loadingGuilds = false;
   m_loadingDmChannels = false;
@@ -796,6 +1024,9 @@ void DiscordClient::onAvatarDownloaded(const QString &userId,
                                        const QString &localPath) {
   QString source = m_avatarManager->avatarSourceForPath(localPath);
   m_avatarSourcesByUserId.insert(userId, source);
+  if (m_store) {
+    m_store->notifyChatAvatarChanged(userId, source);
+  }
   if (m_store && userId == m_store->currentUserId()) {
     m_store->setCurrentUserAvatarSource(source);
   }
@@ -915,6 +1146,9 @@ void DiscordClient::onAvatarCacheHit(const QString &userId,
   m_avatarCacheRequests.remove(userId);
   QString source = m_avatarManager->avatarSourceForPath(path);
   m_avatarSourcesByUserId.insert(userId, source);
+  if (m_store) {
+    m_store->notifyChatAvatarChanged(userId, source);
+  }
   if (m_store && userId == m_store->currentUserId()) {
     m_store->setCurrentUserAvatarSource(source);
   }

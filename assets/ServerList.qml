@@ -6,7 +6,7 @@ Container {
     property string serverName: "lmao server"
     property string serverId: ""
 
-    signal channelSelected(string channelName)
+    signal channelSelected(string channelId, string guildId, string channelName)
 
     horizontalAlignment: HorizontalAlignment.Fill
     verticalAlignment: VerticalAlignment.Fill
@@ -42,8 +42,7 @@ Container {
             var item = channelModel.data(indexPath);
 
             if (item.type == "channel") {
-                serverListController.selectChannel(item.id);
-                serverList.channelSelected(item.name);
+                serverList.channelSelected(item.id, serverList.serverId, item.name);
             }
         }
 

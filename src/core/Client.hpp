@@ -1,6 +1,7 @@
 #ifndef CLIENT_HPP_
 #define CLIENT_HPP_
 
+#include <QHash>
 #include <QObject>
 #include <QQueue>
 #include <QString>
@@ -58,6 +59,24 @@ Q_SIGNALS:
   void busyChanged(bool busy);
   void statusTextChanged(const QString &statusText);
 
+public Q_SLOTS:
+  Q_INVOKABLE void loadInitialChatMessages(const QString &channelId,
+                                           const QString &guildId);
+  Q_INVOKABLE void loadOlderChatMessages(const QString &channelId,
+                                         const QString &beforeMessageId);
+  Q_INVOKABLE void sendChatMessage(const QString &channelId,
+                                   const QString &content, const QString &nonce,
+                                   const QString &replyMessageId,
+                                   const QString &attachmentPath);
+  Q_INVOKABLE QString avatarSourceForUser(const QString &userId) const;
+  Q_INVOKABLE void loadUserAvatar(const QString &userId,
+                                  const QString &avatarHash);
+  Q_INVOKABLE void editChatMessage(const QString &channelId,
+                                   const QString &messageId,
+                                   const QString &content);
+  Q_INVOKABLE void deleteChatMessage(const QString &channelId,
+                                     const QString &messageId);
+
 private Q_SLOTS:
   void onRestLoginSucceeded(const QVariantMap &user);
   void onRestLoginFailed(const QString &message);
@@ -65,6 +84,17 @@ private Q_SLOTS:
   void onDmChannelsLoaded(const QVariantList &channels);
   void onGuildChannelsLoaded(const QString &guildId,
                              const QVariantList &channels);
+  void onChannelMessagesLoaded(const QString &channelId,
+                               const QString &beforeMessageId,
+                               const QVariantList &messages);
+  void onChannelMessageSent(const QString &channelId, const QString &nonce,
+                            const QVariantMap &message);
+  void onChannelMessageEdited(const QString &channelId,
+                              const QVariantMap &message);
+  void onChannelMessageDeleted(const QString &channelId,
+                               const QString &messageId);
+  void onChatRequestFailed(const QString &operation, const QString &channelId,
+                           const QString &nonce, const QString &message);
   void onDataRequestFailed(const QString &message);
   void onAvatarDownloaded(const QString &userId, const QString &localPath);
   void onAvatarDownloadFailed(const QString &userId, const QString &message);
@@ -159,6 +189,7 @@ private:
   QStringList &m_pendingUnreadGuildIds;
   QStringList &m_pendingUnreadChannelIds;
   QStringList &m_pendingDmPresenceUserIds;
+  QHash<QString, QString> m_chatGuildByChannelId;
   int &m_visibleDmChannelCount;
   int &m_visibleGuildChannelCount;
   bool &m_loadingGuilds;

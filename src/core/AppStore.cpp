@@ -56,6 +56,67 @@ QString AppStore::selectedGuildId() const { return m_selectedGuildId; }
 
 QString AppStore::selectedChannelId() const { return m_selectedChannelId; }
 
+QVariantList AppStore::currentChannelMessages() const {
+  return messagesForChannel(m_selectedChannelId);
+}
+
+bool AppStore::chatInitialLoaded() const {
+  return isChatInitialLoaded(m_selectedChannelId);
+}
+
+bool AppStore::chatLoadingInitial() const {
+  return isChatLoadingInitial(m_selectedChannelId);
+}
+
+bool AppStore::chatLoadingBefore() const {
+  return isChatLoadingBefore(m_selectedChannelId);
+}
+
+bool AppStore::chatHasMoreBefore() const {
+  return hasMoreChatBefore(m_selectedChannelId);
+}
+
+QString AppStore::chatOldestMessageId() const {
+  return oldestChatMessageId(m_selectedChannelId);
+}
+
+QString AppStore::chatNewestMessageId() const {
+  return newestChatMessageId(m_selectedChannelId);
+}
+
+QVariantList AppStore::messagesForChannel(const QString &channelId) const {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return QVariantList();
+  }
+
+  return m_messageCache.messagesForChannel(safeChannelId);
+}
+
+bool AppStore::isChatInitialLoaded(const QString &channelId) const {
+  return m_messageCache.isInitialLoaded(channelId.trimmed());
+}
+
+bool AppStore::isChatLoadingInitial(const QString &channelId) const {
+  return m_messageCache.isLoadingInitial(channelId.trimmed());
+}
+
+bool AppStore::isChatLoadingBefore(const QString &channelId) const {
+  return m_messageCache.isLoadingBefore(channelId.trimmed());
+}
+
+bool AppStore::hasMoreChatBefore(const QString &channelId) const {
+  return m_messageCache.hasMoreBefore(channelId.trimmed());
+}
+
+QString AppStore::oldestChatMessageId(const QString &channelId) const {
+  return m_messageCache.oldestMessageId(channelId.trimmed());
+}
+
+QString AppStore::newestChatMessageId(const QString &channelId) const {
+  return m_messageCache.newestMessageId(channelId.trimmed());
+}
+
 void AppStore::selectHome() {
   if (m_selectedGuildId.isEmpty() && m_selectedChannelId.isEmpty()) {
     return;
@@ -64,6 +125,8 @@ void AppStore::selectHome() {
   m_selectedGuildId.clear();
   m_selectedChannelId.clear();
   emit selectionChanged();
+  emit currentChannelMessagesChanged();
+  emit currentChatStateChanged();
 }
 
 void AppStore::selectGuild(const QString &guildId) {
@@ -74,6 +137,8 @@ void AppStore::selectGuild(const QString &guildId) {
   m_selectedGuildId = guildId;
   m_selectedChannelId.clear();
   emit selectionChanged();
+  emit currentChannelMessagesChanged();
+  emit currentChatStateChanged();
 }
 
 void AppStore::selectChannel(const QString &channelId) {
@@ -83,6 +148,8 @@ void AppStore::selectChannel(const QString &channelId) {
 
   m_selectedChannelId = channelId;
   emit selectionChanged();
+  emit currentChannelMessagesChanged();
+  emit currentChatStateChanged();
 }
 
 void AppStore::clearSession() {
@@ -94,6 +161,7 @@ void AppStore::clearSession() {
   setGuilds(QVariantList());
   setDmChannels(QVariantList());
   setGuildChannels(QVariantList());
+  clearChatCache();
   selectHome();
 }
 
@@ -324,4 +392,194 @@ void AppStore::appendGuildChannels(const QVariantList &channels) {
     m_guildChannels.append(channels.at(i));
   }
   emit guildChannelsAppended(channels);
+}
+
+void AppStore::setChatLoadingInitial(const QString &channelId, bool loading) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  m_messageCache.setLoadingInitial(safeChannelId, loading);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::setChatLoadingBefore(const QString &channelId, bool loading) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  m_messageCache.setLoadingBefore(safeChannelId, loading);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::setChatHasMoreBefore(const QString &channelId, bool hasMore) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  m_messageCache.setHasMoreBefore(safeChannelId, hasMore);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::setInitialChatMessages(const QString &channelId,
+                                      const QString &guildId,
+                                      const QList<DiscordMessage> &messages,
+                                      bool hasMoreBefore) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  m_messageCache.setInitialMessages(safeChannelId, guildId.trimmed(), messages,
+                                    hasMoreBefore);
+  QVariantList cachedMessages =
+      m_messageCache.messagesForChannel(safeChannelId);
+  emit chatMessagesReset(safeChannelId, cachedMessages);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::prependOlderChatMessages(const QString &channelId,
+                                        const QList<DiscordMessage> &messages,
+                                        bool hasMoreBefore) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  QVariantList added = m_messageCache.prependOlderMessages(
+      safeChannelId, messages, hasMoreBefore);
+  if (!added.isEmpty()) {
+    emit chatMessagesPrepended(safeChannelId, added);
+  }
+  if (safeChannelId == m_selectedChannelId) {
+    if (!added.isEmpty()) {
+      emit currentChannelMessagesChanged();
+    }
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::addOrReplaceChatMessage(const DiscordMessage &message) {
+  QString inputChannelId = message.channelId;
+  bool alreadyExists =
+      !inputChannelId.isEmpty() &&
+      m_messageCache.containsMessage(inputChannelId, message.id);
+  bool replacesPending =
+      !inputChannelId.isEmpty() && !message.nonce.isEmpty() &&
+      m_messageCache.containsMessage(inputChannelId, message.nonce);
+
+  QVariantMap item = m_messageCache.addOrReplaceMessage(message);
+  QString channelId = item.value("channelId").toString();
+  if (channelId.isEmpty()) {
+    return;
+  }
+
+  if (replacesPending) {
+    emit chatMessagesReset(channelId,
+                           m_messageCache.messagesForChannel(channelId));
+  } else if (alreadyExists) {
+    emit chatMessageUpdated(channelId, item);
+  } else {
+    emit chatMessageAdded(channelId, item);
+  }
+  if (channelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::updateChatMessage(const DiscordMessage &message) {
+  QVariantMap item = m_messageCache.updateMessage(message);
+  QString channelId = item.value("channelId").toString();
+  if (channelId.isEmpty()) {
+    return;
+  }
+
+  emit chatMessageUpdated(channelId, item);
+  if (channelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::deleteChatMessage(const QString &channelId,
+                                 const QString &messageId) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeMessageId = messageId.trimmed();
+  if (safeChannelId.isEmpty() || safeMessageId.isEmpty()) {
+    return;
+  }
+
+  if (!m_messageCache.deleteMessage(safeChannelId, safeMessageId)) {
+    return;
+  }
+
+  emit chatMessageDeleted(safeChannelId, safeMessageId);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+QString AppStore::addPendingChatMessage(const DiscordMessage &message) {
+  QString pendingId = m_messageCache.addPendingMessage(message);
+  if (pendingId.isEmpty()) {
+    return QString();
+  }
+
+  QVariantMap item =
+      m_messageCache.message(message.channelId, pendingId).toVariantMap();
+  emit chatMessageAdded(message.channelId, item);
+  if (message.channelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+  return pendingId;
+}
+
+void AppStore::markPendingChatMessageFailed(const QString &channelId,
+                                            const QString &messageId) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeMessageId = messageId.trimmed();
+  if (safeChannelId.isEmpty() || safeMessageId.isEmpty()) {
+    return;
+  }
+
+  m_messageCache.markPendingFailed(safeChannelId, safeMessageId);
+  QVariantMap item =
+      m_messageCache.message(safeChannelId, safeMessageId).toVariantMap();
+  emit chatMessageUpdated(safeChannelId, item);
+  if (safeChannelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::notifyChatAvatarChanged(const QString &userId,
+                                       const QString &avatarSource) {
+  QString safeUserId = userId.trimmed();
+  QString safeAvatarSource = avatarSource.trimmed();
+  if (safeUserId.isEmpty() || safeAvatarSource.isEmpty()) {
+    return;
+  }
+
+  emit chatAvatarChanged(safeUserId, safeAvatarSource);
+}
+
+void AppStore::clearChatCache() {
+  m_messageCache.clear();
+  emit currentChannelMessagesChanged();
+  emit currentChatStateChanged();
 }

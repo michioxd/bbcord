@@ -2,6 +2,7 @@
 #include "../AppStore.hpp"
 #include "../Client.hpp"
 #include "../discord/DiscordUtils.hpp"
+#include "../models/Models.hpp"
 
 #include <QMetaObject>
 #include <QTimer>
@@ -19,6 +20,12 @@ void GatewayHandler::applyGatewayOrderingEvent(
   if (eventName == "MESSAGE_CREATE") {
     QString guildId = payload.value("guild_id").toString();
     QString channelId = payload.value("channel_id").toString();
+    if (shouldApplyChatEvent(channelId)) {
+      DiscordMessage message = DiscordMessage::fromVariantMap(payload);
+      message.pending = false;
+      message.failed = false;
+      m_store->addOrReplaceChatMessage(message);
+    }
     if (guildId.isEmpty() && !channelId.isEmpty()) {
       QMetaObject::invokeMethod(m_client, "moveDmToTop", Qt::DirectConnection,
                                 Q_ARG(QString, channelId),
@@ -52,6 +59,24 @@ void GatewayHandler::applyGatewayOrderingEvent(
     if (!gatewayUiUpdateQueued) {
       gatewayUiUpdateQueued = true;
       QTimer::singleShot(250, m_client, SLOT(flushGatewayUiUpdates()));
+    }
+    return;
+  }
+  if (eventName == "MESSAGE_UPDATE") {
+    QString channelId = payload.value("channel_id").toString();
+    if (shouldApplyChatEvent(channelId)) {
+      DiscordMessage message = DiscordMessage::fromVariantMap(payload);
+      message.pending = false;
+      message.failed = false;
+      m_store->updateChatMessage(message);
+    }
+    return;
+  }
+  if (eventName == "MESSAGE_DELETE") {
+    QString channelId = payload.value("channel_id").toString();
+    QString messageId = payload.value("id").toString();
+    if (shouldApplyChatEvent(channelId)) {
+      m_store->deleteChatMessage(channelId, messageId);
     }
     return;
   }
@@ -100,6 +125,21 @@ void GatewayHandler::applyGatewayOrderingEvent(
                               Qt::DirectConnection);
   }
 }
+
+bool GatewayHandler::shouldApplyChatEvent(const QString &channelId) const {
+  if (m_store == 0) {
+    return false;
+  }
+
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return false;
+  }
+
+  return m_store->isChatInitialLoaded(safeChannelId) ||
+         m_store->selectedChannelId() == safeChannelId;
+}
+
 bool GatewayHandler::gatewayMessageMentionsCurrentUser(
     const QVariantMap &payload) const {
 

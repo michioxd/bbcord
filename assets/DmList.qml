@@ -3,7 +3,10 @@ import bb.cascades 1.4
 Container {
     id: dmList
 
-    signal dmSelected(string channelName)
+    signal dmSelected(string channelId, string channelName)
+
+    property variant dmModelRef: dmModel
+    property variant storeRef: appStore
 
     horizontalAlignment: HorizontalAlignment.Fill
     verticalAlignment: VerticalAlignment.Fill
@@ -39,7 +42,7 @@ Container {
             var item = dmModel.data(indexPath);
 
             if (item.type == "dm") {
-                dmList.dmSelected(item.name);
+                dmList.dmSelected(item.id, item.name);
             }
         }
 
@@ -271,37 +274,66 @@ Container {
     ]
 
     function refreshDms() {
-        dmModel.clear();
-        for (var i = 0; i < appStore.dmChannels.length; ++i) {
-            dmModel.append(appStore.dmChannels[i]);
+        var model = this.dmModelRef;
+        var store = this.storeRef;
+        model.clear();
+        for (var i = 0; i < store.dmChannels.length; ++i) {
+            model.append(store.dmChannels[i]);
         }
-        updateDmLoading();
+
+        if (store.dataLoading) {
+            model.append({
+                "type": "loading"
+            });
+        }
     }
 
     function appendDms(channels) {
-        removeDmLoading();
-        for (var i = 0; i < channels.length; ++i) {
-            dmModel.append(channels[i]);
+        var model = this.dmModelRef;
+        var store = this.storeRef;
+        if (model.size() > 0) {
+            var lastIndex = model.size() - 1;
+            var last = model.data([lastIndex]);
+            if (last.type == "loading") {
+                model.removeAt([lastIndex]);
+            }
         }
-        updateDmLoading();
+
+        for (var i = 0; i < channels.length; ++i) {
+            model.append(channels[i]);
+        }
+
+        if (store.dataLoading) {
+            model.append({
+                "type": "loading"
+            });
+        }
     }
 
     function refreshDmsIfNeeded() {
-        var end = dmModel.size() - loadingRowOffset();
-        if (end != appStore.dmChannels.length) {
+        var model = this.dmModelRef;
+        var store = this.storeRef;
+        var loadingOffset = 0;
+        if (model.size() > 0) {
+            var last = model.data([model.size() - 1]);
+            loadingOffset = last.type == "loading" ? 1 : 0;
+        }
+
+        var end = model.size() - loadingOffset;
+        if (end != store.dmChannels.length) {
             refreshDms();
             return;
         }
 
-        for (var i = 0; i < appStore.dmChannels.length; ++i) {
-            var item = dmModel.data([i]);
-            if (!item || item.id != appStore.dmChannels[i].id) {
+        for (var i = 0; i < store.dmChannels.length; ++i) {
+            var item = model.data([i]);
+            if (!item || item.id != store.dmChannels[i].id) {
                 refreshDms();
                 return;
             }
 
-            if (item.name != appStore.dmChannels[i].name || item.avatar != appStore.dmChannels[i].avatar || item.avatar2 != appStore.dmChannels[i].avatar2 || item.statusColor != appStore.dmChannels[i].statusColor) {
-                dmModel.replace([i], appStore.dmChannels[i]);
+            if (item.name != store.dmChannels[i].name || item.avatar != store.dmChannels[i].avatar || item.avatar2 != store.dmChannels[i].avatar2 || item.statusColor != store.dmChannels[i].statusColor) {
+                model.replace([i], store.dmChannels[i]);
             }
         }
     }
@@ -328,9 +360,18 @@ Container {
     }
 
     function updateDmLoading() {
-        removeDmLoading();
-        if (appStore.dataLoading) {
-            dmModel.append({
+        var model = this.dmModelRef;
+        var store = this.storeRef;
+        if (model.size() > 0) {
+            var lastIndex = model.size() - 1;
+            var last = model.data([lastIndex]);
+            if (last.type == "loading") {
+                model.removeAt([lastIndex]);
+            }
+        }
+
+        if (store.dataLoading) {
+            model.append({
                 "type": "loading"
             });
         }
@@ -346,28 +387,40 @@ Container {
     }
 
     function updateDmAvatar(channelId, avatarSource) {
-        if (dmModel.size() == 0 || !avatarSource)
+        var model = this.dmModelRef;
+        if (model.size() == 0 || !avatarSource)
             return;
-        var end = dmModel.size() - loadingRowOffset();
+        var loadingOffset = 0;
+        var last = model.data([model.size() - 1]);
+        if (last.type == "loading") {
+            loadingOffset = 1;
+        }
+        var end = model.size() - loadingOffset;
         for (var i = 0; i < end; ++i) {
-            var item = dmModel.data([i]);
+            var item = model.data([i]);
             if (item && item.id == channelId) {
                 item.avatar = avatarSource;
-                dmModel.replace([i], item);
+                model.replace([i], item);
                 break;
             }
         }
     }
 
     function updateDmAvatar2(channelId, avatarSource) {
-        if (dmModel.size() == 0 || !avatarSource)
+        var model = this.dmModelRef;
+        if (model.size() == 0 || !avatarSource)
             return;
-        var end = dmModel.size() - loadingRowOffset();
+        var loadingOffset = 0;
+        var last = model.data([model.size() - 1]);
+        if (last.type == "loading") {
+            loadingOffset = 1;
+        }
+        var end = model.size() - loadingOffset;
         for (var i = 0; i < end; ++i) {
-            var item = dmModel.data([i]);
+            var item = model.data([i]);
             if (item && item.id == channelId) {
                 item.avatar2 = avatarSource;
-                dmModel.replace([i], item);
+                model.replace([i], item);
                 break;
             }
         }
