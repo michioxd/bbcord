@@ -106,6 +106,11 @@ private Q_SLOTS:
   void onGuildIconCacheHit(const QString &guildId, const QString &path);
   void onGuildIconCacheMiss(const QString &guildId, const QString &path);
   void onGatewayDispatch(const QString &eventName, const QVariantMap &payload);
+  void onGatewayGuildsAndDmsReady(const QVariantList &guilds,
+                                  const QVariantList &allDmChannels,
+                                  const QVariantList &visibleDmChannels,
+                                  const QStringList &orderedGuildIds,
+                                  const QVariantMap &dmPresenceByUserId);
   void flushGatewayUiUpdates();
   void savePendingDmChannelsCache();
 
@@ -141,6 +146,7 @@ private:
   void initializeAvatarCacheWorker();
   void shutdownAvatarCacheWorker();
   void initializeManagers();
+  void syncGatewayOrderingStateToWorker();
 
   AppStore *m_store;
   QThread *m_networkThread;

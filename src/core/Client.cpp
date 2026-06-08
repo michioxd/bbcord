@@ -164,6 +164,7 @@ void DiscordClient::initializeManagers() {
 void DiscordClient::initializeNetworkWorker() {
   qRegisterMetaType<QVariantMap>("QVariantMap");
   qRegisterMetaType<QVariantList>("QVariantList");
+  qRegisterMetaType<QStringList>("QStringList");
 
   if (m_networkThread != 0 || m_networkWorker != 0) {
     return;
@@ -218,6 +219,14 @@ void DiscordClient::initializeNetworkWorker() {
   connect(m_networkWorker,
           SIGNAL(gatewayDispatchReceived(QString, QVariantMap)), this,
           SLOT(onGatewayDispatch(QString, QVariantMap)), Qt::QueuedConnection);
+  connect(
+      m_networkWorker,
+      SIGNAL(guildsAndDmsReady(QVariantList, QVariantList, QVariantList,
+                               QStringList, QVariantMap)),
+      this,
+      SLOT(onGatewayGuildsAndDmsReady(QVariantList, QVariantList, QVariantList,
+                                      QStringList, QVariantMap)),
+      Qt::QueuedConnection);
   connect(m_networkWorker, SIGNAL(cancelAllFinished()), m_networkThread,
           SLOT(quit()), Qt::DirectConnection);
 
@@ -463,6 +472,7 @@ void DiscordClient::loadMoreDmChannels() {
     if (m_store) {
       m_store->appendDmChannels(appendedChannels);
     }
+    syncGatewayOrderingStateToWorker();
     return;
   }
 
@@ -746,6 +756,7 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
   setLoggedIn(true);
   setStatusText("Connected");
   if (m_networkWorker != 0) {
+    syncGatewayOrderingStateToWorker();
     QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
@@ -814,6 +825,7 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
   updateDataLoading();
 
   sortGuilds();
+  syncGatewayOrderingStateToWorker();
 
   if (m_store && !m_orderedGuildIds.isEmpty()) {
     m_store->setGuilds(m_guilds);
@@ -911,6 +923,7 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
     if (m_store) {
       m_store->setDmChannels(m_dmChannels);
     }
+    syncGatewayOrderingStateToWorker();
   }
 
   m_dmChannelsHasMore = !channels.isEmpty();
@@ -1264,6 +1277,23 @@ void DiscordClient::onGatewayDispatch(const QString &eventName,
       m_pendingDmUiUpdate, m_gatewayUiUpdateQueued);
 }
 
+void DiscordClient::onGatewayGuildsAndDmsReady(
+    const QVariantList &guilds, const QVariantList &allDmChannels,
+    const QVariantList &visibleDmChannels, const QStringList &orderedGuildIds,
+    const QVariantMap &dmPresenceByUserId) {
+  m_guilds = guilds;
+  m_allDmChannels = allDmChannels;
+  m_dmChannels = visibleDmChannels;
+  m_orderedGuildIds = orderedGuildIds;
+  m_dmPresenceByUserId = dmPresenceByUserId;
+
+  rebuildDmRecipientIndex();
+  rebuildDmChannelIndexes();
+  updateStoreWithGuildsAndDms();
+  saveGuildsCache();
+  saveDmChannelsCache();
+}
+
 void DiscordClient::setLoggedIn(bool loggedIn) {
   if (m_loggedIn == loggedIn) {
     return;
@@ -1337,6 +1367,18 @@ void DiscordClient::scheduleDmChannelsCacheSave() {
 void DiscordClient::savePendingDmChannelsCache() {
   m_dmCacheSaveQueued = false;
   saveDmChannelsCache();
+}
+
+void DiscordClient::syncGatewayOrderingStateToWorker() {
+  if (m_networkWorker == 0) {
+    return;
+  }
+
+  QMetaObject::invokeMethod(
+      m_networkWorker, "updateGatewayOrderingState", Qt::QueuedConnection,
+      Q_ARG(QVariantList, m_guilds), Q_ARG(QVariantList, m_allDmChannels),
+      Q_ARG(QVariantList, m_dmChannels), Q_ARG(QStringList, m_orderedGuildIds),
+      Q_ARG(QVariantMap, m_dmPresenceByUserId));
 }
 
 bool DiscordClient::applyGuildOrderFromGatewayPayload(
@@ -1686,6 +1728,7 @@ void DiscordClient::flushGatewayUiUpdates() {
   }
   if (dmChanged) {
     saveDmChannelsCache();
+    syncGatewayOrderingStateToWorker();
   }
 }
 

@@ -91,39 +91,6 @@ void GatewayHandler::applyGatewayOrderingEvent(
     }
     return;
   }
-  if (eventName == "READY") {
-    QVariantList presences = payload.value("presences").toList();
-    for (int i = 0; i < presences.size(); ++i) {
-      QVariantMap presence = presences.at(i).toMap();
-      QMetaObject::invokeMethod(
-          m_client, "updateDmPresence", Qt::DirectConnection,
-          Q_ARG(QString, presence.value("user").toMap().value("id").toString()),
-          Q_ARG(QString, presence.value("status").toString()));
-    }
-  }
-  if (eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
-      eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
-    QMetaObject::invokeMethod(m_client, "applyPendingDmPresences",
-                              Qt::DirectConnection);
-    bool orderChanged = false;
-    QMetaObject::invokeMethod(
-        m_client, "applyGuildOrderFromGatewayPayload", Qt::DirectConnection,
-        Q_RETURN_ARG(bool, orderChanged), Q_ARG(QVariantMap, payload));
-    if (!orderChanged) {
-      QMetaObject::invokeMethod(m_client, "sortGuilds", Qt::DirectConnection);
-    }
-
-    // We need to call these directly on the client to update its internal state
-    QMetaObject::invokeMethod(m_client, "sortDmChannels", Qt::DirectConnection);
-    QMetaObject::invokeMethod(m_client, "rebuildDmChannelIndexes",
-                              Qt::DirectConnection);
-    QMetaObject::invokeMethod(m_client, "updateStoreWithGuildsAndDms",
-                              Qt::DirectConnection);
-    QMetaObject::invokeMethod(m_client, "saveGuildsCache",
-                              Qt::DirectConnection);
-    QMetaObject::invokeMethod(m_client, "saveDmChannelsCache",
-                              Qt::DirectConnection);
-  }
 }
 
 bool GatewayHandler::shouldApplyChatEvent(const QString &channelId) const {
