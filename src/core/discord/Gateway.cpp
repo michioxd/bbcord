@@ -19,8 +19,8 @@ const char *kGatewayHost = "gateway.discord.gg";
 } // namespace
 
 DiscordGateway::DiscordGateway(QObject *parent)
-    : QObject(parent), m_connection(NULL), m_timerId(0), m_sequence(-1),
-      m_zstreamReady(false), m_heartbeatIntervalMs(0), m_nextHeartbeatMs(0),
+    : QObject(parent), m_connection(NULL), m_timerId(0), m_zstreamReady(false),
+      m_sequence(-1), m_heartbeatIntervalMs(0), m_nextHeartbeatMs(0),
       m_state(Disconnected) {
   m_mgr = new mg_mgr;
   mg_mgr_init(m_mgr);

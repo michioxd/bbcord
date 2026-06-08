@@ -63,6 +63,7 @@ private Q_SLOTS:
   void onGuildIconDownloadFailed(const QString &guildId,
                                  const QString &message);
   void onGatewayDispatch(const QString &eventName, const QVariantMap &payload);
+  void flushGatewayUiUpdates();
 
 private:
   void setLoggedIn(bool loggedIn);
@@ -84,11 +85,13 @@ private:
   QVariantMap guildToItem(const QVariantMap &guild) const;
   QVariantMap dmChannelToItem(const QVariantMap &channel) const;
   QVariantMap guildChannelToItem(const QVariantMap &channel) const;
+  QString dmStatusForRecipients(const QVariantList &userIds) const;
   bool applyGuildOrder(const QStringList &orderedGuildIds);
   bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
   void sortGuilds();
   void updateGuildUnreadCount(const QString &guildId, int delta);
   void updateGuildChannelUnread(const QString &channelId, bool unread);
+  void updateDmPresence(const QString &userId, const QString &status);
   QVariantList
   sortedAccessibleGuildChannels(const QVariantList &channels) const;
   void moveDmToTop(const QString &channelId, const QString &lastMessageId);
@@ -113,6 +116,7 @@ private:
   QStringList m_queuedGuildIconIds;
   QStringList m_loadedGuildIconIds;
   QStringList m_orderedGuildIds;
+  QVariantMap m_dmPresenceByUserId;
   QString m_token;
   QString m_lastGuildId;
   QString m_lastDmChannelId;
@@ -122,6 +126,8 @@ private:
   QVariantList m_dmChannels;
   QVariantList m_allGuildChannels;
   QVariantList m_visibleGuildChannels;
+  QStringList m_pendingUnreadGuildIds;
+  QStringList m_pendingUnreadChannelIds;
   int m_visibleDmChannelCount;
   int m_visibleGuildChannelCount;
   bool m_loadingGuilds;
@@ -132,6 +138,8 @@ private:
   bool m_guildChannelsHasMore;
   bool m_loggedIn;
   bool m_busy;
+  bool m_gatewayUiUpdateQueued;
+  bool m_pendingDmUiUpdate;
   QString m_statusText;
 };
 

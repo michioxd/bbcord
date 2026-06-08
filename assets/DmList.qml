@@ -1,16 +1,16 @@
 import bb.cascades 1.4
 
 Container {
-	id: dmList
+    id: dmList
 
-	signal dmSelected(string channelName)
+    signal dmSelected(string channelName)
 
-	horizontalAlignment: HorizontalAlignment.Fill
-	verticalAlignment: VerticalAlignment.Fill
+    horizontalAlignment: HorizontalAlignment.Fill
+    verticalAlignment: VerticalAlignment.Fill
 
-	layout: StackLayout {}
+    layout: StackLayout {}
 
-Container {
+    Container {
         preferredHeight: ui.du(10)
         leftPadding: ui.du(2)
         rightPadding: ui.du(2)
@@ -30,228 +30,311 @@ Container {
         }
     }
 
-	ListView {
-		id: dmListView
-		dataModel: dmModel
-		verticalAlignment: VerticalAlignment.Fill
+    ListView {
+        id: dmListView
+        dataModel: dmModel
+        verticalAlignment: VerticalAlignment.Fill
 
-		onTriggered: {
-			var item = dmModel.data(indexPath)
+        onTriggered: {
+            var item = dmModel.data(indexPath);
 
-			if (item.type == "dm") {
-				dmList.dmSelected(item.name)
-			}
-		}
+            if (item.type == "dm") {
+                dmList.dmSelected(item.name);
+            }
+        }
 
-		listItemComponents: [
-			ListItemComponent {
-				type: "loading"
+        listItemComponents: [
+            ListItemComponent {
+                type: "loading"
 
-				Container {
-					preferredHeight: ui.du(7.0)
-					horizontalAlignment: HorizontalAlignment.Fill
-					verticalAlignment: VerticalAlignment.Fill
-					layout: DockLayout {}
+                Container {
+                    preferredHeight: ui.du(7.0)
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Fill
+                    layout: DockLayout {}
 
-					ActivityIndicator {
-						running: true
-						horizontalAlignment: HorizontalAlignment.Center
-						verticalAlignment: VerticalAlignment.Center
-					}
-				}
-			},
+                    ActivityIndicator {
+                        running: true
+                        horizontalAlignment: HorizontalAlignment.Center
+                        verticalAlignment: VerticalAlignment.Center
+                    }
+                }
+            },
+            ListItemComponent {
+                type: "dm"
 
-			ListItemComponent {
-				type: "category"
+                Container {
+                    preferredHeight: ui.du(8.8)
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: ui.du(2)
+                    rightPadding: ui.du(2)
 
-				Container {
-					preferredHeight: 2.0
-					horizontalAlignment: HorizontalAlignment.Fill
-					leftPadding: ui.du(2)
-					rightPadding: ui.du(2)
-					topPadding: ui.du(2.0)
+                    function requestAvatar() {
+                        if ((ListItemData.avatar === "" && ListItemData.avatarHash !== "") || (ListItemData.avatar2 === "" && ListItemData.avatarHash2 !== "")) {
+                            ListItem.view.loadVisibleDmAvatar(ListItemData.id);
+                        }
+                    }
 
-					Label {
-						text: ListItemData.name.toUpperCase()
-						verticalAlignment: VerticalAlignment.Center
-						opacity: 0.45
-						textStyle.fontSize: FontSize.XSmall
-					}
-				}
-			},
+                    onCreationCompleted: {
+                        requestAvatar();
+                    }
 
-			ListItemComponent {
-				type: "dm"
+                    ListItem.onDataChanged: {
+                        requestAvatar();
+                    }
 
-				Container {
-					preferredHeight: ui.du(8.0)
-					horizontalAlignment: HorizontalAlignment.Fill
-					leftPadding: ui.du(2)
-					rightPadding: ui.du(2)
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.LeftToRight
+                    }
 
-					function requestAvatar() {
-						if (ListItemData.avatar === "" && ListItemData.avatarHash !== "") {
-							ListItem.view.loadVisibleDmAvatar(ListItemData.id)
-						}
-					}
+                    Container {
+                        preferredWidth: ui.du(7.0)
+                        preferredHeight: ui.du(7.0)
+                        minWidth: ui.du(7.0)
+                        minHeight: ui.du(7.0)
+                        maxWidth: ui.du(7.0)
+                        maxHeight: ui.du(7.0)
+                        verticalAlignment: VerticalAlignment.Center
 
-					onCreationCompleted: {
-						requestAvatar()
-					}
+                        layout: DockLayout {}
 
-					ListItem.onDataChanged: {
-						requestAvatar()
-					}
+                        Container {
+                            visible: ListItemData.isGroup != true
+                            preferredWidth: ui.du(6.7)
+                            preferredHeight: ui.du(6.7)
+                            minWidth: ui.du(6.7)
+                            minHeight: ui.du(6.7)
+                            maxWidth: ui.du(6.7)
+                            maxHeight: ui.du(6.7)
+                            horizontalAlignment: HorizontalAlignment.Left
+                            verticalAlignment: VerticalAlignment.Top
+                            background: Color.create(ListItemData.avatarColor)
 
-					layout: StackLayout {
-						orientation: LayoutOrientation.LeftToRight
-					}
+                            layout: DockLayout {}
 
-					Container {
-						preferredWidth: ui.du(6.0)
-						preferredHeight: ui.du(6.0)
-						minWidth: ui.du(6.0)
-						minHeight: ui.du(6.0)
-						maxWidth: ui.du(6.0)
-						maxHeight: ui.du(6.0)
-						verticalAlignment: VerticalAlignment.Center
-						background: Color.create(ListItemData.avatarColor)
+                            ImageView {
+                                imageSource: ListItemData.avatar
+                                visible: ListItemData.avatar !== ""
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                verticalAlignment: VerticalAlignment.Fill
+                                scalingMethod: ScalingMethod.AspectFill
+                            }
 
-						layout: DockLayout {}
+                            Label {
+                                text: ListItemData.initials
+                                visible: ListItemData.avatar === ""
+                                horizontalAlignment: HorizontalAlignment.Center
+                                verticalAlignment: VerticalAlignment.Center
+                                textStyle.fontSize: FontSize.Small
+                                textStyle.fontWeight: FontWeight.Bold
+                                textStyle.color: Color.White
+                            }
+                        }
 
-						ImageView {
-							imageSource: ListItemData.avatar
-							visible: ListItemData.avatar !== ""
-							horizontalAlignment: HorizontalAlignment.Fill
-							verticalAlignment: VerticalAlignment.Fill
-							scalingMethod: ScalingMethod.AspectFill
-						}
+                        Container {
+                            visible: ListItemData.isGroup == true
+                            preferredWidth: ui.du(7.0)
+                            preferredHeight: ui.du(7.0)
+                            layout: DockLayout {}
 
-						Label {
-							text: ListItemData.initials
-							visible: ListItemData.avatar === ""
-							horizontalAlignment: HorizontalAlignment.Center
-							verticalAlignment: VerticalAlignment.Center
-							textStyle.fontSize: FontSize.Small
-							textStyle.fontWeight: FontWeight.Bold
-							textStyle.color: Color.White
-						}
-					}
+                            Container {
+                                preferredWidth: ui.du(4.8)
+                                preferredHeight: ui.du(4.8)
+                                minWidth: ui.du(4.8)
+                                minHeight: ui.du(4.8)
+                                maxWidth: ui.du(4.8)
+                                maxHeight: ui.du(4.8)
+                                horizontalAlignment: HorizontalAlignment.Left
+                                verticalAlignment: VerticalAlignment.Top
+                                background: Color.create(ListItemData.avatarColor)
 
-					Label {
-						text: ListItemData.name
-						leftMargin: ui.du(1.5)
-						verticalAlignment: VerticalAlignment.Center
-						textStyle.fontSize: FontSize.Medium
-					}
-				}
-			}
-		]
+                                layout: DockLayout {}
 
-		function itemType(data, indexPath) {
-			return data.type
-		}
+                                ImageView {
+                                    imageSource: ListItemData.avatar
+                                    visible: ListItemData.avatar !== ""
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+                                    scalingMethod: ScalingMethod.AspectFill
+                                }
 
-		function loadVisibleDmAvatar(channelId) {
-			dmListController.loadDmAvatar(channelId)
-		}
+                                Label {
+                                    text: ListItemData.initials
+                                    visible: ListItemData.avatar === ""
+                                    horizontalAlignment: HorizontalAlignment.Center
+                                    verticalAlignment: VerticalAlignment.Center
+                                    textStyle.fontSize: FontSize.XSmall
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.White
+                                }
+                            }
 
-		attachedObjects: [
-			ListScrollStateHandler {
-				onAtEndChanged: {
-					if (atEnd) {
-						dmListController.loadMoreDmChannels()
-					}
-				}
-			}
-		]
-	}
+                            Container {
+                                preferredWidth: ui.du(4.8)
+                                preferredHeight: ui.du(4.8)
+                                minWidth: ui.du(4.8)
+                                minHeight: ui.du(4.8)
+                                maxWidth: ui.du(4.8)
+                                maxHeight: ui.du(4.8)
+                                horizontalAlignment: HorizontalAlignment.Right
+                                verticalAlignment: VerticalAlignment.Bottom
+                                background: Color.create(ListItemData.avatarColor2)
 
-	attachedObjects: [
-		ArrayDataModel {
-			id: dmModel
-		}
-	]
+                                layout: DockLayout {}
 
-	function refreshDms() {
-		dmModel.clear()
-		dmModel.append({"type": "category", "name": "Direct Messages"})
-		for (var i = 0; i < appStore.dmChannels.length; ++i) {
-			dmModel.append(appStore.dmChannels[i])
-		}
-		updateDmLoading()
-	}
+                                ImageView {
+                                    imageSource: ListItemData.avatar2
+                                    visible: ListItemData.avatar2 !== ""
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+                                    scalingMethod: ScalingMethod.AspectFill
+                                }
 
-	function appendDms(channels) {
-		removeDmLoading()
-		for (var i = 0; i < channels.length; ++i) {
-			dmModel.append(channels[i])
-		}
-		updateDmLoading()
-	}
+                                Label {
+                                    text: ListItemData.initials2
+                                    visible: ListItemData.avatar2 === ""
+                                    horizontalAlignment: HorizontalAlignment.Center
+                                    verticalAlignment: VerticalAlignment.Center
+                                    textStyle.fontSize: FontSize.XSmall
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.White
+                                }
+                            }
+                        }
 
-	function refreshDmsIfNeeded() {
-		var end = dmModel.size() - loadingRowOffset()
-		if (end - 1 != appStore.dmChannels.length) {
-			refreshDms()
-			return
-		}
+                        Container {
+                            preferredWidth: ui.du(1.5)
+                            preferredHeight: ui.du(1.5)
+                            minWidth: ui.du(1.5)
+                            minHeight: ui.du(1.5)
+                            maxWidth: ui.du(1.5)
+                            maxHeight: ui.du(1.5)
+                            horizontalAlignment: HorizontalAlignment.Right
+                            verticalAlignment: VerticalAlignment.Bottom
+                            background: Color.create(ListItemData.statusColor)
+                        }
+                    }
 
-		for (var i = 0; i < appStore.dmChannels.length; ++i) {
-			var item = dmModel.data([i + 1])
-			if (!item || item.id != appStore.dmChannels[i].id) {
-				refreshDms()
-				return
-			}
-		}
-	}
+                    Label {
+                        text: ListItemData.name
+                        leftMargin: ui.du(1.5)
+                        verticalAlignment: VerticalAlignment.Center
+                        textStyle.fontSize: FontSize.Medium
+                    }
+                }
+            }
+        ]
 
-	function loadingRowOffset() {
-		if (dmModel.size() == 0) {
-			return 0
-		}
+        function itemType(data, indexPath) {
+            return data.type;
+        }
 
-		var last = dmModel.data([dmModel.size() - 1])
-		return last.type == "loading" ? 1 : 0
-	}
+        function loadVisibleDmAvatar(channelId) {
+            dmListController.loadDmAvatar(channelId);
+        }
 
-	function removeDmLoading() {
-		if (dmModel.size() == 0) {
-			return
-		}
+        attachedObjects: [
+            ListScrollStateHandler {
+                onAtEndChanged: {
+                    if (atEnd) {
+                        dmListController.loadMoreDmChannels();
+                    }
+                }
+            }
+        ]
+    }
 
-		var lastIndex = dmModel.size() - 1
-		var last = dmModel.data([lastIndex])
-		if (last.type == "loading") {
-			dmModel.removeAt([lastIndex])
-		}
-	}
+    attachedObjects: [
+        ArrayDataModel {
+            id: dmModel
+        }
+    ]
 
-	function updateDmLoading() {
-		removeDmLoading()
-		if (appStore.dataLoading) {
-			dmModel.append({ "type": "loading" })
-		}
-	}
+    function refreshDms() {
+        dmModel.clear();
+        for (var i = 0; i < appStore.dmChannels.length; ++i) {
+            dmModel.append(appStore.dmChannels[i]);
+        }
+        updateDmLoading();
+    }
 
-	onCreationCompleted: {
-		refreshDms()
-		appStore.dmChannelsAppended.connect(appendDms)
-		appStore.dmAvatarChanged.connect(updateDmAvatar)
-		appStore.dmChannelsChanged.connect(refreshDmsIfNeeded)
-		appStore.dataLoadingChanged.connect(updateDmLoading)
-	}
+    function appendDms(channels) {
+        removeDmLoading();
+        for (var i = 0; i < channels.length; ++i) {
+            dmModel.append(channels[i]);
+        }
+        updateDmLoading();
+    }
 
-	function updateDmAvatar(channelId, avatarSource) {
-		if (dmModel.size() == 0) return
-		var end = dmModel.size() - loadingRowOffset()
-		for (var i = 1; i < end; ++i) {
-			var item = dmModel.data([i])
-			if (item && item.id == channelId) {
-				item.avatar = avatarSource
-				dmModel.replace([i], item)
-				break
-			}
-		}
-	}
+    function refreshDmsIfNeeded() {
+        var end = dmModel.size() - loadingRowOffset();
+        if (end != appStore.dmChannels.length) {
+            refreshDms();
+            return;
+        }
+
+        for (var i = 0; i < appStore.dmChannels.length; ++i) {
+            var item = dmModel.data([i]);
+            if (!item || item.id != appStore.dmChannels[i].id) {
+                refreshDms();
+                return;
+            }
+
+            if (item.name != appStore.dmChannels[i].name || item.avatar != appStore.dmChannels[i].avatar || item.avatar2 != appStore.dmChannels[i].avatar2 || item.statusColor != appStore.dmChannels[i].statusColor) {
+                dmModel.replace([i], appStore.dmChannels[i]);
+            }
+        }
+    }
+
+    function loadingRowOffset() {
+        if (dmModel.size() == 0) {
+            return 0;
+        }
+
+        var last = dmModel.data([dmModel.size() - 1]);
+        return last.type == "loading" ? 1 : 0;
+    }
+
+    function removeDmLoading() {
+        if (dmModel.size() == 0) {
+            return;
+        }
+
+        var lastIndex = dmModel.size() - 1;
+        var last = dmModel.data([lastIndex]);
+        if (last.type == "loading") {
+            dmModel.removeAt([lastIndex]);
+        }
+    }
+
+    function updateDmLoading() {
+        removeDmLoading();
+        if (appStore.dataLoading) {
+            dmModel.append({
+                "type": "loading"
+            });
+        }
+    }
+
+    onCreationCompleted: {
+        refreshDms();
+        appStore.dmChannelsAppended.connect(appendDms);
+        appStore.dmAvatarChanged.connect(updateDmAvatar);
+        appStore.dmChannelsChanged.connect(refreshDmsIfNeeded);
+        appStore.dataLoadingChanged.connect(updateDmLoading);
+    }
+
+    function updateDmAvatar(channelId, avatarSource) {
+        if (dmModel.size() == 0)
+            return;
+        var end = dmModel.size() - loadingRowOffset();
+        for (var i = 0; i < end; ++i) {
+            var item = dmModel.data([i]);
+            if (item && item.id == channelId) {
+                item.avatar = avatarSource;
+                dmModel.replace([i], item);
+                break;
+            }
+        }
+    }
 }
