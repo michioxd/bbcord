@@ -60,6 +60,7 @@ public:
   void setGuilds(const QVariantList &guilds);
   void updateGuildIcon(const QString &guildId, const QString &iconSource);
   void updateDmAvatar(const QString &channelId, const QString &avatarSource);
+  void updateDmAvatar2(const QString &channelId, const QString &avatarSource);
   void setDmChannels(const QVariantList &dmChannels);
   void setGuildChannels(const QVariantList &channels);
 
@@ -74,6 +75,7 @@ Q_SIGNALS:
   void dmChannelsChanged();
   void dmChannelsAppended(const QVariantList &channels);
   void dmAvatarChanged(const QString &channelId, const QString &avatarSource);
+  void dmAvatar2Changed(const QString &channelId, const QString &avatarSource);
   void guildChannelsChanged();
   void guildChannelsAppended(const QVariantList &channels);
   void selectionChanged();

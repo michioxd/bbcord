@@ -191,6 +191,19 @@ void AppStore::updateDmAvatar(const QString &channelId,
   }
 }
 
+void AppStore::updateDmAvatar2(const QString &channelId,
+                               const QString &avatarSource) {
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    if (channel.value("id").toString() == channelId) {
+      channel["avatar2"] = avatarSource;
+      m_dmChannels.replace(i, channel);
+      emit dmAvatar2Changed(channelId, avatarSource);
+      return;
+    }
+  }
+}
+
 void AppStore::setDmChannels(const QVariantList &dmChannels) {
   QVariantList appended;
   if (dmChannels.size() >= m_dmChannels.size()) {

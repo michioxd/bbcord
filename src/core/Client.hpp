@@ -89,9 +89,13 @@ private:
   bool applyGuildOrder(const QStringList &orderedGuildIds);
   bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
   void sortGuilds();
-  void updateGuildUnreadCount(const QString &guildId, int delta);
+  int guildMentionCount(const QString &guildId) const;
+  bool gatewayMessageMentionsCurrentUser(const QVariantMap &payload) const;
+  void updateGuildMentionCount(const QString &guildId, int mentionCount);
+  void updateGuildUnread(const QString &guildId, bool unread);
   void updateGuildChannelUnread(const QString &channelId, bool unread);
   void updateDmPresence(const QString &userId, const QString &status);
+  bool applyPendingDmPresences();
   QVariantList
   sortedAccessibleGuildChannels(const QVariantList &channels) const;
   void moveDmToTop(const QString &channelId, const QString &lastMessageId);
@@ -126,8 +130,10 @@ private:
   QVariantList m_dmChannels;
   QVariantList m_allGuildChannels;
   QVariantList m_visibleGuildChannels;
+  QVariantMap m_pendingMentionCountsByGuildId;
   QStringList m_pendingUnreadGuildIds;
   QStringList m_pendingUnreadChannelIds;
+  QStringList m_pendingDmPresenceUserIds;
   int m_visibleDmChannelCount;
   int m_visibleGuildChannelCount;
   bool m_loadingGuilds;

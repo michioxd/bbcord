@@ -201,12 +201,14 @@ void DiscordClient::logout() {
   m_loadedGuildIconIds.clear();
   m_orderedGuildIds.clear();
   m_dmPresenceByUserId.clear();
+  m_pendingDmPresenceUserIds.clear();
   m_guilds.clear();
   m_allDmChannels.clear();
   m_dmChannels.clear();
   m_allGuildChannels.clear();
   m_visibleGuildChannels.clear();
   m_pendingUnreadGuildIds.clear();
+  m_pendingMentionCountsByGuildId.clear();
   m_pendingUnreadChannelIds.clear();
   m_gatewayUiUpdateQueued = false;
   m_pendingDmUiUpdate = false;
@@ -388,19 +390,6 @@ void DiscordClient::selectGuild(const QString &guildId) {
 
   bool sameGuild = safeGuildId == m_selectedGuildId;
 
-  for (int i = 0; i < m_guilds.size(); ++i) {
-    QVariantMap guild = m_guilds.at(i).toMap();
-    if (guild.value("id").toString() == safeGuildId &&
-        guild.value("unreadCount").toInt() > 0) {
-      guild["unreadCount"] = 0;
-      m_guilds.replace(i, guild);
-      if (m_store) {
-        m_store->setGuilds(m_guilds);
-      }
-      break;
-    }
-  }
-
   if (m_store) {
     m_store->selectGuild(safeGuildId);
   }
@@ -564,7 +553,6 @@ void DiscordClient::onAvatarDownloaded(const QString &userId,
     }
   }
 
-  bool secondaryDmAvatarChanged = false;
   for (int i = 0; i < m_dmChannels.size(); ++i) {
     QVariantMap channel = m_dmChannels.at(i).toMap();
     if (channel.value("avatarUserId").toString() == userId) {
@@ -576,12 +564,10 @@ void DiscordClient::onAvatarDownloaded(const QString &userId,
     } else if (channel.value("avatarUserId2").toString() == userId) {
       channel["avatar2"] = source;
       m_dmChannels.replace(i, channel);
-      secondaryDmAvatarChanged = true;
+      if (m_store) {
+        m_store->updateDmAvatar2(channel.value("id").toString(), source);
+      }
     }
-  }
-
-  if (secondaryDmAvatarChanged && m_store) {
-    m_store->setDmChannels(m_dmChannels);
   }
 
   if (!m_loadedAvatarUserIds.contains(userId)) {
@@ -937,7 +923,8 @@ QVariantMap DiscordClient::guildToItem(const QVariantMap &guild) const {
   item["type"] = "server";
   item["id"] = guildId;
   item["name"] = name;
-  item["unreadCount"] = guild.value("mention_count").toInt();
+  item["mentionCount"] = guild.value("mention_count").toInt();
+  item["unread"] = guild.value("unread").toBool();
   if (guild.contains("position")) {
     item["position"] = guild.value("position").toInt();
   }
@@ -1031,17 +1018,64 @@ bool DiscordClient::applyGuildOrderFromGatewayPayload(
 
 void DiscordClient::sortGuilds() { applyGuildOrder(m_orderedGuildIds); }
 
-void DiscordClient::updateGuildUnreadCount(const QString &guildId, int delta) {
+int DiscordClient::guildMentionCount(const QString &guildId) const {
   QString safeGuildId = guildId.trimmed();
-  if (safeGuildId.isEmpty() || delta == 0) {
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      return guild.value("mentionCount").toInt();
+    }
+  }
+  return 0;
+}
+
+bool DiscordClient::gatewayMessageMentionsCurrentUser(
+    const QVariantMap &payload) const {
+  QString currentUserId = m_store ? m_store->currentUserId() : QString();
+  if (currentUserId.isEmpty()) {
+    return false;
+  }
+
+  if (payload.value("mention_everyone").toBool()) {
+    return true;
+  }
+
+  QVariantList mentions = payload.value("mentions").toList();
+  for (int i = 0; i < mentions.size(); ++i) {
+    if (mentions.at(i).toMap().value("id").toString() == currentUserId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void DiscordClient::updateGuildMentionCount(const QString &guildId,
+                                            int mentionCount) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
     return;
   }
 
   for (int i = 0; i < m_guilds.size(); ++i) {
     QVariantMap guild = m_guilds.at(i).toMap();
     if (guild.value("id").toString() == safeGuildId) {
-      int count = guild.value("unreadCount").toInt() + delta;
-      guild["unreadCount"] = count < 0 ? 0 : count;
+      guild["mentionCount"] = mentionCount < 0 ? 0 : mentionCount;
+      m_guilds.replace(i, guild);
+      return;
+    }
+  }
+}
+
+void DiscordClient::updateGuildUnread(const QString &guildId, bool unread) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      guild["unread"] = unread;
       m_guilds.replace(i, guild);
       return;
     }
@@ -1199,33 +1233,72 @@ void DiscordClient::updateDmPresence(const QString &userId,
     safeStatus = "offline";
   }
 
-  m_dmPresenceByUserId.insert(safeUserId, safeStatus);
+  if (m_dmPresenceByUserId.contains(safeUserId) &&
+      m_dmPresenceByUserId.value(safeUserId).toString() == safeStatus) {
+    return;
+  }
 
-  bool changed = false;
+  m_dmPresenceByUserId.insert(safeUserId, safeStatus);
+  if (!m_pendingDmPresenceUserIds.contains(safeUserId)) {
+    m_pendingDmPresenceUserIds.append(safeUserId);
+  }
+}
+
+bool DiscordClient::applyPendingDmPresences() {
+  if (m_pendingDmPresenceUserIds.isEmpty()) {
+    return false;
+  }
+
+  QStringList userIds = m_pendingDmPresenceUserIds;
+  m_pendingDmPresenceUserIds.clear();
+
   for (int i = 0; i < m_allDmChannels.size(); ++i) {
     QVariantMap channel = m_allDmChannels.at(i).toMap();
     QVariantList recipientIds = channel.value("recipientIds").toList();
-    if (recipientIds.contains(safeUserId)) {
+    bool containsUser = false;
+    for (int userIndex = 0; userIndex < userIds.size(); ++userIndex) {
+      if (recipientIds.contains(userIds.at(userIndex))) {
+        containsUser = true;
+        break;
+      }
+    }
+    if (containsUser) {
       QString status = dmStatusForRecipients(recipientIds);
-      channel["status"] = status;
-      channel["statusColor"] = presenceColor(status);
-      m_allDmChannels.replace(i, channel);
+      QString statusColor = presenceColor(status);
+      if (channel.value("status").toString() != status ||
+          channel.value("statusColor").toString() != statusColor) {
+        channel["status"] = status;
+        channel["statusColor"] = statusColor;
+        m_allDmChannels.replace(i, channel);
+      }
     }
   }
 
+  bool changed = false;
   for (int i = 0; i < m_dmChannels.size(); ++i) {
     QVariantMap channel = m_dmChannels.at(i).toMap();
     QVariantList recipientIds = channel.value("recipientIds").toList();
-    if (recipientIds.contains(safeUserId)) {
+    bool containsUser = false;
+    for (int userIndex = 0; userIndex < userIds.size(); ++userIndex) {
+      if (recipientIds.contains(userIds.at(userIndex))) {
+        containsUser = true;
+        break;
+      }
+    }
+    if (containsUser) {
       QString status = dmStatusForRecipients(recipientIds);
-      channel["status"] = status;
-      channel["statusColor"] = presenceColor(status);
-      m_dmChannels.replace(i, channel);
-      changed = true;
+      QString statusColor = presenceColor(status);
+      if (channel.value("status").toString() != status ||
+          channel.value("statusColor").toString() != statusColor) {
+        channel["status"] = status;
+        channel["statusColor"] = statusColor;
+        m_dmChannels.replace(i, channel);
+        changed = true;
+      }
     }
   }
 
-  Q_UNUSED(changed);
+  return changed;
 }
 
 QVariantList DiscordClient::sortedAccessibleGuildChannels(
@@ -1343,7 +1416,19 @@ void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
     } else if (!guildId.isEmpty() &&
                payload.value("author").toMap().value("id").toString() !=
                    (m_store ? m_store->currentUserId() : QString())) {
-      m_pendingUnreadGuildIds.append(guildId);
+      if (!m_pendingUnreadGuildIds.contains(guildId)) {
+        m_pendingUnreadGuildIds.append(guildId);
+      }
+      if (payload.contains("mention_count")) {
+        m_pendingMentionCountsByGuildId.insert(
+            guildId, payload.value("mention_count").toInt());
+      } else if (gatewayMessageMentionsCurrentUser(payload)) {
+        int mentionCount =
+            m_pendingMentionCountsByGuildId.contains(guildId)
+                ? m_pendingMentionCountsByGuildId.value(guildId).toInt()
+                : guildMentionCount(guildId);
+        m_pendingMentionCountsByGuildId.insert(guildId, mentionCount + 1);
+      }
       if (!channelId.isEmpty() &&
           !m_pendingUnreadChannelIds.contains(channelId)) {
         m_pendingUnreadChannelIds.append(channelId);
@@ -1359,7 +1444,6 @@ void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
   if (eventName == "PRESENCE_UPDATE") {
     updateDmPresence(payload.value("user").toMap().value("id").toString(),
                      payload.value("status").toString());
-    m_pendingDmUiUpdate = true;
     if (!m_gatewayUiUpdateQueued) {
       m_gatewayUiUpdateQueued = true;
       QTimer::singleShot(250, this, SLOT(flushGatewayUiUpdates()));
@@ -1378,6 +1462,7 @@ void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
 
   if (eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
       eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
+    applyPendingDmPresences();
     bool orderChanged = applyGuildOrderFromGatewayPayload(payload);
     if (!orderChanged) {
       sortGuilds();
@@ -1398,13 +1483,23 @@ void DiscordClient::flushGatewayUiUpdates() {
 
   QStringList guildIds = m_pendingUnreadGuildIds;
   QStringList channelIds = m_pendingUnreadChannelIds;
+  QVariantMap mentionCounts = m_pendingMentionCountsByGuildId;
   bool dmChanged = m_pendingDmUiUpdate;
   m_pendingUnreadGuildIds.clear();
   m_pendingUnreadChannelIds.clear();
+  m_pendingMentionCountsByGuildId.clear();
   m_pendingDmUiUpdate = false;
 
+  if (applyPendingDmPresences()) {
+    dmChanged = true;
+  }
+
   for (int i = 0; i < guildIds.size(); ++i) {
-    updateGuildUnreadCount(guildIds.at(i), 1);
+    updateGuildUnread(guildIds.at(i), true);
+    if (mentionCounts.contains(guildIds.at(i))) {
+      updateGuildMentionCount(guildIds.at(i),
+                              mentionCounts.value(guildIds.at(i)).toInt());
+    }
   }
   for (int i = 0; i < channelIds.size(); ++i) {
     updateGuildChannelUnread(channelIds.at(i), true);

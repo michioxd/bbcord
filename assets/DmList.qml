@@ -75,11 +75,15 @@ Container {
                         }
                     }
 
-                    onCreationCompleted: {
-                        requestAvatar();
+                    function safeText(value) {
+                        return value === undefined || value === null ? "" : value;
                     }
 
-                    ListItem.onDataChanged: {
+                    function safeColor(value, fallback) {
+                        return value === undefined || value === null || value === "" ? fallback : value;
+                    }
+
+                    onCreationCompleted: {
                         requestAvatar();
                     }
 
@@ -108,12 +112,12 @@ Container {
                             maxHeight: ui.du(6.7)
                             horizontalAlignment: HorizontalAlignment.Left
                             verticalAlignment: VerticalAlignment.Top
-                            background: Color.create(ListItemData.avatarColor)
+                            background: Color.create(safeColor(ListItemData.avatarColor, "#5865F2"))
 
                             layout: DockLayout {}
 
                             ImageView {
-                                imageSource: ListItemData.avatar
+                                imageSource: safeText(ListItemData.avatar)
                                 visible: ListItemData.avatar !== ""
                                 horizontalAlignment: HorizontalAlignment.Fill
                                 verticalAlignment: VerticalAlignment.Fill
@@ -146,12 +150,12 @@ Container {
                                 maxHeight: ui.du(4.8)
                                 horizontalAlignment: HorizontalAlignment.Left
                                 verticalAlignment: VerticalAlignment.Top
-                                background: Color.create(ListItemData.avatarColor)
+                                background: Color.create(safeColor(ListItemData.avatarColor, "#5865F2"))
 
                                 layout: DockLayout {}
 
                                 ImageView {
-                                    imageSource: ListItemData.avatar
+                                    imageSource: safeText(ListItemData.avatar)
                                     visible: ListItemData.avatar !== ""
                                     horizontalAlignment: HorizontalAlignment.Fill
                                     verticalAlignment: VerticalAlignment.Fill
@@ -178,12 +182,12 @@ Container {
                                 maxHeight: ui.du(4.8)
                                 horizontalAlignment: HorizontalAlignment.Right
                                 verticalAlignment: VerticalAlignment.Bottom
-                                background: Color.create(ListItemData.avatarColor2)
+                                background: Color.create(safeColor(ListItemData.avatarColor2, "#3F4147"))
 
                                 layout: DockLayout {}
 
                                 ImageView {
-                                    imageSource: ListItemData.avatar2
+                                    imageSource: safeText(ListItemData.avatar2)
                                     visible: ListItemData.avatar2 !== ""
                                     horizontalAlignment: HorizontalAlignment.Fill
                                     verticalAlignment: VerticalAlignment.Fill
@@ -211,7 +215,7 @@ Container {
                             maxHeight: ui.du(1.5)
                             horizontalAlignment: HorizontalAlignment.Right
                             verticalAlignment: VerticalAlignment.Bottom
-                            background: Color.create(ListItemData.statusColor)
+                            background: Color.create(safeColor(ListItemData.statusColor, "#80848E"))
                         }
                     }
 
@@ -320,18 +324,33 @@ Container {
         refreshDms();
         appStore.dmChannelsAppended.connect(appendDms);
         appStore.dmAvatarChanged.connect(updateDmAvatar);
+        appStore.dmAvatar2Changed.connect(updateDmAvatar2);
         appStore.dmChannelsChanged.connect(refreshDmsIfNeeded);
         appStore.dataLoadingChanged.connect(updateDmLoading);
     }
 
     function updateDmAvatar(channelId, avatarSource) {
-        if (dmModel.size() == 0)
+        if (dmModel.size() == 0 || !avatarSource)
             return;
         var end = dmModel.size() - loadingRowOffset();
         for (var i = 0; i < end; ++i) {
             var item = dmModel.data([i]);
             if (item && item.id == channelId) {
                 item.avatar = avatarSource;
+                dmModel.replace([i], item);
+                break;
+            }
+        }
+    }
+
+    function updateDmAvatar2(channelId, avatarSource) {
+        if (dmModel.size() == 0 || !avatarSource)
+            return;
+        var end = dmModel.size() - loadingRowOffset();
+        for (var i = 0; i < end; ++i) {
+            var item = dmModel.data([i]);
+            if (item && item.id == channelId) {
+                item.avatar2 = avatarSource;
                 dmModel.replace([i], item);
                 break;
             }
