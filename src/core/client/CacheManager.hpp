@@ -39,7 +39,7 @@ private:
 
   bool loadCacheFile(const QString &path, QVariantMap *root) const;
 
-  bool saveCacheFile(const QString &path, const QVariantMap &root) const;
+  void saveCacheFileAsync(const QString &path, const QVariantMap &root) const;
 
   QVariantList dmChannelsForCache(const QVariantList &allDmChannels) const;
 

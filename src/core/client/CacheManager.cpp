@@ -5,11 +5,55 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QtConcurrentRun>
 #include <bb/data/JsonDataAccess>
 
 namespace {
 
 const int kCacheSchemaVersion = 1;
+
+static void writeCacheFileWorker(const QString path, const QVariantMap data) {
+
+  QFileInfo fileInfo(path);
+
+  QDir dir = fileInfo.dir();
+
+  if (!dir.exists() && !dir.mkpath(".")) {
+
+    qDebug() << "[discord-cache] could not create cache dir"
+
+             << dir.absolutePath();
+
+    return;
+  }
+  bb::data::JsonDataAccess json;
+
+  QByteArray bytes;
+
+  json.saveToBuffer(data, &bytes);
+
+  if (json.hasError()) {
+
+    qDebug() << "[discord-cache] could not serialize cache"
+
+             << json.error().errorMessage();
+
+    return;
+  }
+  QFile file(path);
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+
+    qDebug() << "[discord-cache] could not write cache" << path;
+
+    return;
+  }
+
+  file.write(bytes);
+
+  file.close();
+}
+
 QString presenceColor(const QString &status) {
 
   if (status == "online") {
@@ -146,7 +190,7 @@ void CacheManager::saveGuildsCache(const QVariantList &guilds) const {
   root["selectedChannelId"] =
       m_store ? m_store->selectedChannelId() : QString();
 
-  saveCacheFile(guildsCachePath(), root);
+  saveCacheFileAsync(guildsCachePath(), root);
 }
 void CacheManager::saveDmChannelsCache(
     const QVariantList &allDmChannels) const {
@@ -162,7 +206,7 @@ void CacheManager::saveDmChannelsCache(
   root["selectedChannelId"] =
       m_store ? m_store->selectedChannelId() : QString();
 
-  saveCacheFile(dmChannelsCachePath(), root);
+  saveCacheFileAsync(dmChannelsCachePath(), root);
 }
 void CacheManager::clearBootstrapCache() const {
 
@@ -226,49 +270,14 @@ bool CacheManager::loadCacheFile(const QString &path, QVariantMap *root) const {
 
   return true;
 }
-bool CacheManager::saveCacheFile(const QString &path,
-                                 const QVariantMap &root) const {
+void CacheManager::saveCacheFileAsync(const QString &path,
+                                      const QVariantMap &root) const {
 
-  QFileInfo fileInfo(path);
+  QString pathCopy = path;
 
-  QDir dir = fileInfo.dir();
+  QVariantMap rootCopy = root;
 
-  if (!dir.exists() && !dir.mkpath(".")) {
-
-    qDebug() << "[discord-cache] could not create cache dir"
-
-             << dir.absolutePath();
-
-    return false;
-  }
-  bb::data::JsonDataAccess json;
-
-  QByteArray bytes;
-
-  json.saveToBuffer(root, &bytes);
-
-  if (json.hasError()) {
-
-    qDebug() << "[discord-cache] could not serialize cache"
-
-             << json.error().errorMessage();
-
-    return false;
-  }
-  QFile file(path);
-
-  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-
-    qDebug() << "[discord-cache] could not write cache" << path;
-
-    return false;
-  }
-
-  file.write(bytes);
-
-  file.close();
-
-  return true;
+  QtConcurrent::run(writeCacheFileWorker, pathCopy, rootCopy);
 }
 QVariantList
 CacheManager::dmChannelsForCache(const QVariantList &allDmChannels) const {
