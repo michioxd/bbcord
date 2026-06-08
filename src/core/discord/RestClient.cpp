@@ -539,6 +539,8 @@ void DiscordRestClient::timerEvent(QTimerEvent *event) {
     if (m_pollTicks > kRequestTimeoutTicks) {
       failWithMessage("Discord REST timeout");
     }
+  } else {
+    stopTimerIfIdle();
   }
 }
 

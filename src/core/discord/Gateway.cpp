@@ -98,6 +98,14 @@ DiscordGateway::ConnectionState DiscordGateway::state() const {
 void DiscordGateway::timerEvent(QTimerEvent *event) {
   Q_UNUSED(event);
 
+  if (m_connection == NULL) {
+    if (m_timerId != 0) {
+      killTimer(m_timerId);
+      m_timerId = 0;
+    }
+    return;
+  }
+
   mg_mgr_poll(m_mgr, 0);
 
   if (m_connection != NULL && m_connection->is_websocket &&
