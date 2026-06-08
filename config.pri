@@ -79,7 +79,13 @@ config_pri_source_group1 {
     SOURCES += \
         $$quote($$BASEDIR/src/applicationui.cpp) \
         $$quote($$BASEDIR/src/core/AppStore.cpp) \
+        $$quote($$BASEDIR/src/core/AvatarCacheWorker.cpp) \
         $$quote($$BASEDIR/src/core/Client.cpp) \
+        $$quote($$BASEDIR/src/core/client/AvatarManager.cpp) \
+        $$quote($$BASEDIR/src/core/client/CacheManager.cpp) \
+        $$quote($$BASEDIR/src/core/client/GatewayHandler.cpp) \
+        $$quote($$BASEDIR/src/core/client/ItemMapper.cpp) \
+        $$quote($$BASEDIR/src/core/client/SortUtils.cpp) \
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.cpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.cpp) \
         $$quote($$BASEDIR/src/core/discord/GatewayEvents.cpp) \
@@ -96,7 +102,13 @@ config_pri_source_group1 {
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \
         $$quote($$BASEDIR/src/core/AppStore.hpp) \
+        $$quote($$BASEDIR/src/core/AvatarCacheWorker.hpp) \
         $$quote($$BASEDIR/src/core/Client.hpp) \
+        $$quote($$BASEDIR/src/core/client/AvatarManager.hpp) \
+        $$quote($$BASEDIR/src/core/client/CacheManager.hpp) \
+        $$quote($$BASEDIR/src/core/client/GatewayHandler.hpp) \
+        $$quote($$BASEDIR/src/core/client/ItemMapper.hpp) \
+        $$quote($$BASEDIR/src/core/client/SortUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.hpp) \
         $$quote($$BASEDIR/src/core/discord/JsonParser.hpp) \
@@ -124,6 +136,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/core/*.cc) \
         $$quote($$BASEDIR/../src/core/*.cpp) \
         $$quote($$BASEDIR/../src/core/*.cxx) \
+        $$quote($$BASEDIR/../src/core/client/*.c) \
+        $$quote($$BASEDIR/../src/core/client/*.c++) \
+        $$quote($$BASEDIR/../src/core/client/*.cc) \
+        $$quote($$BASEDIR/../src/core/client/*.cpp) \
+        $$quote($$BASEDIR/../src/core/client/*.cxx) \
         $$quote($$BASEDIR/../src/core/discord/*.c) \
         $$quote($$BASEDIR/../src/core/discord/*.c++) \
         $$quote($$BASEDIR/../src/core/discord/*.cc) \

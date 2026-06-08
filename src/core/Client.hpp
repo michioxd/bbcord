@@ -1,5 +1,5 @@
-#ifndef Client_HPP_
-#define Client_HPP_
+#ifndef CLIENT_HPP_
+#define CLIENT_HPP_
 
 #include <QObject>
 #include <QQueue>
@@ -11,8 +11,15 @@
 #include "models/Models.hpp"
 
 class AppStore;
+class AvatarCacheWorker;
 class DiscordNetworkWorker;
 class QThread;
+
+class CacheManager;
+class AvatarManager;
+class GatewayHandler;
+class ItemMapper;
+class SortUtils;
 
 class DiscordClient : public QObject {
   Q_OBJECT
@@ -62,8 +69,25 @@ private Q_SLOTS:
   void onGuildIconDownloaded(const QString &guildId, const QString &localPath);
   void onGuildIconDownloadFailed(const QString &guildId,
                                  const QString &message);
+  void onAvatarCacheHit(const QString &userId, const QString &path);
+  void onAvatarCacheMiss(const QString &userId, const QString &path);
+  void onGuildIconCacheHit(const QString &guildId, const QString &path);
+  void onGuildIconCacheMiss(const QString &guildId, const QString &path);
   void onGatewayDispatch(const QString &eventName, const QVariantMap &payload);
   void flushGatewayUiUpdates();
+  void savePendingDmChannelsCache();
+
+  void moveDmToTop(const QString &channelId, const QString &lastMessageId);
+  int guildMentionCount(const QString &guildId) const;
+  void updateDmPresence(const QString &userId, const QString &status);
+  bool applyPendingDmPresences();
+  bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
+  void sortGuilds();
+  void sortDmChannels();
+  void rebuildDmChannelIndexes();
+  void updateStoreWithGuildsAndDms();
+  void saveGuildsCache() const;
+  void saveDmChannelsCache() const;
 
 private:
   void setLoggedIn(bool loggedIn);
@@ -71,56 +95,42 @@ private:
   void setStatusText(const QString &statusText);
   void saveToken();
   void clearSavedToken();
-  void loadCurrentUserAvatar(const DiscordUser &user);
   void loadGuilds();
-  void loadBootstrapCache();
-  void saveGuildsCache() const;
-  void saveDmChannelsCache() const;
-  void clearBootstrapCache() const;
-  QString guildsCachePath() const;
-  QString dmChannelsCachePath() const;
-  bool loadCacheFile(const QString &path, QVariantMap *root) const;
-  bool saveCacheFile(const QString &path, const QVariantMap &root) const;
-  QVariantList dmChannelsForCache() const;
-  QVariantList dmChannelsFromCache(const QVariantList &channels) const;
-  void queueDmAvatar(const QString &channelId, const QString &userId,
-                     const QString &avatarHash);
-  void loadNextAvatar();
-  void queueGuildIcon(const QString &guildId, const QString &iconHash);
-  void loadNextGuildIcon();
-  QString avatarCachePath(const DiscordUser &user) const;
-  QString guildIconCachePath(const QString &guildId,
-                             const QString &iconHash) const;
-  QString avatarSourceForPath(const QString &path) const;
-  QVariantMap guildToItem(const QVariantMap &guild) const;
-  QVariantMap dmChannelToItem(const QVariantMap &channel) const;
-  QVariantMap guildChannelToItem(const QVariantMap &channel) const;
-  QString dmStatusForRecipients(const QVariantList &userIds) const;
-  bool applyGuildOrder(const QStringList &orderedGuildIds);
-  bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
-  void sortGuilds();
-  int guildMentionCount(const QString &guildId) const;
-  bool gatewayMessageMentionsCurrentUser(const QVariantMap &payload) const;
+  void indexDmChannelRecipients(const QVariantMap &channel);
+  void rebuildDmRecipientIndex();
   void updateGuildMentionCount(const QString &guildId, int mentionCount);
   void updateGuildUnread(const QString &guildId, bool unread);
   void updateGuildChannelUnread(const QString &channelId, bool unread);
-  void updateDmPresence(const QString &userId, const QString &status);
-  bool applyPendingDmPresences();
-  QVariantList
-  sortedAccessibleGuildChannels(const QVariantList &channels) const;
-  void moveDmToTop(const QString &channelId, const QString &lastMessageId);
-  void applyGatewayOrderingEvent(const QString &eventName,
-                                 const QVariantMap &payload);
   void appendVisibleGuildChannels();
+  void scheduleDmChannelsCacheSave();
   void updateDataLoading();
   void initializeNetworkWorker();
   void shutdownNetworkWorker();
+  void initializeAvatarCacheWorker();
+  void shutdownAvatarCacheWorker();
+  void initializeManagers();
 
   AppStore *m_store;
   QThread *m_networkThread;
   DiscordNetworkWorker *m_networkWorker;
+  QThread *m_avatarCacheThread;
+  AvatarCacheWorker *m_avatarCacheWorker;
+
+  CacheManager *m_cacheManager;
+  AvatarManager *m_avatarManager;
+  GatewayHandler *m_gatewayHandler;
+  ItemMapper *m_itemMapper;
+  SortUtils *m_sortUtils;
+
   QQueue<QVariantMap> m_pendingAvatars;
   QQueue<QVariantMap> m_pendingGuildIcons;
+  QVariantMap m_avatarCacheRequests;
+  QVariantMap m_guildIconCacheRequests;
+  QVariantMap m_avatarSourcesByUserId;
+  QVariantMap m_dmChannelsById;
+  QVariantMap m_dmChannelIdsByRecipientId;
+  QVariantMap m_allDmChannelIndexById;
+  QVariantMap m_visibleDmChannelIndexById;
   QString m_loadingAvatarUserId;
   QString m_loadingAvatarUserId2;
   QString m_loadingGuildIconId;
@@ -156,8 +166,9 @@ private:
   bool m_busy;
   bool m_gatewayUiUpdateQueued;
   bool m_pendingDmUiUpdate;
+  bool m_dmCacheSaveQueued;
   bool m_bootstrapCacheLoaded;
   QString m_statusText;
 };
 
-#endif /* Client_HPP_ */
+#endif /* CLIENT_HPP_ */

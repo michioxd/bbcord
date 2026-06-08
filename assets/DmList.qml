@@ -83,10 +83,6 @@ Container {
                         return value === undefined || value === null || value === "" ? fallback : value;
                     }
 
-                    onCreationCompleted: {
-                        requestAvatar();
-                    }
-
                     layout: StackLayout {
                         orientation: LayoutOrientation.LeftToRight
                     }

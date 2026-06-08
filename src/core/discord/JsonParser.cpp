@@ -185,3 +185,60 @@ QString DiscordJsonParser::extractStringField(const QByteArray &bytes,
 
   return QString::fromUtf8(value.constData(), value.size());
 }
+
+QVariantList DiscordJsonParser::extractArrayField(const QByteArray &bytes,
+                                                  const char *fieldName) {
+  QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");
+  int pos = bytes.indexOf(marker);
+  if (pos < 0) {
+    return QVariantList();
+  }
+
+  pos = bytes.indexOf(':', pos + marker.size());
+  if (pos < 0) {
+    return QVariantList();
+  }
+
+  ++pos;
+  while (pos < bytes.size() &&
+         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+    ++pos;
+  }
+
+  if (pos >= bytes.size() || bytes.at(pos) != '[') {
+    return QVariantList();
+  }
+
+  int start = pos;
+  int depth = 0;
+  bool inString = false;
+  bool escaped = false;
+  for (; pos < bytes.size(); ++pos) {
+    char ch = bytes.at(pos);
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch == '"') {
+      inString = true;
+    } else if (ch == '[') {
+      ++depth;
+    } else if (ch == ']') {
+      --depth;
+      if (depth == 0) {
+        QByteArray arrayBytes = bytes.mid(start, pos - start + 1);
+        return parseArray(arrayBytes);
+      }
+    }
+  }
+
+  return QVariantList();
+}

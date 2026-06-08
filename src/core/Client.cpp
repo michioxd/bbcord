@@ -1,76 +1,44 @@
 #include "Client.hpp"
 
 #include "AppStore.hpp"
+#include "AvatarCacheWorker.hpp"
 #include "discord/DiscordUtils.hpp"
 #include "discord/NetworkWorker.hpp"
 #include "models/Models.hpp"
 
-#include <bb/data/JsonDataAccess>
+#include "client/AvatarManager.hpp"
+#include "client/CacheManager.hpp"
+#include "client/GatewayHandler.hpp"
+#include "client/ItemMapper.hpp"
+#include "client/SortUtils.hpp"
 
 #include <QDebug>
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QMap>
 #include <QMetaObject>
 #include <QMetaType>
 #include <QSettings>
-#include <QStringList>
+#include <QSet>
 #include <QThread>
 #include <QTimer>
 
 namespace {
 const int kPageSize = 25;
 const int kGuildPageSize = 100;
-const int kCacheSchemaVersion = 1;
-QString userDisplayName(const QVariantMap &user) {
-  QString name = user.value("global_name").toString();
-  if (name.isEmpty()) {
-    name = user.value("username").toString();
-  }
-  if (name.isEmpty()) {
-    name = user.value("id").toString();
-  }
-  return name;
-}
-
-QString presenceColor(const QString &status) {
-  if (status == "online") {
-    return "#23A55A";
-  }
-  if (status == "idle") {
-    return "#F0B232";
-  }
-  if (status == "dnd" || status == "busy") {
-    return "#F23F43";
-  }
-  return "#80848E";
-}
-
-int presenceRank(const QString &status) {
-  if (status == "online") {
-    return 3;
-  }
-  if (status == "dnd" || status == "busy") {
-    return 2;
-  }
-  if (status == "idle") {
-    return 1;
-  }
-  return 0;
-}
 } // namespace
 
 DiscordClient::DiscordClient(QObject *parent)
     : QObject(parent), m_store(0), m_networkThread(0), m_networkWorker(0),
+      m_avatarCacheThread(0), m_avatarCacheWorker(0), m_cacheManager(0),
+      m_avatarManager(0), m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
       m_visibleDmChannelCount(0), m_visibleGuildChannelCount(0),
       m_loadingGuilds(false), m_loadingDmChannels(false),
       m_loadingGuildChannels(false), m_guildsHasMore(true),
       m_dmChannelsHasMore(true), m_guildChannelsHasMore(false),
       m_loggedIn(false), m_busy(false), m_gatewayUiUpdateQueued(false),
-      m_pendingDmUiUpdate(false), m_bootstrapCacheLoaded(false),
-      m_statusText("Disconnected") {
+      m_pendingDmUiUpdate(false), m_dmCacheSaveQueued(false),
+      m_bootstrapCacheLoaded(false), m_statusText("Disconnected") {
   initializeNetworkWorker();
+  initializeAvatarCacheWorker();
+  initializeManagers();
 
   QSettings settings;
   m_token = settings.value("auth/token").toString();
@@ -78,20 +46,36 @@ DiscordClient::DiscordClient(QObject *parent)
 
 DiscordClient::DiscordClient(AppStore *store, QObject *parent)
     : QObject(parent), m_store(store), m_networkThread(0), m_networkWorker(0),
+      m_avatarCacheThread(0), m_avatarCacheWorker(0), m_cacheManager(0),
+      m_avatarManager(0), m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
       m_visibleDmChannelCount(0), m_visibleGuildChannelCount(0),
       m_loadingGuilds(false), m_loadingDmChannels(false),
       m_loadingGuildChannels(false), m_guildsHasMore(true),
       m_dmChannelsHasMore(true), m_guildChannelsHasMore(false),
       m_loggedIn(false), m_busy(false), m_gatewayUiUpdateQueued(false),
-      m_pendingDmUiUpdate(false), m_bootstrapCacheLoaded(false),
-      m_statusText("Disconnected") {
+      m_pendingDmUiUpdate(false), m_dmCacheSaveQueued(false),
+      m_bootstrapCacheLoaded(false), m_statusText("Disconnected") {
   initializeNetworkWorker();
+  initializeAvatarCacheWorker();
+  initializeManagers();
 
   QSettings settings;
   m_token = settings.value("auth/token").toString();
 }
 
-DiscordClient::~DiscordClient() { shutdownNetworkWorker(); }
+DiscordClient::~DiscordClient() {
+  shutdownAvatarCacheWorker();
+  shutdownNetworkWorker();
+}
+
+void DiscordClient::initializeManagers() {
+  m_cacheManager = new CacheManager(this, m_store, this);
+  m_avatarManager =
+      new AvatarManager(this, m_networkWorker, m_avatarCacheWorker, this);
+  m_gatewayHandler = new GatewayHandler(this, m_store, this);
+  m_itemMapper = new ItemMapper(this);
+  m_sortUtils = new SortUtils(this);
+}
 
 void DiscordClient::initializeNetworkWorker() {
   qRegisterMetaType<QVariantMap>("QVariantMap");
@@ -136,6 +120,49 @@ void DiscordClient::initializeNetworkWorker() {
           SLOT(quit()), Qt::DirectConnection);
 
   m_networkThread->start();
+}
+
+void DiscordClient::initializeAvatarCacheWorker() {
+  if (m_avatarCacheThread != 0 || m_avatarCacheWorker != 0) {
+    return;
+  }
+
+  m_avatarCacheThread = new QThread(this);
+  m_avatarCacheWorker = new AvatarCacheWorker();
+  m_avatarCacheWorker->moveToThread(m_avatarCacheThread);
+
+  connect(m_avatarCacheThread, SIGNAL(finished()), m_avatarCacheWorker,
+          SLOT(deleteLater()));
+  connect(m_avatarCacheWorker, SIGNAL(avatarCacheHit(QString, QString)), this,
+          SLOT(onAvatarCacheHit(QString, QString)), Qt::QueuedConnection);
+  connect(m_avatarCacheWorker, SIGNAL(avatarCacheMiss(QString, QString)), this,
+          SLOT(onAvatarCacheMiss(QString, QString)), Qt::QueuedConnection);
+  connect(m_avatarCacheWorker, SIGNAL(guildIconCacheHit(QString, QString)),
+          this, SLOT(onGuildIconCacheHit(QString, QString)),
+          Qt::QueuedConnection);
+  connect(m_avatarCacheWorker, SIGNAL(guildIconCacheMiss(QString, QString)),
+          this, SLOT(onGuildIconCacheMiss(QString, QString)),
+          Qt::QueuedConnection);
+
+  m_avatarCacheThread->start();
+}
+
+void DiscordClient::shutdownAvatarCacheWorker() {
+  m_avatarCacheRequests.clear();
+  m_guildIconCacheRequests.clear();
+
+  if (m_avatarCacheThread != 0) {
+    if (m_avatarCacheThread->isRunning()) {
+      m_avatarCacheThread->quit();
+      m_avatarCacheThread->wait();
+    }
+    delete m_avatarCacheThread;
+    m_avatarCacheThread = 0;
+  } else if (m_avatarCacheWorker != 0) {
+    delete m_avatarCacheWorker;
+  }
+
+  m_avatarCacheWorker = 0;
 }
 
 void DiscordClient::shutdownNetworkWorker() {
@@ -194,8 +221,15 @@ void DiscordClient::autoLogin() {
 
 void DiscordClient::logout() {
   clearSavedToken();
-  clearBootstrapCache();
+  m_cacheManager->clearBootstrapCache();
   shutdownNetworkWorker();
+  m_avatarCacheRequests.clear();
+  m_guildIconCacheRequests.clear();
+  m_avatarSourcesByUserId.clear();
+  m_dmChannelsById.clear();
+  m_dmChannelIdsByRecipientId.clear();
+  m_allDmChannelIndexById.clear();
+  m_visibleDmChannelIndexById.clear();
   m_pendingAvatars.clear();
   m_pendingGuildIcons.clear();
   m_loadingAvatarUserId.clear();
@@ -219,6 +253,7 @@ void DiscordClient::logout() {
   m_pendingUnreadChannelIds.clear();
   m_gatewayUiUpdateQueued = false;
   m_pendingDmUiUpdate = false;
+  m_dmCacheSaveQueued = false;
   m_bootstrapCacheLoaded = false;
   m_lastGuildId.clear();
   m_lastDmChannelId.clear();
@@ -283,8 +318,13 @@ void DiscordClient::loadGuildIcon(const QString &guildId) {
   for (int i = 0; i < m_guilds.size(); ++i) {
     QVariantMap guild = m_guilds.at(i).toMap();
     if (guild.value("id").toString() == safeGuildId) {
-      queueGuildIcon(safeGuildId, guild.value("iconHash").toString());
-      loadNextGuildIcon();
+      m_avatarManager->queueGuildIcon(
+          safeGuildId, guild.value("iconHash").toString(), m_loadedGuildIconIds,
+          m_guildIconCacheRequests, m_queuedGuildIconIds, m_loadingGuildIconId,
+          m_loadingGuildIconId2, m_pendingGuildIcons);
+      m_avatarManager->loadNextGuildIcon(
+          m_loadingGuildIconId, m_loadingGuildIconId2, m_pendingGuildIcons,
+          m_queuedGuildIconIds);
       return;
     }
   }
@@ -303,9 +343,30 @@ void DiscordClient::loadMoreDmChannels() {
     }
 
     for (int i = m_visibleDmChannelCount; i < nextCount; ++i) {
-      m_dmChannels.append(m_allDmChannels.at(i));
-      m_lastDmChannelId = m_allDmChannels.at(i).toMap().value("id").toString();
+      QVariantMap channel = m_allDmChannels.at(i).toMap();
+      m_dmChannels.append(channel);
+      QString channelId = channel.value("id").toString();
+      if (!channelId.isEmpty()) {
+        m_dmChannelsById.insert(channelId, channel);
+        m_visibleDmChannelIndexById.insert(channelId, m_dmChannels.size() - 1);
+        indexDmChannelRecipients(channel);
+      }
+      m_lastDmChannelId = channelId;
+      m_avatarManager->queueDmAvatar(
+          channelId, channel.value("avatarUserId").toString(),
+          channel.value("avatarHash").toString(), m_loadedAvatarUserIds,
+          m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
+          m_loadingAvatarUserId2, m_pendingAvatars);
+      m_avatarManager->queueDmAvatar(
+          channelId, channel.value("avatarUserId2").toString(),
+          channel.value("avatarHash2").toString(), m_loadedAvatarUserIds,
+          m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
+          m_loadingAvatarUserId2, m_pendingAvatars);
     }
+
+    m_avatarManager->loadNextAvatar(m_loadingAvatarUserId,
+                                    m_loadingAvatarUserId2, m_pendingAvatars,
+                                    m_queuedAvatarUserIds);
 
     m_visibleDmChannelCount = nextCount;
     m_dmChannelsHasMore = m_visibleDmChannelCount < m_allDmChannels.size();
@@ -332,17 +393,23 @@ void DiscordClient::loadDmAvatar(const QString &channelId) {
     return;
   }
 
-  for (int i = 0; i < m_allDmChannels.size(); ++i) {
-    QVariantMap channel = m_allDmChannels.at(i).toMap();
-    if (channel.value("id").toString() == safeChannelId) {
-      queueDmAvatar(safeChannelId, channel.value("avatarUserId").toString(),
-                    channel.value("avatarHash").toString());
-      queueDmAvatar(safeChannelId, channel.value("avatarUserId2").toString(),
-                    channel.value("avatarHash2").toString());
-      loadNextAvatar();
-      return;
-    }
+  QVariantMap channel = m_dmChannelsById.value(safeChannelId).toMap();
+  if (channel.isEmpty()) {
+    return;
   }
+
+  m_avatarManager->queueDmAvatar(
+      safeChannelId, channel.value("avatarUserId").toString(),
+      channel.value("avatarHash").toString(), m_loadedAvatarUserIds,
+      m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
+      m_loadingAvatarUserId2, m_pendingAvatars);
+  m_avatarManager->queueDmAvatar(
+      safeChannelId, channel.value("avatarUserId2").toString(),
+      channel.value("avatarHash2").toString(), m_loadedAvatarUserIds,
+      m_avatarCacheRequests, m_queuedAvatarUserIds, m_loadingAvatarUserId,
+      m_loadingAvatarUserId2, m_pendingAvatars);
+  m_avatarManager->loadNextAvatar(m_loadingAvatarUserId, m_loadingAvatarUserId2,
+                                  m_pendingAvatars, m_queuedAvatarUserIds);
 }
 
 void DiscordClient::loadGuildChannels(const QString &guildId) {
@@ -437,10 +504,24 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
     currentUser.avatarHash = user.value("avatar").toString();
     currentUser.bot = user.value("bot").toBool();
     m_store->setCurrentUser(currentUser);
-    loadCurrentUserAvatar(currentUser);
+    m_avatarManager->loadCurrentUserAvatar(
+        currentUser, m_avatarCacheRequests, m_loadingAvatarUserId,
+        m_loadingAvatarUserId2, m_pendingAvatars, m_queuedAvatarUserIds);
   }
 
-  loadBootstrapCache();
+  m_cacheManager->loadBootstrapCache(
+      m_guilds, m_allDmChannels, m_avatarSourcesByUserId, m_selectedGuildId,
+      m_bootstrapCacheLoaded, m_guildsHasMore, m_lastGuildId,
+      m_visibleDmChannelCount, m_lastDmChannelId, m_dmChannelsHasMore);
+  if (m_bootstrapCacheLoaded && !m_allDmChannels.isEmpty()) {
+    m_dmChannels.clear();
+    m_dmChannelsById.clear();
+    m_allDmChannelIndexById.clear();
+    m_visibleDmChannelIndexById.clear();
+    rebuildDmRecipientIndex();
+    rebuildDmChannelIndexes();
+    loadMoreDmChannels();
+  }
 
   saveToken();
   setBusy(false);
@@ -467,6 +548,16 @@ void DiscordClient::onRestLoginFailed(const QString &message) {
 }
 
 void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
+  QVariantMap existingIconsByGuildId;
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap existingGuild = m_guilds.at(i).toMap();
+    QString guildId = existingGuild.value("id").toString();
+    QString icon = existingGuild.value("icon").toString();
+    if (!guildId.isEmpty() && !icon.isEmpty()) {
+      existingIconsByGuildId.insert(guildId, icon);
+    }
+  }
+
   if (m_bootstrapCacheLoaded) {
     m_guilds.clear();
     m_lastGuildId.clear();
@@ -476,8 +567,13 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
 
   for (int i = 0; i < guilds.size(); ++i) {
     QVariantMap guild = guilds.at(i).toMap();
-    QVariantMap item = guildToItem(guild);
+    QVariantMap item = m_itemMapper->guildToItem(guild);
     if (!item.value("id").toString().isEmpty()) {
+      QString existingIcon =
+          existingIconsByGuildId.value(item.value("id").toString()).toString();
+      if (!existingIcon.isEmpty()) {
+        item["icon"] = existingIcon;
+      }
       m_guilds.append(item);
       m_lastGuildId = item.value("id").toString();
     }
@@ -510,9 +606,6 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
   }
   setStatusText("Connected");
   if (!m_loadingDmChannels && m_token.trimmed().isEmpty() == false) {
-    m_allDmChannels.clear();
-    m_dmChannels.clear();
-    m_visibleDmChannelCount = 0;
     m_lastDmChannelId.clear();
     m_dmChannelsHasMore = true;
     m_loadingDmChannels = true;
@@ -530,22 +623,82 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
 void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
   m_loadingDmChannels = false;
   updateDataLoading();
-  if (!channels.isEmpty()) {
-    m_allDmChannels.clear();
-    m_dmChannels.clear();
-    m_visibleDmChannelCount = 0;
-  }
-  for (int i = 0; i < channels.size(); ++i) {
-    QVariantMap item = dmChannelToItem(channels.at(i).toMap());
-    if (!item.value("id").toString().isEmpty()) {
-      m_allDmChannels.append(item);
+  QVariantMap existingAvatarsByUserId;
+  for (QVariantMap::const_iterator it = m_avatarSourcesByUserId.constBegin();
+       it != m_avatarSourcesByUserId.constEnd(); ++it) {
+    if (!it.key().isEmpty() && !it.value().toString().isEmpty()) {
+      existingAvatarsByUserId.insert(it.key(), it.value());
     }
   }
-  DiscordUtils::stableSortItems(&m_allDmChannels,
-                                DiscordUtils::dmShouldMoveBefore);
+  for (int i = 0; i < m_allDmChannels.size(); ++i) {
+    QVariantMap existingChannel = m_allDmChannels.at(i).toMap();
+    QString userId = existingChannel.value("avatarUserId").toString();
+    QString avatar = existingChannel.value("avatar").toString();
+    if (!userId.isEmpty() && !avatar.isEmpty()) {
+      existingAvatarsByUserId.insert(userId, avatar);
+    }
+    QString userId2 = existingChannel.value("avatarUserId2").toString();
+    QString avatar2 = existingChannel.value("avatar2").toString();
+    if (!userId2.isEmpty() && !avatar2.isEmpty()) {
+      existingAvatarsByUserId.insert(userId2, avatar2);
+    }
+  }
 
-  m_dmChannelsHasMore = !m_allDmChannels.isEmpty();
-  loadMoreDmChannels();
+  bool changed = false;
+  for (int i = 0; i < channels.size(); ++i) {
+    QVariantMap item = m_itemMapper->dmChannelToItem(
+        channels.at(i).toMap(), existingAvatarsByUserId, m_dmPresenceByUserId);
+    QString channelId = item.value("id").toString();
+    if (!channelId.isEmpty()) {
+      QString avatar =
+          existingAvatarsByUserId.value(item.value("avatarUserId").toString())
+              .toString();
+      if (!avatar.isEmpty()) {
+        item["avatar"] = avatar;
+      }
+      QString avatar2 =
+          existingAvatarsByUserId.value(item.value("avatarUserId2").toString())
+              .toString();
+      if (!avatar2.isEmpty()) {
+        item["avatar2"] = avatar2;
+      }
+
+      int existingIndex = m_allDmChannelIndexById.value(channelId, -1).toInt();
+      if (existingIndex >= 0 && existingIndex < m_allDmChannels.size()) {
+        QVariantMap existingChannel = m_allDmChannels.at(existingIndex).toMap();
+        item["status"] = existingChannel.value("status");
+        item["statusColor"] = existingChannel.value("statusColor");
+        item["unread"] = existingChannel.value("unread");
+        m_allDmChannels.replace(existingIndex, item);
+
+        int visibleIndex =
+            m_visibleDmChannelIndexById.value(channelId, -1).toInt();
+        if (visibleIndex >= 0 && visibleIndex < m_dmChannels.size()) {
+          m_dmChannels.replace(visibleIndex, item);
+          m_dmChannelsById.insert(channelId, item);
+          changed = true;
+        }
+      } else {
+        m_allDmChannels.append(item);
+        m_allDmChannelIndexById.insert(channelId, m_allDmChannels.size() - 1);
+        indexDmChannelRecipients(item);
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    sortDmChannels();
+    rebuildDmChannelIndexes();
+    if (m_store) {
+      m_store->setDmChannels(m_dmChannels);
+    }
+  }
+
+  m_dmChannelsHasMore = !channels.isEmpty();
+  if (m_dmChannelsHasMore) {
+    loadMoreDmChannels();
+  }
   saveDmChannelsCache();
   setStatusText("Connected");
 }
@@ -561,12 +714,12 @@ void DiscordClient::onGuildChannelsLoaded(const QString &guildId,
   m_allGuildChannels.clear();
   QVariantList rawChannels;
   for (int i = 0; i < channels.size(); ++i) {
-    QVariantMap item = guildChannelToItem(channels.at(i).toMap());
+    QVariantMap item = m_itemMapper->guildChannelToItem(channels.at(i).toMap());
     if (!item.value("id").toString().isEmpty()) {
       rawChannels.append(item);
     }
   }
-  m_allGuildChannels = sortedAccessibleGuildChannels(rawChannels);
+  m_allGuildChannels = m_sortUtils->sortedAccessibleGuildChannels(rawChannels);
 
   appendVisibleGuildChannels();
   setStatusText("Connected");
@@ -583,9 +736,10 @@ void DiscordClient::onDataRequestFailed(const QString &message) {
 
 void DiscordClient::onAvatarDownloaded(const QString &userId,
                                        const QString &localPath) {
-  QString source = avatarSourceForPath(localPath);
+  QString source = m_avatarManager->avatarSourceForPath(localPath);
+  m_avatarSourcesByUserId.insert(userId, source);
   if (m_store && userId == m_store->currentUserId()) {
-    m_store->setCurrentUserAvatarSource(avatarSourceForPath(localPath));
+    m_store->setCurrentUserAvatarSource(source);
   }
 
   for (int i = 0; i < m_allDmChannels.size(); ++i) {
@@ -593,9 +747,17 @@ void DiscordClient::onAvatarDownloaded(const QString &userId,
     if (channel.value("avatarUserId").toString() == userId) {
       channel["avatar"] = source;
       m_allDmChannels.replace(i, channel);
+      QString channelId = channel.value("id").toString();
+      if (!channelId.isEmpty()) {
+        m_dmChannelsById.insert(channelId, channel);
+      }
     } else if (channel.value("avatarUserId2").toString() == userId) {
       channel["avatar2"] = source;
       m_allDmChannels.replace(i, channel);
+      QString channelId = channel.value("id").toString();
+      if (!channelId.isEmpty()) {
+        m_dmChannelsById.insert(channelId, channel);
+      }
     }
   }
 
@@ -625,8 +787,9 @@ void DiscordClient::onAvatarDownloaded(const QString &userId,
   if (m_loadingAvatarUserId2 == userId) {
     m_loadingAvatarUserId2.clear();
   }
-  saveDmChannelsCache();
-  loadNextAvatar();
+  scheduleDmChannelsCacheSave();
+  m_avatarManager->loadNextAvatar(m_loadingAvatarUserId, m_loadingAvatarUserId2,
+                                  m_pendingAvatars, m_queuedAvatarUserIds);
 }
 
 void DiscordClient::onAvatarDownloadFailed(const QString &userId,
@@ -639,12 +802,13 @@ void DiscordClient::onAvatarDownloadFailed(const QString &userId,
   if (m_loadingAvatarUserId2 == userId) {
     m_loadingAvatarUserId2.clear();
   }
-  loadNextAvatar();
+  m_avatarManager->loadNextAvatar(m_loadingAvatarUserId, m_loadingAvatarUserId2,
+                                  m_pendingAvatars, m_queuedAvatarUserIds);
 }
 
 void DiscordClient::onGuildIconDownloaded(const QString &guildId,
                                           const QString &localPath) {
-  QString source = avatarSourceForPath(localPath);
+  QString source = m_avatarManager->avatarSourceForPath(localPath);
   for (int i = 0; i < m_guilds.size(); ++i) {
     QVariantMap guild = m_guilds.at(i).toMap();
     if (guild.value("id").toString() == guildId) {
@@ -667,7 +831,9 @@ void DiscordClient::onGuildIconDownloaded(const QString &guildId,
     m_loadingGuildIconId2.clear();
   }
   saveGuildsCache();
-  loadNextGuildIcon();
+  m_avatarManager->loadNextGuildIcon(m_loadingGuildIconId,
+                                     m_loadingGuildIconId2, m_pendingGuildIcons,
+                                     m_queuedGuildIconIds);
 }
 
 void DiscordClient::onGuildIconDownloadFailed(const QString &guildId,
@@ -681,12 +847,129 @@ void DiscordClient::onGuildIconDownloadFailed(const QString &guildId,
   if (m_loadingGuildIconId2 == guildId) {
     m_loadingGuildIconId2.clear();
   }
-  loadNextGuildIcon();
+  m_avatarManager->loadNextGuildIcon(m_loadingGuildIconId,
+                                     m_loadingGuildIconId2, m_pendingGuildIcons,
+                                     m_queuedGuildIconIds);
+}
+
+void DiscordClient::onAvatarCacheHit(const QString &userId,
+                                     const QString &path) {
+  m_avatarCacheRequests.remove(userId);
+  QString source = m_avatarManager->avatarSourceForPath(path);
+  m_avatarSourcesByUserId.insert(userId, source);
+  if (m_store && userId == m_store->currentUserId()) {
+    m_store->setCurrentUserAvatarSource(source);
+  }
+
+  for (int i = 0; i < m_allDmChannels.size(); ++i) {
+    QVariantMap channel = m_allDmChannels.at(i).toMap();
+    if (channel.value("avatarUserId").toString() == userId) {
+      channel["avatar"] = source;
+      m_allDmChannels.replace(i, channel);
+      QString channelId = channel.value("id").toString();
+      if (!channelId.isEmpty()) {
+        m_dmChannelsById.insert(channelId, channel);
+      }
+    } else if (channel.value("avatarUserId2").toString() == userId) {
+      channel["avatar2"] = source;
+      m_allDmChannels.replace(i, channel);
+      QString channelId = channel.value("id").toString();
+      if (!channelId.isEmpty()) {
+        m_dmChannelsById.insert(channelId, channel);
+      }
+    }
+  }
+
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    if (channel.value("avatarUserId").toString() == userId) {
+      channel["avatar"] = source;
+      m_dmChannels.replace(i, channel);
+      if (m_store) {
+        m_store->updateDmAvatar(channel.value("id").toString(), source);
+      }
+    } else if (channel.value("avatarUserId2").toString() == userId) {
+      channel["avatar2"] = source;
+      m_dmChannels.replace(i, channel);
+      if (m_store) {
+        m_store->updateDmAvatar2(channel.value("id").toString(), source);
+      }
+    }
+  }
+
+  if (!m_loadedAvatarUserIds.contains(userId)) {
+    m_loadedAvatarUserIds.append(userId);
+  }
+}
+
+void DiscordClient::onAvatarCacheMiss(const QString &userId,
+                                      const QString &path) {
+  QString avatarHash = m_avatarCacheRequests.value(userId).toString();
+  m_avatarCacheRequests.remove(userId);
+  if (userId.trimmed().isEmpty() || avatarHash.trimmed().isEmpty()) {
+    return;
+  }
+
+  QVariantMap request;
+  request["channelId"] = QString();
+  request["userId"] = userId;
+  request["avatarHash"] = avatarHash;
+  request["path"] = path;
+  m_pendingAvatars.enqueue(request);
+  if (!m_queuedAvatarUserIds.contains(userId)) {
+    m_queuedAvatarUserIds.append(userId);
+  }
+  m_avatarManager->loadNextAvatar(m_loadingAvatarUserId, m_loadingAvatarUserId2,
+                                  m_pendingAvatars, m_queuedAvatarUserIds);
+}
+
+void DiscordClient::onGuildIconCacheHit(const QString &guildId,
+                                        const QString &path) {
+  m_guildIconCacheRequests.remove(guildId);
+  QString source = m_avatarManager->avatarSourceForPath(path);
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == guildId) {
+      guild["icon"] = source;
+      m_guilds.replace(i, guild);
+      if (m_store) {
+        m_store->updateGuildIcon(guildId, source);
+      }
+      break;
+    }
+  }
+  if (!m_loadedGuildIconIds.contains(guildId)) {
+    m_loadedGuildIconIds.append(guildId);
+  }
+}
+
+void DiscordClient::onGuildIconCacheMiss(const QString &guildId,
+                                         const QString &path) {
+  QString iconHash = m_guildIconCacheRequests.value(guildId).toString();
+  m_guildIconCacheRequests.remove(guildId);
+  if (guildId.trimmed().isEmpty() || iconHash.trimmed().isEmpty()) {
+    return;
+  }
+
+  QVariantMap request;
+  request["guildId"] = guildId;
+  request["iconHash"] = iconHash;
+  request["path"] = path;
+  m_pendingGuildIcons.enqueue(request);
+  if (!m_queuedGuildIconIds.contains(guildId)) {
+    m_queuedGuildIconIds.append(guildId);
+  }
+  m_avatarManager->loadNextGuildIcon(m_loadingGuildIconId,
+                                     m_loadingGuildIconId2, m_pendingGuildIcons,
+                                     m_queuedGuildIconIds);
 }
 
 void DiscordClient::onGatewayDispatch(const QString &eventName,
                                       const QVariantMap &payload) {
-  applyGatewayOrderingEvent(eventName, payload);
+  m_gatewayHandler->applyGatewayOrderingEvent(
+      eventName, payload, m_pendingUnreadGuildIds,
+      m_pendingMentionCountsByGuildId, m_pendingUnreadChannelIds,
+      m_pendingDmUiUpdate, m_gatewayUiUpdateQueued);
 }
 
 void DiscordClient::setLoggedIn(bool loggedIn) {
@@ -742,502 +1025,44 @@ void DiscordClient::clearSavedToken() {
   m_token.clear();
 }
 
-void DiscordClient::loadBootstrapCache() {
-  if (m_store == 0 || m_bootstrapCacheLoaded) {
-    return;
-  }
-
-  QVariantMap guildRoot;
-  if (loadCacheFile(guildsCachePath(), &guildRoot)) {
-    QVariantList cachedGuilds = guildRoot.value("guilds").toList();
-    if (!cachedGuilds.isEmpty()) {
-      m_guilds = cachedGuilds;
-      m_lastGuildId.clear();
-      m_guildsHasMore = true;
-      m_store->setGuilds(m_guilds);
-      m_bootstrapCacheLoaded = true;
-    }
-  }
-
-  QVariantMap dmRoot;
-  if (loadCacheFile(dmChannelsCachePath(), &dmRoot)) {
-    QVariantList cachedDms =
-        dmChannelsFromCache(dmRoot.value("channels").toList());
-    if (!cachedDms.isEmpty()) {
-      m_allDmChannels = cachedDms;
-      m_dmChannels.clear();
-      m_visibleDmChannelCount = 0;
-      m_lastDmChannelId.clear();
-      m_dmChannelsHasMore = true;
-      loadMoreDmChannels();
-      m_bootstrapCacheLoaded = true;
-    }
-  }
-
-  QString selectedGuildId = guildRoot.value("selectedGuildId").toString();
-  QString selectedChannelId = guildRoot.value("selectedChannelId").toString();
-  if (selectedGuildId.isEmpty()) {
-    selectedGuildId = dmRoot.value("selectedGuildId").toString();
-  }
-  if (selectedChannelId.isEmpty()) {
-    selectedChannelId = dmRoot.value("selectedChannelId").toString();
-  }
-
-  if (!selectedGuildId.isEmpty()) {
-    m_store->selectGuild(selectedGuildId);
-    m_selectedGuildId = selectedGuildId;
-  }
-  if (!selectedChannelId.isEmpty()) {
-    m_store->selectChannel(selectedChannelId);
-  }
-}
-
 void DiscordClient::saveGuildsCache() const {
-  QVariantMap root;
-  root["version"] = kCacheSchemaVersion;
-  root["guilds"] = m_guilds;
-  root["selectedGuildId"] = m_store ? m_store->selectedGuildId() : QString();
-  root["selectedChannelId"] =
-      m_store ? m_store->selectedChannelId() : QString();
-  saveCacheFile(guildsCachePath(), root);
+  m_cacheManager->saveGuildsCache(m_guilds);
 }
 
 void DiscordClient::saveDmChannelsCache() const {
-  QVariantMap root;
-  root["version"] = kCacheSchemaVersion;
-  root["channels"] = dmChannelsForCache();
-  root["selectedGuildId"] = m_store ? m_store->selectedGuildId() : QString();
-  root["selectedChannelId"] =
-      m_store ? m_store->selectedChannelId() : QString();
-  saveCacheFile(dmChannelsCachePath(), root);
+  m_cacheManager->saveDmChannelsCache(m_allDmChannels);
 }
 
-void DiscordClient::clearBootstrapCache() const {
-  QFile::remove(guildsCachePath());
-  QFile::remove(dmChannelsCachePath());
-}
-
-QString DiscordClient::guildsCachePath() const {
-  QDir dir(QDir::homePath());
-  dir.mkpath("data");
-  return dir.absoluteFilePath("data/guilds_cache.json");
-}
-
-QString DiscordClient::dmChannelsCachePath() const {
-  QDir dir(QDir::homePath());
-  dir.mkpath("data");
-  return dir.absoluteFilePath("data/dms_cache.json");
-}
-
-bool DiscordClient::loadCacheFile(const QString &path,
-                                  QVariantMap *root) const {
-  if (root == 0) {
-    return false;
-  }
-
-  QFile file(path);
-  if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
-    return false;
-  }
-
-  QByteArray bytes = file.readAll();
-  file.close();
-  bb::data::JsonDataAccess json;
-  QVariant parsed = json.loadFromBuffer(bytes);
-  if (json.hasError()) {
-    qDebug() << "[discord-cache] ignoring invalid cache" << path
-             << json.error().errorMessage();
-    return false;
-  }
-
-  QVariantMap parsedRoot = parsed.toMap();
-  if (parsedRoot.value("version").toInt() != kCacheSchemaVersion) {
-    qDebug() << "[discord-cache] ignoring unsupported cache version" << path;
-    return false;
-  }
-
-  *root = parsedRoot;
-  return true;
-}
-
-bool DiscordClient::saveCacheFile(const QString &path,
-                                  const QVariantMap &root) const {
-  QFileInfo fileInfo(path);
-  QDir dir = fileInfo.dir();
-  if (!dir.exists() && !dir.mkpath(".")) {
-    qDebug() << "[discord-cache] could not create cache dir"
-             << dir.absolutePath();
-    return false;
-  }
-
-  bb::data::JsonDataAccess json;
-  QByteArray bytes;
-  json.saveToBuffer(root, &bytes);
-  if (json.hasError()) {
-    qDebug() << "[discord-cache] could not serialize cache"
-             << json.error().errorMessage();
-    return false;
-  }
-
-  QFile file(path);
-  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    qDebug() << "[discord-cache] could not write cache" << path;
-    return false;
-  }
-  file.write(bytes);
-  file.close();
-  return true;
-}
-
-QVariantList DiscordClient::dmChannelsForCache() const {
-  QVariantList cached;
-  for (int i = 0; i < m_allDmChannels.size(); ++i) {
-    QVariantMap item = m_allDmChannels.at(i).toMap();
-    item["status"] = "offline";
-    item["statusColor"] = presenceColor("offline");
-    cached.append(item);
-  }
-  return cached;
-}
-
-QVariantList
-DiscordClient::dmChannelsFromCache(const QVariantList &channels) const {
-  QVariantList cached;
-  for (int i = 0; i < channels.size(); ++i) {
-    QVariantMap item = channels.at(i).toMap();
-    if (item.value("id").toString().isEmpty()) {
-      continue;
-    }
-    item["status"] = "offline";
-    item["statusColor"] = presenceColor("offline");
-    cached.append(item);
-  }
-  return cached;
-}
-
-void DiscordClient::loadCurrentUserAvatar(const DiscordUser &user) {
-  if (!m_store || user.id.isEmpty() || user.avatarHash.isEmpty()) {
+void DiscordClient::scheduleDmChannelsCacheSave() {
+  if (m_dmCacheSaveQueued) {
     return;
   }
 
-  QString path = avatarCachePath(user);
-  QFileInfo cachedFile(path);
-  if (cachedFile.exists() && cachedFile.size() > 0) {
-    m_store->setCurrentUserAvatarSource(avatarSourceForPath(path));
-    return;
-  }
-
-  QDir dir = cachedFile.dir();
-  if (!dir.exists() && !dir.mkpath(".")) {
-    qDebug() << "[discord-client] could not create avatar cache"
-             << dir.absolutePath();
-    return;
-  }
-
-  if (m_loadingAvatarUserId.isEmpty()) {
-    m_loadingAvatarUserId = user.id;
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(m_networkWorker, "downloadAvatar",
-                                Qt::QueuedConnection, Q_ARG(QString, user.id),
-                                Q_ARG(QString, user.avatarHash),
-                                Q_ARG(QString, path));
-    }
-  } else if (m_loadingAvatarUserId2.isEmpty()) {
-    m_loadingAvatarUserId2 = user.id;
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(m_networkWorker, "downloadAvatar2",
-                                Qt::QueuedConnection, Q_ARG(QString, user.id),
-                                Q_ARG(QString, user.avatarHash),
-                                Q_ARG(QString, path));
-    }
-  } else {
-    QVariantMap request;
-    request["channelId"] = QString();
-    request["userId"] = user.id;
-    request["avatarHash"] = user.avatarHash;
-    request["path"] = path;
-    m_pendingAvatars.enqueue(request);
-    m_queuedAvatarUserIds.append(user.id);
-  }
+  m_dmCacheSaveQueued = true;
+  QTimer::singleShot(1000, this, SLOT(savePendingDmChannelsCache()));
 }
 
-void DiscordClient::queueDmAvatar(const QString &channelId,
-                                  const QString &userId,
-                                  const QString &avatarHash) {
-  QString safeChannelId = channelId.trimmed();
-  QString safeUserId = userId.trimmed();
-  QString safeAvatarHash = avatarHash.trimmed();
-  if (safeChannelId.isEmpty() || safeUserId.isEmpty() ||
-      safeAvatarHash.isEmpty()) {
-    return;
-  }
-
-  if (m_loadedAvatarUserIds.contains(safeUserId) ||
-      m_queuedAvatarUserIds.contains(safeUserId) ||
-      m_loadingAvatarUserId == safeUserId ||
-      m_loadingAvatarUserId2 == safeUserId) {
-    return;
-  }
-
-  DiscordUser user;
-  user.id = safeUserId;
-  user.avatarHash = safeAvatarHash;
-  QString path = avatarCachePath(user);
-  QFileInfo cachedFile(path);
-  if (cachedFile.exists() && cachedFile.size() > 0) {
-    onAvatarDownloaded(safeUserId, path);
-    return;
-  }
-
-  QDir dir = cachedFile.dir();
-  if (!dir.exists() && !dir.mkpath(".")) {
-    qDebug() << "[discord-client] could not create DM avatar cache"
-             << dir.absolutePath();
-    return;
-  }
-
-  QVariantMap request;
-  request["channelId"] = safeChannelId;
-  request["userId"] = safeUserId;
-  request["avatarHash"] = safeAvatarHash;
-  request["path"] = path;
-  m_pendingAvatars.enqueue(request);
-  m_queuedAvatarUserIds.append(safeUserId);
-}
-
-void DiscordClient::loadNextAvatar() {
-  if (m_loadingAvatarUserId.isEmpty() && !m_pendingAvatars.isEmpty()) {
-    QVariantMap request = m_pendingAvatars.dequeue();
-    m_loadingAvatarUserId = request.value("userId").toString();
-    m_queuedAvatarUserIds.removeAll(m_loadingAvatarUserId);
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(
-          m_networkWorker, "downloadAvatar", Qt::QueuedConnection,
-          Q_ARG(QString, m_loadingAvatarUserId),
-          Q_ARG(QString, request.value("avatarHash").toString()),
-          Q_ARG(QString, request.value("path").toString()));
-    }
-  }
-
-  if (m_loadingAvatarUserId2.isEmpty() && !m_pendingAvatars.isEmpty()) {
-    QVariantMap request = m_pendingAvatars.dequeue();
-    m_loadingAvatarUserId2 = request.value("userId").toString();
-    m_queuedAvatarUserIds.removeAll(m_loadingAvatarUserId2);
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(
-          m_networkWorker, "downloadAvatar2", Qt::QueuedConnection,
-          Q_ARG(QString, m_loadingAvatarUserId2),
-          Q_ARG(QString, request.value("avatarHash").toString()),
-          Q_ARG(QString, request.value("path").toString()));
-    }
-  }
-}
-
-void DiscordClient::queueGuildIcon(const QString &guildId,
-                                   const QString &iconHash) {
-  QString safeGuildId = guildId.trimmed();
-  QString safeIconHash = iconHash.trimmed();
-  if (safeGuildId.isEmpty() || safeIconHash.isEmpty()) {
-    return;
-  }
-
-  if (m_loadedGuildIconIds.contains(safeGuildId) ||
-      m_queuedGuildIconIds.contains(safeGuildId) ||
-      m_loadingGuildIconId == safeGuildId ||
-      m_loadingGuildIconId2 == safeGuildId) {
-    return;
-  }
-
-  QString path = guildIconCachePath(safeGuildId, safeIconHash);
-  QFileInfo cachedFile(path);
-  if (cachedFile.exists() && cachedFile.size() > 0) {
-    QString source = avatarSourceForPath(path);
-    for (int i = 0; i < m_guilds.size(); ++i) {
-      QVariantMap guild = m_guilds.at(i).toMap();
-      if (guild.value("id").toString() == safeGuildId) {
-        guild["icon"] = source;
-        m_guilds.replace(i, guild);
-        if (m_store) {
-          m_store->updateGuildIcon(safeGuildId, source);
-        }
-        break;
-      }
-    }
-    if (!m_loadedGuildIconIds.contains(safeGuildId)) {
-      m_loadedGuildIconIds.append(safeGuildId);
-    }
-    return;
-  }
-
-  QDir dir = cachedFile.dir();
-  if (!dir.exists() && !dir.mkpath(".")) {
-    qDebug() << "[discord-client] could not create guild icon cache"
-             << dir.absolutePath();
-    return;
-  }
-
-  QVariantMap request;
-  request["guildId"] = safeGuildId;
-  request["iconHash"] = safeIconHash;
-  request["path"] = path;
-  m_pendingGuildIcons.enqueue(request);
-  m_queuedGuildIconIds.append(safeGuildId);
-}
-
-void DiscordClient::loadNextGuildIcon() {
-  if (m_loadingGuildIconId.isEmpty() && !m_pendingGuildIcons.isEmpty()) {
-    QVariantMap request = m_pendingGuildIcons.dequeue();
-    m_loadingGuildIconId = request.value("guildId").toString();
-    m_queuedGuildIconIds.removeAll(m_loadingGuildIconId);
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(
-          m_networkWorker, "downloadGuildIcon", Qt::QueuedConnection,
-          Q_ARG(QString, m_loadingGuildIconId),
-          Q_ARG(QString, request.value("iconHash").toString()),
-          Q_ARG(QString, request.value("path").toString()));
-    }
-  }
-
-  if (m_loadingGuildIconId2.isEmpty() && !m_pendingGuildIcons.isEmpty()) {
-    QVariantMap request = m_pendingGuildIcons.dequeue();
-    m_loadingGuildIconId2 = request.value("guildId").toString();
-    m_queuedGuildIconIds.removeAll(m_loadingGuildIconId2);
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(
-          m_networkWorker, "downloadGuildIcon2", Qt::QueuedConnection,
-          Q_ARG(QString, m_loadingGuildIconId2),
-          Q_ARG(QString, request.value("iconHash").toString()),
-          Q_ARG(QString, request.value("path").toString()));
-    }
-  }
-}
-
-QString DiscordClient::avatarCachePath(const DiscordUser &user) const {
-  QDir dir(QDir::homePath());
-  dir.mkpath("data/avatar-cache");
-  return dir.absoluteFilePath(
-      QString("data/avatar-cache/%1_%2.png").arg(user.id).arg(user.avatarHash));
-}
-
-QString DiscordClient::guildIconCachePath(const QString &guildId,
-                                          const QString &iconHash) const {
-  QDir dir(QDir::homePath());
-  dir.mkpath("data/guild-icon-cache");
-  return dir.absoluteFilePath(
-      QString("data/guild-icon-cache/%1_%2.png").arg(guildId).arg(iconHash));
-}
-
-QString DiscordClient::avatarSourceForPath(const QString &path) const {
-  QString cleanPath = QDir::fromNativeSeparators(path);
-  if (cleanPath.startsWith("/")) {
-    return QString("file://%1").arg(cleanPath);
-  }
-
-  return QString("file:///%1").arg(cleanPath);
-}
-
-QVariantMap DiscordClient::guildToItem(const QVariantMap &guild) const {
-  QVariantMap item;
-  QString name = guild.value("name").toString();
-  QString guildId = guild.value("id").toString();
-  QString iconHash = guild.value("icon").toString();
-  item["type"] = "server";
-  item["id"] = guildId;
-  item["name"] = name;
-  item["mentionCount"] = guild.value("mention_count").toInt();
-  item["unread"] = guild.value("unread").toBool();
-  if (guild.contains("position")) {
-    item["position"] = guild.value("position").toInt();
-  }
-  item["initials"] = DiscordUtils::firstTwoWordLetters(name);
-  item["iconHash"] = iconHash;
-  item["icon"] = QString();
-  if (!guildId.isEmpty() && !iconHash.isEmpty()) {
-    QString path = guildIconCachePath(guildId, iconHash);
-    QFileInfo cachedFile(path);
-    if (cachedFile.exists() && cachedFile.size() > 0) {
-      item["icon"] = avatarSourceForPath(path);
-    }
-  }
-  return item;
-}
-
-bool DiscordClient::applyGuildOrder(const QStringList &orderedGuildIds) {
-  if (orderedGuildIds.isEmpty() || m_guilds.isEmpty()) {
-    return false;
-  }
-
-  QVariantList ordered;
-  QStringList usedIds;
-  for (int i = 0; i < orderedGuildIds.size(); ++i) {
-    QString guildId = orderedGuildIds.at(i).trimmed();
-    if (guildId.isEmpty() || usedIds.contains(guildId)) {
-      continue;
-    }
-
-    for (int j = 0; j < m_guilds.size(); ++j) {
-      QVariantMap guild = m_guilds.at(j).toMap();
-      if (guild.value("id").toString() == guildId) {
-        ordered.append(guild);
-        usedIds.append(guildId);
-        break;
-      }
-    }
-  }
-
-  if (ordered.isEmpty()) {
-    return false;
-  }
-
-  for (int i = 0; i < m_guilds.size(); ++i) {
-    QVariantMap guild = m_guilds.at(i).toMap();
-    if (!usedIds.contains(guild.value("id").toString())) {
-      ordered.append(guild);
-    }
-  }
-
-  m_guilds = ordered;
-  return true;
+void DiscordClient::savePendingDmChannelsCache() {
+  m_dmCacheSaveQueued = false;
+  saveDmChannelsCache();
 }
 
 bool DiscordClient::applyGuildOrderFromGatewayPayload(
     const QVariantMap &payload) {
-  QStringList orderedGuildIds;
-
-  DiscordUtils::appendGuildIdsFromUserSettingsProto(
-      &orderedGuildIds, payload.value("user_settings_proto").toString());
-
-  QVariantMap settings = payload.value("settings").toMap();
-  DiscordUtils::appendGuildIdsFromUserSettingsProto(
-      &orderedGuildIds, settings.value("proto").toString());
-
-  QVariantList folders = payload.value("guild_folders").toList();
-  if (folders.isEmpty()) {
-    QVariantMap userSettings = payload.value("user_settings").toMap();
-    folders = userSettings.value("guild_folders").toList();
-  }
-
-  for (int i = 0; i < folders.size(); ++i) {
-    QVariantMap folder = folders.at(i).toMap();
-    QVariantList guildIds = folder.value("guild_ids").toList();
-    for (int j = 0; j < guildIds.size(); ++j) {
-      DiscordUtils::appendUniqueGuildId(&orderedGuildIds,
-                                        guildIds.at(j).toString());
-    }
-  }
-
-  if (orderedGuildIds.isEmpty()) {
-    return false;
-  }
-
-  m_orderedGuildIds = orderedGuildIds;
-  qDebug() << "[discord-client] applied guild order from gateway"
-           << orderedGuildIds.size();
-
-  return applyGuildOrder(orderedGuildIds);
+  return m_sortUtils->applyGuildOrderFromGatewayPayload(
+      m_guilds, m_orderedGuildIds, payload);
 }
 
-void DiscordClient::sortGuilds() { applyGuildOrder(m_orderedGuildIds); }
+void DiscordClient::sortGuilds() {
+  m_sortUtils->applyGuildOrder(m_guilds, m_orderedGuildIds);
+}
+
+void DiscordClient::sortDmChannels() {
+  DiscordUtils::stableSortItems(&m_allDmChannels,
+                                DiscordUtils::dmShouldMoveBefore);
+  DiscordUtils::stableSortItems(&m_dmChannels,
+                                DiscordUtils::dmShouldMoveBefore);
+}
 
 int DiscordClient::guildMentionCount(const QString &guildId) const {
   QString safeGuildId = guildId.trimmed();
@@ -1248,26 +1073,6 @@ int DiscordClient::guildMentionCount(const QString &guildId) const {
     }
   }
   return 0;
-}
-
-bool DiscordClient::gatewayMessageMentionsCurrentUser(
-    const QVariantMap &payload) const {
-  QString currentUserId = m_store ? m_store->currentUserId() : QString();
-  if (currentUserId.isEmpty()) {
-    return false;
-  }
-
-  if (payload.value("mention_everyone").toBool()) {
-    return true;
-  }
-
-  QVariantList mentions = payload.value("mentions").toList();
-  for (int i = 0; i < mentions.size(); ++i) {
-    if (mentions.at(i).toMap().value("id").toString() == currentUserId) {
-      return true;
-    }
-  }
-  return false;
 }
 
 void DiscordClient::updateGuildMentionCount(const QString &guildId,
@@ -1334,124 +1139,54 @@ void DiscordClient::updateGuildChannelUnread(const QString &channelId,
   Q_UNUSED(changed);
 }
 
-QVariantMap DiscordClient::dmChannelToItem(const QVariantMap &channel) const {
-  QVariantMap item;
-  QVariantList recipients = channel.value("recipients").toList();
-  QVariantMap recipient =
-      recipients.isEmpty() ? QVariantMap() : recipients.first().toMap();
-  QVariantMap recipient2 =
-      recipients.size() > 1 ? recipients.at(1).toMap() : QVariantMap();
-  int channelType = channel.value("type").toInt();
-  bool groupDm = channelType == DiscordChannel::GroupDm;
-  QString name = channel.value("name").toString();
-  if (name.isEmpty() && groupDm) {
-    QStringList names;
-    for (int i = 0; i < recipients.size() && names.size() < 3; ++i) {
-      QString recipientName = userDisplayName(recipients.at(i).toMap());
-      if (!recipientName.isEmpty()) {
-        names.append(recipientName);
-      }
-    }
-    name = names.join(", ");
-  }
-  if (name.isEmpty()) {
-    name = userDisplayName(recipient);
+void DiscordClient::indexDmChannelRecipients(const QVariantMap &channel) {
+  QString channelId = channel.value("id").toString();
+  if (channelId.isEmpty()) {
+    return;
   }
 
-  item["type"] = "dm";
-  item["id"] = channel.value("id").toString();
-  item["name"] = name;
-  item["isGroup"] = groupDm;
-  item["lastMessageId"] = channel.value("last_message_id").toString();
-  item["initials"] = DiscordUtils::firstLetter(name);
-  item["initials2"] = DiscordUtils::firstLetter(userDisplayName(recipient2));
-  item["avatarColor"] = "#5865F2";
-  item["avatarColor2"] = "#3F4147";
-  item["avatarUserId"] = recipient.value("id").toString();
-  item["avatarHash"] = recipient.value("avatar").toString();
-  item["avatar"] = QString();
-  item["avatarUserId2"] = recipient2.value("id").toString();
-  item["avatarHash2"] = recipient2.value("avatar").toString();
-  item["avatar2"] = QString();
-  QVariantList recipientIds;
-  QVariantList cachedRecipients;
-  for (int i = 0; i < recipients.size(); ++i) {
-    QVariantMap rawRecipient = recipients.at(i).toMap();
-    QString recipientId = rawRecipient.value("id").toString();
-    if (!recipientId.isEmpty()) {
-      recipientIds.append(recipientId);
-      QVariantMap cachedRecipient;
-      cachedRecipient["id"] = recipientId;
-      cachedRecipient["username"] = rawRecipient.value("username").toString();
-      cachedRecipient["global_name"] =
-          rawRecipient.value("global_name").toString();
-      cachedRecipient["discriminator"] =
-          rawRecipient.value("discriminator").toString();
-      cachedRecipient["avatar"] = rawRecipient.value("avatar").toString();
-      cachedRecipients.append(cachedRecipient);
+  QVariantList recipientIds = channel.value("recipientIds").toList();
+  for (int i = 0; i < recipientIds.size(); ++i) {
+    QString userId = recipientIds.at(i).toString().trimmed();
+    if (userId.isEmpty()) {
+      continue;
+    }
+
+    QStringList channelIds =
+        m_dmChannelIdsByRecipientId.value(userId).toStringList();
+    if (!channelIds.contains(channelId)) {
+      channelIds.append(channelId);
+      m_dmChannelIdsByRecipientId.insert(userId, channelIds);
     }
   }
-  item["recipientIds"] = recipientIds;
-  item["recipients"] = cachedRecipients;
-  QString status = dmStatusForRecipients(recipientIds);
-  item["status"] = status;
-  item["statusColor"] = presenceColor(status);
-  if (!item.value("avatarUserId").toString().isEmpty() &&
-      !item.value("avatarHash").toString().isEmpty()) {
-    DiscordUser user;
-    user.id = item.value("avatarUserId").toString();
-    user.avatarHash = item.value("avatarHash").toString();
-    QString path = avatarCachePath(user);
-    QFileInfo cachedFile(path);
-    if (cachedFile.exists() && cachedFile.size() > 0) {
-      item["avatar"] = avatarSourceForPath(path);
-    }
-  }
-  if (!item.value("avatarUserId2").toString().isEmpty() &&
-      !item.value("avatarHash2").toString().isEmpty()) {
-    DiscordUser user;
-    user.id = item.value("avatarUserId2").toString();
-    user.avatarHash = item.value("avatarHash2").toString();
-    QString path = avatarCachePath(user);
-    QFileInfo cachedFile(path);
-    if (cachedFile.exists() && cachedFile.size() > 0) {
-      item["avatar2"] = avatarSourceForPath(path);
-    }
-  }
-  return item;
 }
 
-QString
-DiscordClient::dmStatusForRecipients(const QVariantList &userIds) const {
-  QString bestStatus = "offline";
-  int bestRank = 0;
-  for (int i = 0; i < userIds.size(); ++i) {
-    QString userId = userIds.at(i).toString().trimmed();
-    QString status = m_dmPresenceByUserId.value(userId).toString();
-    int rank = presenceRank(status);
-    if (rank > bestRank) {
-      bestRank = rank;
-      bestStatus = status;
-    }
+void DiscordClient::rebuildDmRecipientIndex() {
+  m_dmChannelIdsByRecipientId.clear();
+  for (int i = 0; i < m_allDmChannels.size(); ++i) {
+    indexDmChannelRecipients(m_allDmChannels.at(i).toMap());
   }
-  return bestStatus;
 }
 
-QVariantMap
-DiscordClient::guildChannelToItem(const QVariantMap &channel) const {
-  QVariantMap item;
-  int type = channel.value("type").toInt();
-  item["id"] = channel.value("id").toString();
-  item["name"] = channel.value("name").toString();
-  item["type"] = type == DiscordChannel::GuildCategory ? "category" : "channel";
-  item["icon"] = type == DiscordChannel::GuildVoice
-                     ? "asset:///images/icons/speaker.png"
-                     : "asset:///images/icons/hash.png";
-  item["position"] = channel.value("position").toInt();
-  item["channelType"] = type;
-  item["parentId"] = channel.value("parent_id").toString();
-  item["unread"] = channel.value("unread").toBool();
-  return item;
+void DiscordClient::rebuildDmChannelIndexes() {
+  m_allDmChannelIndexById.clear();
+  for (int i = 0; i < m_allDmChannels.size(); ++i) {
+    QString channelId = m_allDmChannels.at(i).toMap().value("id").toString();
+    if (!channelId.isEmpty()) {
+      m_allDmChannelIndexById.insert(channelId, i);
+    }
+  }
+
+  m_dmChannelsById.clear();
+  m_visibleDmChannelIndexById.clear();
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    QString channelId = channel.value("id").toString();
+    if (!channelId.isEmpty()) {
+      m_dmChannelsById.insert(channelId, channel);
+      m_visibleDmChannelIndexById.insert(channelId, i);
+    }
+  }
 }
 
 void DiscordClient::updateDmPresence(const QString &userId,
@@ -1484,126 +1219,90 @@ bool DiscordClient::applyPendingDmPresences() {
 
   QStringList userIds = m_pendingDmPresenceUserIds;
   m_pendingDmPresenceUserIds.clear();
+  QStringList affectedChannelIds;
+  QSet<QString> affectedChannelIdSet;
 
-  for (int i = 0; i < m_allDmChannels.size(); ++i) {
-    QVariantMap channel = m_allDmChannels.at(i).toMap();
-    QVariantList recipientIds = channel.value("recipientIds").toList();
-    bool containsUser = false;
-    for (int userIndex = 0; userIndex < userIds.size(); ++userIndex) {
-      if (recipientIds.contains(userIds.at(userIndex))) {
-        containsUser = true;
-        break;
-      }
-    }
-    if (containsUser) {
-      QString status = dmStatusForRecipients(recipientIds);
-      QString statusColor = presenceColor(status);
-      if (channel.value("status").toString() != status ||
-          channel.value("statusColor").toString() != statusColor) {
-        channel["status"] = status;
-        channel["statusColor"] = statusColor;
-        m_allDmChannels.replace(i, channel);
+  for (int userIndex = 0; userIndex < userIds.size(); ++userIndex) {
+    QStringList channelIds =
+        m_dmChannelIdsByRecipientId.value(userIds.at(userIndex)).toStringList();
+    for (int channelIndex = 0; channelIndex < channelIds.size();
+         ++channelIndex) {
+      QString channelId = channelIds.at(channelIndex);
+      if (!channelId.isEmpty() && !affectedChannelIdSet.contains(channelId)) {
+        affectedChannelIdSet.insert(channelId);
+        affectedChannelIds.append(channelId);
       }
     }
   }
 
   bool changed = false;
-  for (int i = 0; i < m_dmChannels.size(); ++i) {
-    QVariantMap channel = m_dmChannels.at(i).toMap();
+  for (int i = 0; i < affectedChannelIds.size(); ++i) {
+    QString channelId = affectedChannelIds.at(i);
+    int allIndex = m_allDmChannelIndexById.value(channelId, -1).toInt();
+    if (allIndex < 0 || allIndex >= m_allDmChannels.size()) {
+      continue;
+    }
+
+    QVariantMap channel = m_allDmChannels.at(allIndex).toMap();
     QVariantList recipientIds = channel.value("recipientIds").toList();
-    bool containsUser = false;
-    for (int userIndex = 0; userIndex < userIds.size(); ++userIndex) {
-      if (recipientIds.contains(userIds.at(userIndex))) {
-        containsUser = true;
-        break;
+
+    // We need to calculate status here since we don't have direct access to
+    // ItemMapper's private method
+    QString status = "offline";
+    int bestRank = 0;
+    for (int j = 0; j < recipientIds.size(); ++j) {
+      QString uid = recipientIds.at(j).toString().trimmed();
+      QString s = m_dmPresenceByUserId.value(uid).toString();
+      int rank = 0;
+      if (s == "online")
+        rank = 3;
+      else if (s == "dnd" || s == "busy")
+        rank = 2;
+      else if (s == "idle")
+        rank = 1;
+
+      if (rank > bestRank) {
+        bestRank = rank;
+        status = s;
       }
     }
-    if (containsUser) {
-      QString status = dmStatusForRecipients(recipientIds);
-      QString statusColor = presenceColor(status);
-      if (channel.value("status").toString() != status ||
-          channel.value("statusColor").toString() != statusColor) {
-        channel["status"] = status;
-        channel["statusColor"] = statusColor;
-        m_dmChannels.replace(i, channel);
-        changed = true;
+
+    QString statusColor = "#80848E";
+    if (status == "online")
+      statusColor = "#23A55A";
+    else if (status == "idle")
+      statusColor = "#F0B232";
+    else if (status == "dnd" || status == "busy")
+      statusColor = "#F23F43";
+
+    if (channel.value("status").toString() == status &&
+        channel.value("statusColor").toString() == statusColor) {
+      continue;
+    }
+
+    channel["status"] = status;
+    channel["statusColor"] = statusColor;
+    m_allDmChannels.replace(allIndex, channel);
+
+    int visibleIndex = m_visibleDmChannelIndexById.value(channelId, -1).toInt();
+    if (visibleIndex >= 0 && visibleIndex < m_dmChannels.size()) {
+      QVariantMap visibleChannel = m_dmChannels.at(visibleIndex).toMap();
+      visibleChannel["status"] = status;
+      visibleChannel["statusColor"] = statusColor;
+      m_dmChannels.replace(visibleIndex, visibleChannel);
+      m_dmChannelsById.insert(channelId, visibleChannel);
+      changed = true;
+    } else if (m_dmChannelsById.contains(channelId)) {
+      QVariantMap visibleChannel = m_dmChannelsById.value(channelId).toMap();
+      if (!visibleChannel.isEmpty()) {
+        visibleChannel["status"] = status;
+        visibleChannel["statusColor"] = statusColor;
+        m_dmChannelsById.insert(channelId, visibleChannel);
       }
     }
   }
 
   return changed;
-}
-
-QVariantList DiscordClient::sortedAccessibleGuildChannels(
-    const QVariantList &channels) const {
-  QVariantList categories;
-  QVariantList rootChannels;
-  QMap<QString, QVariantList> channelsByCategory;
-  QStringList categoryIds;
-
-  for (int i = 0; i < channels.size(); ++i) {
-    QVariantMap item = channels.at(i).toMap();
-    if (item.value("type").toString() == "category") {
-      categories.append(item);
-      categoryIds.append(item.value("id").toString());
-    } else {
-      QString parentId = item.value("parentId").toString();
-      if (parentId.isEmpty() || !categoryIds.contains(parentId)) {
-        rootChannels.append(item);
-      } else {
-        QVariantList categoryChannels = channelsByCategory.value(parentId);
-        categoryChannels.append(item);
-        channelsByCategory.insert(parentId, categoryChannels);
-      }
-    }
-  }
-
-  for (int i = 0; i < rootChannels.size(); ++i) {
-    QVariantMap item = rootChannels.at(i).toMap();
-    QString parentId = item.value("parentId").toString();
-    if (!parentId.isEmpty() && categoryIds.contains(parentId)) {
-      QVariantList categoryChannels = channelsByCategory.value(parentId);
-      categoryChannels.append(item);
-      channelsByCategory.insert(parentId, categoryChannels);
-      rootChannels.removeAt(i);
-      --i;
-    }
-  }
-
-  DiscordUtils::stableSortItems(&categories,
-                                DiscordUtils::positionShouldMoveBefore);
-  DiscordUtils::stableSortItems(&rootChannels,
-                                DiscordUtils::positionShouldMoveBefore);
-
-  QVariantList result;
-  int rootIndex = 0;
-  for (int i = 0; i < categories.size(); ++i) {
-    QVariantMap item = categories.at(i).toMap();
-
-    while (rootIndex < rootChannels.size() &&
-           DiscordUtils::positionShouldMoveBefore(
-               rootChannels.at(rootIndex).toMap(), item)) {
-      result.append(rootChannels.at(rootIndex));
-      ++rootIndex;
-    }
-
-    result.append(item);
-
-    QVariantList categoryChannels =
-        channelsByCategory.value(item.value("id").toString());
-    DiscordUtils::stableSortItems(&categoryChannels,
-                                  DiscordUtils::positionShouldMoveBefore);
-    for (int j = 0; j < categoryChannels.size(); ++j) {
-      result.append(categoryChannels.at(j));
-    }
-  }
-
-  while (rootIndex < rootChannels.size()) {
-    result.append(rootChannels.at(rootIndex));
-    ++rootIndex;
-  }
-
-  return result;
 }
 
 void DiscordClient::moveDmToTop(const QString &channelId,
@@ -1621,6 +1320,7 @@ void DiscordClient::moveDmToTop(const QString &channelId,
       }
       m_allDmChannels.removeAt(i);
       m_allDmChannels.prepend(item);
+      rebuildDmChannelIndexes();
       break;
     }
   }
@@ -1633,83 +1333,16 @@ void DiscordClient::moveDmToTop(const QString &channelId,
       }
       m_dmChannels.removeAt(i);
       m_dmChannels.prepend(item);
+      rebuildDmChannelIndexes();
       return;
     }
   }
 }
 
-void DiscordClient::applyGatewayOrderingEvent(const QString &eventName,
-                                              const QVariantMap &payload) {
-  if (eventName == "MESSAGE_CREATE") {
-    QString guildId = payload.value("guild_id").toString();
-    QString channelId = payload.value("channel_id").toString();
-    if (guildId.isEmpty() && !channelId.isEmpty()) {
-      moveDmToTop(channelId, payload.value("id").toString());
-      m_pendingDmUiUpdate = true;
-    } else if (!guildId.isEmpty() &&
-               payload.value("author").toMap().value("id").toString() !=
-                   (m_store ? m_store->currentUserId() : QString())) {
-      if (!m_pendingUnreadGuildIds.contains(guildId)) {
-        m_pendingUnreadGuildIds.append(guildId);
-      }
-      if (payload.contains("mention_count")) {
-        m_pendingMentionCountsByGuildId.insert(
-            guildId, payload.value("mention_count").toInt());
-      } else if (gatewayMessageMentionsCurrentUser(payload)) {
-        int mentionCount =
-            m_pendingMentionCountsByGuildId.contains(guildId)
-                ? m_pendingMentionCountsByGuildId.value(guildId).toInt()
-                : guildMentionCount(guildId);
-        m_pendingMentionCountsByGuildId.insert(guildId, mentionCount + 1);
-      }
-      if (!channelId.isEmpty() &&
-          !m_pendingUnreadChannelIds.contains(channelId)) {
-        m_pendingUnreadChannelIds.append(channelId);
-      }
-    }
-    if (!m_gatewayUiUpdateQueued) {
-      m_gatewayUiUpdateQueued = true;
-      QTimer::singleShot(250, this, SLOT(flushGatewayUiUpdates()));
-    }
-    return;
-  }
-
-  if (eventName == "PRESENCE_UPDATE") {
-    updateDmPresence(payload.value("user").toMap().value("id").toString(),
-                     payload.value("status").toString());
-    if (!m_gatewayUiUpdateQueued) {
-      m_gatewayUiUpdateQueued = true;
-      QTimer::singleShot(250, this, SLOT(flushGatewayUiUpdates()));
-    }
-    return;
-  }
-
-  if (eventName == "READY") {
-    QVariantList presences = payload.value("presences").toList();
-    for (int i = 0; i < presences.size(); ++i) {
-      QVariantMap presence = presences.at(i).toMap();
-      updateDmPresence(presence.value("user").toMap().value("id").toString(),
-                       presence.value("status").toString());
-    }
-  }
-
-  if (eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
-      eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
-    applyPendingDmPresences();
-    bool orderChanged = applyGuildOrderFromGatewayPayload(payload);
-    if (!orderChanged) {
-      sortGuilds();
-    }
-    DiscordUtils::stableSortItems(&m_allDmChannels,
-                                  DiscordUtils::dmShouldMoveBefore);
-    DiscordUtils::stableSortItems(&m_dmChannels,
-                                  DiscordUtils::dmShouldMoveBefore);
-    if (m_store) {
-      m_store->setGuilds(m_guilds);
-      m_store->setDmChannels(m_dmChannels);
-    }
-    saveGuildsCache();
-    saveDmChannelsCache();
+void DiscordClient::updateStoreWithGuildsAndDms() {
+  if (m_store) {
+    m_store->setGuilds(m_guilds);
+    m_store->setDmChannels(m_dmChannels);
   }
 }
 

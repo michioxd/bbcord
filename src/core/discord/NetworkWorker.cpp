@@ -5,7 +5,7 @@
 
 namespace {
 bool isInObjectThread(const QObject *object) {
-        return object != 0 && object->thread() == QThread::currentThread();
+  return object != 0 && object->thread() == QThread::currentThread();
 }
 } // namespace
 
@@ -58,35 +58,35 @@ DiscordNetworkWorker::DiscordNetworkWorker(QObject *parent)
 DiscordNetworkWorker::~DiscordNetworkWorker() { cancelAll(); }
 
 void DiscordNetworkWorker::loginWithToken(const QString &token) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "loginWithToken", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, token));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "loginWithToken", Qt::QueuedConnection,
+                              Q_ARG(QString, token));
+    return;
+  }
 
   m_loginClient.loginWithToken(token);
 }
 
 void DiscordNetworkWorker::fetchGuilds(const QString &token, int limit,
                                        const QString &afterId) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "fetchGuilds", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, token), Q_ARG(int, limit),
-                                                                                                                        Q_ARG(QString, afterId));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "fetchGuilds", Qt::QueuedConnection,
+                              Q_ARG(QString, token), Q_ARG(int, limit),
+                              Q_ARG(QString, afterId));
+    return;
+  }
 
   m_dataClient.fetchGuilds(token, limit, afterId);
 }
 
 void DiscordNetworkWorker::fetchDmChannels(const QString &token, int limit,
                                            const QString &afterId) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "fetchDmChannels", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, token), Q_ARG(int, limit),
-                                                                                                                        Q_ARG(QString, afterId));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "fetchDmChannels", Qt::QueuedConnection,
+                              Q_ARG(QString, token), Q_ARG(int, limit),
+                              Q_ARG(QString, afterId));
+    return;
+  }
 
   m_dataClient.fetchDmChannels(token, limit, afterId);
 }
@@ -94,12 +94,12 @@ void DiscordNetworkWorker::fetchDmChannels(const QString &token, int limit,
 void DiscordNetworkWorker::fetchGuildChannels(const QString &token,
                                               const QString &guildId, int limit,
                                               const QString &afterId) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "fetchGuildChannels", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, token), Q_ARG(QString, guildId),
-                                                                                                                        Q_ARG(int, limit), Q_ARG(QString, afterId));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "fetchGuildChannels", Qt::QueuedConnection,
+                              Q_ARG(QString, token), Q_ARG(QString, guildId),
+                              Q_ARG(int, limit), Q_ARG(QString, afterId));
+    return;
+  }
 
   m_dataClient.fetchGuildChannels(token, guildId, limit, afterId);
 }
@@ -107,13 +107,12 @@ void DiscordNetworkWorker::fetchGuildChannels(const QString &token,
 void DiscordNetworkWorker::downloadAvatar(const QString &userId,
                                           const QString &avatarHash,
                                           const QString &outputPath) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "downloadAvatar", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, userId),
-                                                                                                                        Q_ARG(QString, avatarHash),
-                                                                                                                        Q_ARG(QString, outputPath));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(
+        this, "downloadAvatar", Qt::QueuedConnection, Q_ARG(QString, userId),
+        Q_ARG(QString, avatarHash), Q_ARG(QString, outputPath));
+    return;
+  }
 
   m_avatarClient.downloadAvatar(userId, avatarHash, outputPath);
 }
@@ -121,13 +120,12 @@ void DiscordNetworkWorker::downloadAvatar(const QString &userId,
 void DiscordNetworkWorker::downloadAvatar2(const QString &userId,
                                            const QString &avatarHash,
                                            const QString &outputPath) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "downloadAvatar2", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, userId),
-                                                                                                                        Q_ARG(QString, avatarHash),
-                                                                                                                        Q_ARG(QString, outputPath));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(
+        this, "downloadAvatar2", Qt::QueuedConnection, Q_ARG(QString, userId),
+        Q_ARG(QString, avatarHash), Q_ARG(QString, outputPath));
+    return;
+  }
 
   m_avatarClient2.downloadAvatar(userId, avatarHash, outputPath);
 }
@@ -135,13 +133,12 @@ void DiscordNetworkWorker::downloadAvatar2(const QString &userId,
 void DiscordNetworkWorker::downloadGuildIcon(const QString &guildId,
                                              const QString &iconHash,
                                              const QString &outputPath) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "downloadGuildIcon", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, guildId),
-                                                                                                                        Q_ARG(QString, iconHash),
-                                                                                                                        Q_ARG(QString, outputPath));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "downloadGuildIcon", Qt::QueuedConnection,
+                              Q_ARG(QString, guildId), Q_ARG(QString, iconHash),
+                              Q_ARG(QString, outputPath));
+    return;
+  }
 
   m_guildIconClient.downloadGuildIcon(guildId, iconHash, outputPath);
 }
@@ -149,41 +146,40 @@ void DiscordNetworkWorker::downloadGuildIcon(const QString &guildId,
 void DiscordNetworkWorker::downloadGuildIcon2(const QString &guildId,
                                               const QString &iconHash,
                                               const QString &outputPath) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "downloadGuildIcon2", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, guildId),
-                                                                                                                        Q_ARG(QString, iconHash),
-                                                                                                                        Q_ARG(QString, outputPath));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "downloadGuildIcon2", Qt::QueuedConnection,
+                              Q_ARG(QString, guildId), Q_ARG(QString, iconHash),
+                              Q_ARG(QString, outputPath));
+    return;
+  }
 
   m_guildIconClient2.downloadGuildIcon(guildId, iconHash, outputPath);
 }
 
 void DiscordNetworkWorker::connectGateway(const QString &token) {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "connectGateway", Qt::QueuedConnection,
-                                                                                                                        Q_ARG(QString, token));
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "connectGateway", Qt::QueuedConnection,
+                              Q_ARG(QString, token));
+    return;
+  }
 
   m_gateway.connectToGateway(token);
 }
 
 void DiscordNetworkWorker::disconnectGateway() {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "disconnectGateway", Qt::QueuedConnection);
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "disconnectGateway", Qt::QueuedConnection);
+    return;
+  }
 
   m_gateway.disconnectFromGateway();
 }
 
 void DiscordNetworkWorker::cancelAll() {
-        if (!isInObjectThread(this)) {
-                QMetaObject::invokeMethod(this, "cancelAll", Qt::QueuedConnection);
-                return;
-        }
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "cancelAll", Qt::QueuedConnection);
+    return;
+  }
 
   m_loginClient.cancel();
   m_dataClient.cancel();

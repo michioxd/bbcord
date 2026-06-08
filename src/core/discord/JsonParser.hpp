@@ -33,6 +33,8 @@ public:
   static bool isLargeReadyPayload(const QByteArray &bytes);
   static QString extractStringField(const QByteArray &bytes,
                                     const char *fieldName);
+  static QVariantList extractArrayField(const QByteArray &bytes,
+                                        const char *fieldName);
 };
 
 #endif /* JsonParser_HPP_ */

@@ -206,16 +206,31 @@ void AppStore::updateDmAvatar2(const QString &channelId,
 
 void AppStore::setDmChannels(const QVariantList &dmChannels) {
   QVariantList appended;
-  if (dmChannels.size() >= m_dmChannels.size()) {
+  bool appendOnly = dmChannels.size() > m_dmChannels.size();
+  if (appendOnly) {
+    for (int i = 0; i < m_dmChannels.size(); ++i) {
+      QVariantMap oldChannel = m_dmChannels.at(i).toMap();
+      QVariantMap newChannel = dmChannels.at(i).toMap();
+      if (oldChannel.value("id").toString() !=
+          newChannel.value("id").toString()) {
+        appendOnly = false;
+        break;
+      }
+    }
+  }
+
+  if (appendOnly) {
     for (int i = m_dmChannels.size(); i < dmChannels.size(); ++i) {
       appended.append(dmChannels.at(i));
     }
   }
 
   m_dmChannels = dmChannels;
-  if (!appended.isEmpty()) {
+  if (appendOnly && !appended.isEmpty()) {
     emit dmChannelsAppended(appended);
+    return;
   }
+
   emit dmChannelsChanged();
 }
 
