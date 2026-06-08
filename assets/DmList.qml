@@ -43,12 +43,15 @@ Container {
             }
         }
 
+        horizontalAlignment: HorizontalAlignment.Fill
+
         listItemComponents: [
             ListItemComponent {
                 type: "loading"
 
                 Container {
                     preferredHeight: ui.du(7.0)
+                    preferredWidth: ui.du(200)
                     horizontalAlignment: HorizontalAlignment.Fill
                     verticalAlignment: VerticalAlignment.Fill
                     layout: DockLayout {}
@@ -65,6 +68,7 @@ Container {
 
                 Container {
                     preferredHeight: ui.du(8.8)
+                    preferredWidth: ui.du(200)
                     horizontalAlignment: HorizontalAlignment.Fill
                     leftPadding: ui.du(2)
                     rightPadding: ui.du(2)
@@ -233,6 +237,7 @@ Container {
                     Label {
                         text: ListItemData.name
                         leftMargin: ui.du(1.5)
+                        horizontalAlignment: HorizontalAlignment.Fill
                         verticalAlignment: VerticalAlignment.Center
                         textStyle.fontSize: FontSize.Medium
                     }

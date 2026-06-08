@@ -151,7 +151,7 @@ Page {
 
         if (page) {
             page.channelName = channelName;
-            page.title = "# " + channelName;
+            page.title = channelName;
             page.backRequested.connect(function () {
                 if (mainPage.navigationPane) {
                     mainPage.navigationPane.pop();

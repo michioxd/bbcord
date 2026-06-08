@@ -14,21 +14,21 @@ Page {
     property string replyAuthor: ""
     property string replyMessage: ""
 
-    signal backRequested()
-    signal memberListRequested()
+    signal backRequested
+    signal memberListRequested
 
     actionBarVisibility: ChromeVisibility.Hidden
 
     titleBar: TitleBar {
         id: titleBar
-        title: "# " + chatPage.channelName
+        title: chatPage.channelName
         visibility: ChromeVisibility.Visible
 
         dismissAction: ActionItem {
             imageSource: "asset:///images/icons/accent/caret-left.png"
 
             onTriggered: {
-                chatPage.backRequested()
+                chatPage.backRequested();
             }
         }
 
@@ -36,7 +36,7 @@ Page {
             imageSource: "asset:///images/icons/accent/users.png"
 
             onTriggered: {
-                chatPage.memberListRequested()
+                chatPage.memberListRequested();
             }
         }
     }
@@ -58,8 +58,8 @@ Page {
             attachedObjects: [
                 LayoutUpdateHandler {
                     onLayoutFrameChanged: {
-                        chatPage.viewportHeight = layoutFrame.height
-                        chatPage.updateBottomPadding()
+                        chatPage.viewportHeight = layoutFrame.height;
+                        chatPage.updateBottomPadding();
                     }
                 }
             ]
@@ -92,11 +92,11 @@ Page {
                         attachedObjects: [
                             LayoutUpdateHandler {
                                 onLayoutFrameChanged: {
-                                    chatPage.messagesHeight = layoutFrame.height
-                                    chatPage.updateBottomPadding()
+                                    chatPage.messagesHeight = layoutFrame.height;
+                                    chatPage.updateBottomPadding();
 
                                     if (chatPage.pendingScrollToBottom) {
-                                        chatPage.scrollToBottomNow()
+                                        chatPage.scrollToBottomNow();
                                     }
                                 }
                             }
@@ -133,7 +133,7 @@ Page {
                     defaultImageSource: "asset:///images/icons/x.png"
 
                     onClicked: {
-                        chatPage.clearReply()
+                        chatPage.clearReply();
                     }
                     pressedImageSource: "asset:///images/icons/x-hold.png"
                     disabledImageSource: "asset:///images/icons/x-disabled.png"
@@ -157,7 +157,6 @@ Page {
                         textStyle.color: Color.create("#B5BAC1")
                     }
                 }
-                
             }
 
             Container {
@@ -171,9 +170,9 @@ Page {
                     verticalAlignment: VerticalAlignment.Center
                     preferredWidth: ui.du(7.0)
                     preferredHeight: ui.du(7.0)
-                    
+
                     onClicked: {
-                        console.log("attach file")
+                        console.log("attach file");
                     }
                     defaultImageSource: "asset:///images/icons/paperclip.png"
                     pressedImageSource: "asset:///images/icons/paperclip-hold.png"
@@ -194,7 +193,7 @@ Page {
                         submitKey: SubmitKey.Send
 
                         onSubmitted: {
-                            chatPage.sendCurrentMessage()
+                            chatPage.sendCurrentMessage();
                         }
                     }
                 }
@@ -210,96 +209,96 @@ Page {
     ]
 
     function updateBottomPadding() {
-        var missingHeight = viewportHeight - messagesHeight
+        var missingHeight = viewportHeight - messagesHeight;
 
         if (missingHeight > 0) {
-            bottomFillPadding = missingHeight
+            bottomFillPadding = missingHeight;
         } else {
-            bottomFillPadding = 0
+            bottomFillPadding = 0;
         }
     }
 
     function appendMessage(message) {
-        var item = normalizeMessage(message)
-        var lastIndex = messagesContainer.controls.length - 1
+        var item = normalizeMessage(message);
+        var lastIndex = messagesContainer.controls.length - 1;
 
         if (lastIndex >= 0) {
-            var previousBubble = messagesContainer.controls[lastIndex]
-            var previous = messageFromBubble(previousBubble)
+            var previousBubble = messagesContainer.controls[lastIndex];
+            var previous = messageFromBubble(previousBubble);
 
             if (shouldGroup(previous, item)) {
-                previousBubble.isGroupEnd = false
+                previousBubble.isGroupEnd = false;
 
-                item.isGroupStart = false
-                item.showAvatar = false
-                item.showUsername = false
-                item.showTimestamp = false
+                item.isGroupStart = false;
+                item.showAvatar = false;
+                item.showUsername = false;
+                item.showTimestamp = false;
             }
         }
 
-        addMessageBubble(item)
+        addMessageBubble(item);
 
-        requestScrollToBottom()
+        requestScrollToBottom();
     }
 
     function requestScrollToBottom() {
-        pendingScrollToBottom = true
-        scrollToBottomNow()
+        pendingScrollToBottom = true;
+        scrollToBottomNow();
     }
 
     function setReply(author, message) {
-        replyAuthor = author
-        replyMessage = message
-        inputMessage.requestFocus()
+        replyAuthor = author;
+        replyMessage = message;
+        inputMessage.requestFocus();
     }
 
     function clearReply() {
-        replyAuthor = ""
-        replyMessage = ""
+        replyAuthor = "";
+        replyMessage = "";
     }
 
     function addMessageBubble(item) {
-        var bubble = messageBubbleDefinition.createObject()
+        var bubble = messageBubbleDefinition.createObject();
 
-        bubble.author = item.author
-        bubble.initials = item.initials
-        bubble.avatarColor = item.avatarColor
-        bubble.time = item.time
-        bubble.timestampMs = item.timestampMs
-        bubble.message = item.message
-        bubble.replyAuthor = item.replyAuthor
-        bubble.replyMessage = item.replyMessage
-        bubble.image = item.image
-        bubble.imageWidth = item.imageWidth
-        bubble.imageHeight = item.imageHeight
-        bubble.isGroupStart = item.isGroupStart
-        bubble.isGroupEnd = item.isGroupEnd
-        bubble.showAvatar = item.showAvatar
-        bubble.showUsername = item.showUsername
-        bubble.showTimestamp = item.showTimestamp
-        bubble.deleteRequested.connect(function() {
-                chatPage.deleteMessageBubble(bubble)
-            })
-        bubble.replyRequested.connect(function(author, replyText) {
-                chatPage.setReply(author, replyText)
-            })
+        bubble.author = item.author;
+        bubble.initials = item.initials;
+        bubble.avatarColor = item.avatarColor;
+        bubble.time = item.time;
+        bubble.timestampMs = item.timestampMs;
+        bubble.message = item.message;
+        bubble.replyAuthor = item.replyAuthor;
+        bubble.replyMessage = item.replyMessage;
+        bubble.image = item.image;
+        bubble.imageWidth = item.imageWidth;
+        bubble.imageHeight = item.imageHeight;
+        bubble.isGroupStart = item.isGroupStart;
+        bubble.isGroupEnd = item.isGroupEnd;
+        bubble.showAvatar = item.showAvatar;
+        bubble.showUsername = item.showUsername;
+        bubble.showTimestamp = item.showTimestamp;
+        bubble.deleteRequested.connect(function () {
+            chatPage.deleteMessageBubble(bubble);
+        });
+        bubble.replyRequested.connect(function (author, replyText) {
+            chatPage.setReply(author, replyText);
+        });
 
-        messagesContainer.add(bubble)
+        messagesContainer.add(bubble);
     }
 
     function messageFromBubble(bubble) {
         if (!bubble) {
-            return null
+            return null;
         }
 
         return {
             "author": bubble.author,
             "timestampMs": bubble.timestampMs
-        }
+        };
     }
 
     function normalizeMessage(message) {
-        var timestampMs = message.timestampMs || new Date().getTime()
+        var timestampMs = message.timestampMs || new Date().getTime();
 
         return {
             "id": ++messageIdCounter,
@@ -319,74 +318,74 @@ Page {
             "showAvatar": true,
             "showUsername": true,
             "showTimestamp": true
-        }
+        };
     }
 
     function shouldGroup(previous, current) {
         if (!previous || !current) {
-            return false
+            return false;
         }
 
         if (previous.author != current.author) {
-            return false
+            return false;
         }
 
-        return current.timestampMs - previous.timestampMs < 7 * 60 * 1000
+        return current.timestampMs - previous.timestampMs < 7 * 60 * 1000;
     }
 
     function refreshGroupingAround(index) {
-        refreshGroupingAt(index - 1)
-        refreshGroupingAt(index)
-        refreshGroupingAt(index + 1)
+        refreshGroupingAt(index - 1);
+        refreshGroupingAt(index);
+        refreshGroupingAt(index + 1);
     }
 
     function refreshGroupingAt(index) {
         if (index < 0 || index >= messagesContainer.controls.length) {
-            return
+            return;
         }
 
-        var bubble = messagesContainer.controls[index]
-        var item = messageFromBubble(bubble)
-        var previous = index > 0 ? messageFromBubble(messagesContainer.controls[index - 1]) : null
-        var next = index < messagesContainer.controls.length - 1 ? messageFromBubble(messagesContainer.controls[index + 1]) : null
-        var groupedWithPrevious = shouldGroup(previous, item)
-        var groupedWithNext = shouldGroup(item, next)
+        var bubble = messagesContainer.controls[index];
+        var item = messageFromBubble(bubble);
+        var previous = index > 0 ? messageFromBubble(messagesContainer.controls[index - 1]) : null;
+        var next = index < messagesContainer.controls.length - 1 ? messageFromBubble(messagesContainer.controls[index + 1]) : null;
+        var groupedWithPrevious = shouldGroup(previous, item);
+        var groupedWithNext = shouldGroup(item, next);
 
-        bubble.isGroupStart = !groupedWithPrevious
-        bubble.isGroupEnd = !groupedWithNext
-        bubble.showAvatar = bubble.isGroupStart
-        bubble.showUsername = bubble.isGroupStart
-        bubble.showTimestamp = bubble.isGroupStart
+        bubble.isGroupStart = !groupedWithPrevious;
+        bubble.isGroupEnd = !groupedWithNext;
+        bubble.showAvatar = bubble.isGroupStart;
+        bubble.showUsername = bubble.isGroupStart;
+        bubble.showTimestamp = bubble.isGroupStart;
     }
 
     function deleteMessageBubble(bubble) {
-        var index = messagesContainer.controls.indexOf(bubble)
+        var index = messagesContainer.controls.indexOf(bubble);
 
-        messagesContainer.remove(bubble)
-        bubble.destroy()
-        refreshGroupingAround(index)
-        updateBottomPadding()
+        messagesContainer.remove(bubble);
+        bubble.destroy();
+        refreshGroupingAround(index);
+        updateBottomPadding();
     }
 
     function scrollToBottomNow() {
-        updateBottomPadding()
+        updateBottomPadding();
 
-        var scrollY = messagesHeight - viewportHeight
+        var scrollY = messagesHeight - viewportHeight;
 
         if (scrollY < 0) {
-            scrollY = 0
+            scrollY = 0;
         }
 
-        messageScroll.scrollToPoint(0, scrollY, ScrollAnimation.None)
+        messageScroll.scrollToPoint(0, scrollY, ScrollAnimation.None);
 
-        pendingScrollToBottom = false
+        pendingScrollToBottom = false;
     }
 
     function sendCurrentMessage() {
-        var text = inputMessage.text.replace(/^\s+|\s+$/g, "")
+        var text = inputMessage.text.replace(/^\s+|\s+$/g, "");
 
         if (text.length == 0) {
-            return
+            return;
         }
 
         appendMessage({
@@ -401,10 +400,10 @@ Page {
             "imageWidth": 0,
             "imageHeight": 0,
             "timestampMs": new Date().getTime()
-        })
+        });
 
-        inputMessage.text = ""
-        clearReply()
+        inputMessage.text = "";
+        clearReply();
     }
 
     onCreationCompleted: {
@@ -420,7 +419,7 @@ Page {
             "imageWidth": 0,
             "imageHeight": 0,
             "timestampMs": 1000000
-        })
+        });
 
         appendMessage({
             "author": "BerryBot",
@@ -434,7 +433,7 @@ Page {
             "imageWidth": 32,
             "imageHeight": 20,
             "timestampMs": 1000000 + 2 * 60 * 1000
-        })
+        });
 
         appendMessage({
             "author": "Guest",
@@ -448,6 +447,6 @@ Page {
             "imageWidth": 0,
             "imageHeight": 0,
             "timestampMs": 1000000 + 5 * 60 * 1000
-        })
+        });
     }
 }

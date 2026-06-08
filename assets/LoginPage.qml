@@ -17,9 +17,11 @@ Page {
             rightPadding: ui.du(8.0)
 
             ImageView {
-                imageSource: "asset:///images/icon.png"
+                imageSource: "asset:///icon.png"
                 horizontalAlignment: HorizontalAlignment.Center
                 scalingMethod: ScalingMethod.AspectFit
+                preferredWidth: ui.du(16.0)
+                preferredHeight: ui.du(16.0)
             }
 
             Label {

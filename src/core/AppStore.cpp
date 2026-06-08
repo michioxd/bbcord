@@ -1,7 +1,7 @@
 #include "AppStore.hpp"
 
 namespace {
-const char *kDefaultUserAvatar = "asset:///images/icon.png";
+const char *kDefaultUserAvatar = "asset:///images/default-avt.png";
 }
 
 AppStore::AppStore(QObject *parent)

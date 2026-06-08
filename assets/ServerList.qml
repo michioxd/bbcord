@@ -35,14 +35,15 @@ Container {
 
     ListView {
         dataModel: channelModel
+        horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
 
         onTriggered: {
-            var item = channelModel.data(indexPath)
+            var item = channelModel.data(indexPath);
 
             if (item.type == "channel") {
-                serverListController.selectChannel(item.id)
-                serverList.channelSelected(item.name)
+                serverListController.selectChannel(item.id);
+                serverList.channelSelected(item.name);
             }
         }
 
@@ -52,6 +53,7 @@ Container {
 
                 Container {
                     preferredHeight: ui.du(7.0)
+                    preferredWidth: ui.du(200)
                     horizontalAlignment: HorizontalAlignment.Fill
                     verticalAlignment: VerticalAlignment.Fill
                     layout: DockLayout {}
@@ -63,12 +65,12 @@ Container {
                     }
                 }
             },
-
             ListItemComponent {
                 type: "category"
 
                 Container {
                     preferredHeight: 2.0
+                    preferredWidth: ui.du(200)
                     horizontalAlignment: HorizontalAlignment.Fill
                     leftPadding: ui.du(2)
                     rightPadding: ui.du(2)
@@ -78,18 +80,19 @@ Container {
                     topPadding: ui.du(2.0)
                     Label {
                         text: ListItemData.name.toUpperCase()
+                        horizontalAlignment: HorizontalAlignment.Fill
                         verticalAlignment: VerticalAlignment.Center
                         opacity: 0.45
                         textStyle.fontSize: FontSize.XSmall
                     }
                 }
             },
-
             ListItemComponent {
                 type: "channel"
 
                 Container {
                     preferredHeight: ui.du(7.0)
+                    preferredWidth: ui.du(200)
                     horizontalAlignment: HorizontalAlignment.Fill
                     leftPadding: ui.du(2)
                     rightPadding: ui.du(2)
@@ -118,6 +121,7 @@ Container {
 
                         Label {
                             text: ListItemData.name
+                            horizontalAlignment: HorizontalAlignment.Fill
                             textStyle.fontSize: FontSize.Medium
                             opacity: ListItemData.unread ? 1.0 : 0.45
                         }
@@ -127,14 +131,14 @@ Container {
         ]
 
         function itemType(data, indexPath) {
-            return data.type
+            return data.type;
         }
 
         attachedObjects: [
             ListScrollStateHandler {
                 onAtEndChanged: {
                     if (atEnd) {
-                        serverListController.loadMoreGuildChannels()
+                        serverListController.loadMoreGuildChannels();
                     }
                 }
             }
@@ -148,73 +152,75 @@ Container {
     ]
 
     function refreshChannels() {
-        channelModel.clear()
+        channelModel.clear();
         for (var i = 0; i < appStore.guildChannels.length; ++i) {
-            channelModel.append(appStore.guildChannels[i])
+            channelModel.append(appStore.guildChannels[i]);
         }
-        updateChannelLoading()
+        updateChannelLoading();
     }
 
     function appendChannels(channels) {
-        removeChannelLoading()
+        removeChannelLoading();
         for (var i = 0; i < channels.length; ++i) {
-            channelModel.append(channels[i])
+            channelModel.append(channels[i]);
         }
-        updateChannelLoading()
+        updateChannelLoading();
     }
 
     function refreshChannelsIfNeeded() {
-        var end = channelModel.size() - loadingRowOffset()
+        var end = channelModel.size() - loadingRowOffset();
         if (end != appStore.guildChannels.length) {
-            refreshChannels()
-            return
+            refreshChannels();
+            return;
         }
 
         for (var i = 0; i < appStore.guildChannels.length; ++i) {
-            var item = channelModel.data([i])
+            var item = channelModel.data([i]);
             if (!item || item.id != appStore.guildChannels[i].id) {
-                refreshChannels()
-                return
+                refreshChannels();
+                return;
             }
 
             if (item.unread != appStore.guildChannels[i].unread) {
-                channelModel.replace([i], appStore.guildChannels[i])
+                channelModel.replace([i], appStore.guildChannels[i]);
             }
         }
     }
 
     function loadingRowOffset() {
         if (channelModel.size() == 0) {
-            return 0
+            return 0;
         }
 
-        var last = channelModel.data([channelModel.size() - 1])
-        return last.type == "loading" ? 1 : 0
+        var last = channelModel.data([channelModel.size() - 1]);
+        return last.type == "loading" ? 1 : 0;
     }
 
     function removeChannelLoading() {
         if (channelModel.size() == 0) {
-            return
+            return;
         }
 
-        var lastIndex = channelModel.size() - 1
-        var last = channelModel.data([lastIndex])
+        var lastIndex = channelModel.size() - 1;
+        var last = channelModel.data([lastIndex]);
         if (last.type == "loading") {
-            channelModel.removeAt([lastIndex])
+            channelModel.removeAt([lastIndex]);
         }
     }
 
     function updateChannelLoading() {
-        removeChannelLoading()
+        removeChannelLoading();
         if (appStore.dataLoading) {
-            channelModel.append({ "type": "loading" })
+            channelModel.append({
+                "type": "loading"
+            });
         }
     }
 
     onCreationCompleted: {
-        refreshChannels()
-        appStore.guildChannelsAppended.connect(appendChannels)
-        appStore.guildChannelsChanged.connect(refreshChannelsIfNeeded)
-        appStore.dataLoadingChanged.connect(updateChannelLoading)
+        refreshChannels();
+        appStore.guildChannelsAppended.connect(appendChannels);
+        appStore.guildChannelsChanged.connect(refreshChannelsIfNeeded);
+        appStore.dataLoadingChanged.connect(updateChannelLoading);
     }
 }

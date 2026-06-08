@@ -102,6 +102,17 @@
     <asset path="translations" dest="qm">
         <include name="*.qm"/>
     </asset>
+    <asset path="icon.png">icon.png</asset>
+    <asset path="icon110.png">icon110.png</asset>
+    <asset path="icon86.png">icon86.png</asset>
+    <asset path="icon90.png">icon90.png</asset>
+    <asset path="icon96.png">icon96.png</asset>
+    <asset path="splash.png">splash.png</asset>
+    <asset path="splash1280x720.png">splash1280x720.png</asset>
+    <asset path="splash1280x768.png">splash1280x768.png</asset>
+    <asset path="splash720.png">splash720.png</asset>
+    <asset path="splash720x1280.png">splash720x1280.png</asset>
+    <asset path="splash768x1280.png">splash768x1280.png</asset>
 
     <!-- Request permission to execute native code.  Required for native applications. -->
     <permission system="true">run_native</permission>

@@ -45,6 +45,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/ServerList.qml) \
         $$quote($$BASEDIR/assets/UserSheet.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
+        $$quote($$BASEDIR/assets/images/default-avt.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/caret-left.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/users.png) \
