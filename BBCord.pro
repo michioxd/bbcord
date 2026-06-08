@@ -10,6 +10,7 @@ LIBS += -lbbmultimedia
 LIBS += -lbbsystem
 LIBS += -lsocket
 LIBS += -lm
+LIBS += -lz
 
 SOURCES += third_party/mongoose/mongoose.c
 HEADERS += third_party/mongoose/mongoose.h

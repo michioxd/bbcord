@@ -6,6 +6,7 @@
 #include <QVariantMap>
 
 #include <stdint.h>
+#include <zlib.h>
 
 struct mg_mgr;
 struct mg_connection;
@@ -42,6 +43,7 @@ private:
   void handleEvent(struct mg_connection *connection, int event,
                    void *eventData);
   void handleTextMessage(const char *data, int length);
+  void handleCompressedMessage(const char *data, int length);
   void handleHello(const QVariantMap &data);
   void handleDispatch(const QString &eventName, const QVariantMap &data,
                       int sequence);
@@ -58,6 +60,9 @@ private:
   QString m_token;
   QString m_sessionId;
   QString m_resumeGatewayUrl;
+  QByteArray m_compressedBuffer;
+  z_stream m_zstream;
+  bool m_zstreamReady;
   int m_sequence;
   int m_heartbeatIntervalMs;
   uint64_t m_nextHeartbeatMs;

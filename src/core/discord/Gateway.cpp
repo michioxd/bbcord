@@ -13,20 +13,28 @@ extern "C" {
 #include <string.h>
 
 namespace {
-const char *kGatewayUrl = "wss://gateway.discord.gg/?v=10&encoding=json";
+const char *kGatewayUrl =
+    "wss://gateway.discord.gg/?v=10&encoding=json&compress=zlib-stream";
 const char *kGatewayHost = "gateway.discord.gg";
 } // namespace
 
 DiscordGateway::DiscordGateway(QObject *parent)
     : QObject(parent), m_connection(NULL), m_timerId(0), m_sequence(-1),
-      m_heartbeatIntervalMs(0), m_nextHeartbeatMs(0), m_state(Disconnected) {
+      m_zstreamReady(false), m_heartbeatIntervalMs(0), m_nextHeartbeatMs(0),
+      m_state(Disconnected) {
   m_mgr = new mg_mgr;
   mg_mgr_init(m_mgr);
   mg_log_set(MG_LL_NONE);
+  memset(&m_zstream, 0, sizeof(m_zstream));
+  m_zstreamReady = inflateInit(&m_zstream) == Z_OK;
 }
 
 DiscordGateway::~DiscordGateway() {
   disconnectFromGateway();
+  if (m_zstreamReady) {
+    inflateEnd(&m_zstream);
+    m_zstreamReady = false;
+  }
   mg_mgr_free(m_mgr);
   delete m_mgr;
 }
@@ -152,4 +160,8 @@ void DiscordGateway::resetSession() {
   m_nextHeartbeatMs = 0;
   m_sessionId.clear();
   m_resumeGatewayUrl.clear();
+  m_compressedBuffer.clear();
+  if (m_zstreamReady) {
+    inflateReset(&m_zstream);
+  }
 }

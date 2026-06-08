@@ -43,7 +43,8 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
   case MG_EV_WS_MSG: {
     struct mg_ws_message *message =
         static_cast<struct mg_ws_message *>(eventData);
-    handleTextMessage(message->data.buf, static_cast<int>(message->data.len));
+    handleCompressedMessage(message->data.buf,
+                            static_cast<int>(message->data.len));
     break;
   }
 
@@ -67,6 +68,54 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
     setState(Disconnected);
     emit closed();
     break;
+  }
+}
+
+void DiscordGateway::handleCompressedMessage(const char *data, int length) {
+  if (!m_zstreamReady || data == NULL || length <= 0) {
+    handleTextMessage(data, length);
+    return;
+  }
+
+  m_compressedBuffer.append(data, length);
+  if (m_compressedBuffer.size() < 4 ||
+      static_cast<unsigned char>(
+          m_compressedBuffer.at(m_compressedBuffer.size() - 4)) != 0x00 ||
+      static_cast<unsigned char>(
+          m_compressedBuffer.at(m_compressedBuffer.size() - 3)) != 0x00 ||
+      static_cast<unsigned char>(
+          m_compressedBuffer.at(m_compressedBuffer.size() - 2)) != 0xff ||
+      static_cast<unsigned char>(
+          m_compressedBuffer.at(m_compressedBuffer.size() - 1)) != 0xff) {
+    return;
+  }
+
+  QByteArray inflated;
+  char output[32768];
+  m_zstream.next_in = reinterpret_cast<Bytef *>(m_compressedBuffer.data());
+  m_zstream.avail_in = static_cast<uInt>(m_compressedBuffer.size());
+
+  int result = Z_OK;
+  do {
+    m_zstream.next_out = reinterpret_cast<Bytef *>(output);
+    m_zstream.avail_out = sizeof(output);
+    result = inflate(&m_zstream, Z_SYNC_FLUSH);
+    if (result != Z_OK && result != Z_BUF_ERROR) {
+      emit error(QString("Gateway zlib inflate error %1").arg(result));
+      inflateReset(&m_zstream);
+      m_compressedBuffer.clear();
+      return;
+    }
+
+    int produced = static_cast<int>(sizeof(output) - m_zstream.avail_out);
+    if (produced > 0) {
+      inflated.append(output, produced);
+    }
+  } while (m_zstream.avail_out == 0);
+
+  m_compressedBuffer.clear();
+  if (!inflated.isEmpty()) {
+    handleTextMessage(inflated.constData(), inflated.size());
   }
 }
 
