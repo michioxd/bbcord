@@ -49,15 +49,19 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/caret-left.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/users.png) \
+        $$quote($$BASEDIR/assets/images/icons/action_delete.png) \
         $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
         $$quote($$BASEDIR/assets/images/icons/first.png) \
         $$quote($$BASEDIR/assets/images/icons/hash.png) \
         $$quote($$BASEDIR/assets/images/icons/house.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_edit.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_open.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_reply.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_sign_out.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip-hold.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip.png) \
         $$quote($$BASEDIR/assets/images/icons/send.png) \
-        $$quote($$BASEDIR/assets/images/icons/sign-out.png) \
         $$quote($$BASEDIR/assets/images/icons/speaker.png) \
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/x-hold.png) \

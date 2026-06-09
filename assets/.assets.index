@@ -1,5 +1,5 @@
 1
-27
+31
 ChannelMemberList.qml
 ChatCard.qml
 DmList.qml
@@ -8,15 +8,19 @@ images/default-avt.png
 images/demo.png
 images/icons/accent/caret-left.png
 images/icons/accent/users.png
+images/icons/action_delete.png
 images/icons/caret-down.png
 images/icons/first.png
 images/icons/hash.png
 images/icons/house.png
+images/icons/ic_edit.png
+images/icons/ic_open.png
+images/icons/ic_reply.png
+images/icons/ic_sign_out.png
 images/icons/paperclip-disabled.png
 images/icons/paperclip-hold.png
 images/icons/paperclip.png
 images/icons/send.png
-images/icons/sign-out.png
 images/icons/speaker.png
 images/icons/x-disabled.png
 images/icons/x-hold.png

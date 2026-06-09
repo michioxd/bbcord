@@ -2,6 +2,7 @@
 #define Gateway_HPP_
 
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QVariantMap>
 
@@ -55,6 +56,8 @@ private:
   void initializeTls(struct mg_connection *connection);
   void setState(ConnectionState state);
   void resetSession();
+  QString lazyRequestKey(const QString &guildId,
+                         const QString &channelId) const;
 
   mg_mgr *m_mgr;
   mg_connection *m_connection;
@@ -69,6 +72,7 @@ private:
   int m_heartbeatIntervalMs;
   uint64_t m_nextHeartbeatMs;
   ConnectionState m_state;
+  QSet<QString> m_sentLazyRequests;
 };
 
 #endif /* Gateway_HPP_ */

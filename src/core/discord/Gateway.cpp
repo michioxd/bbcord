@@ -104,6 +104,20 @@ void DiscordGateway::sendLazyRequest(const QString &guildId,
     return;
   }
 
+  if (m_state != Ready || m_connection == NULL || !m_connection->is_websocket ||
+      m_connection->is_closing) {
+    qDebug() << "[discord] lazy request skipped; gateway not ready"
+             << safeGuildId << channelId.trimmed();
+    return;
+  }
+
+  QString key = lazyRequestKey(safeGuildId, channelId);
+  if (m_sentLazyRequests.contains(key)) {
+    qDebug() << "[discord] lazy request skipped; duplicate" << safeGuildId
+             << channelId.trimmed();
+    return;
+  }
+
   QString errorMessage;
   QByteArray payload = DiscordJsonParser::buildLazyRequestPayload(
       safeGuildId, channelId, &errorMessage);
@@ -114,6 +128,7 @@ void DiscordGateway::sendLazyRequest(const QString &guildId,
   }
 
   sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
+  m_sentLazyRequests.insert(key);
   qDebug() << "[discord] lazy request sent" << safeGuildId
            << channelId.trimmed();
 }
@@ -196,4 +211,10 @@ void DiscordGateway::resetSession() {
   if (m_zstreamReady) {
     inflateReset(&m_zstream);
   }
+  m_sentLazyRequests.clear();
+}
+
+QString DiscordGateway::lazyRequestKey(const QString &guildId,
+                                       const QString &channelId) const {
+  return QString("%1:%2").arg(guildId.trimmed()).arg(channelId.trimmed());
 }

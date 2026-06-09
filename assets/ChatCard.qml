@@ -7,28 +7,12 @@ Page {
     property string channelName: "general"
     property alias title: titleBar.title
 
-    property bool pendingScrollToBottom: false
-    property bool suppressOlderLoadUntilBottom: false
-    property real viewportHeight: 0
-    property real messagesHeight: 0
-    property real bottomFillPadding: 0
-    property bool pendingScrollRestore: false
-    property real restoreScrollY: 0
-    property real restoreMessagesHeight: 0
-    property bool restoreAdjustForHeightChange: false
-    property int maxRenderedMessages: 25
-    property int maxAutoImagePreviews: 0
-    property bool bulkRefreshingMessages: false
-    property string renderedChannelId: ""
-    property variant avatarSourceCache: ({})
-    property variant requestedAvatarIds: ({})
-    property variant failedAttachmentImages: ({})
-    property variant loadingAttachmentImages: ({})
     property string replyMessageId: ""
     property string replyAuthor: ""
     property string replyMessage: ""
     property string editingMessageId: ""
     property bool active: true
+    property bool olderLoadRequested: false
 
     signal backRequested
     signal memberListRequested
@@ -72,73 +56,121 @@ Page {
 
             layout: DockLayout {}
 
-            attachedObjects: [
-                LayoutUpdateHandler {
-                    onLayoutFrameChanged: {
-                        chatPage.viewportHeight = layoutFrame.height;
-                        chatPage.updateBottomPadding();
-                    }
-                }
-            ]
-
-            ScrollView {
-                id: messageScroll
+            ListView {
+                id: messageList
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
+                dataModel: chatController.chatDataModel
+                stickToEdgePolicy: ListViewStickToEdgePolicy.End
 
-                scrollViewProperties {
-                    scrollMode: ScrollMode.Vertical
-                    pinchToZoomEnabled: false
-                }
+                listItemComponents: [
+                    ListItemComponent {
+                        type: ""
 
-                onViewableAreaChanged: {
-                    chatPage.requestOlderIfNearTop();
-                }
+                        MessageBubble {
+                            messageId: ListItemData.id
+                            authorId: ListItemData.authorId
+                            author: ListItemData.author
+                            initials: ListItemData.initials
+                            avatarSource: ListItemData.avatarSource
+                            avatarColor: ListItemData.avatarColor
+                            time: ListItemData.time
+                            timestampMs: ListItemData.timestampMs
+                            message: ListItemData.message
+                            replyAuthor: ListItemData.replyAuthor
+                            replyMessage: ListItemData.replyMessage
+                            image: ListItemData.image
+                            imageLoading: ListItemData.imageLoading
+                            imageLoadFailed: ListItemData.imageLoadFailed
+                            imageWidth: ListItemData.imageWidth
+                            imageHeight: ListItemData.imageHeight
+                            attachmentUrl: ListItemData.attachmentUrl
+                            attachmentName: ListItemData.attachmentName
+                            attachmentIsImage: ListItemData.attachmentIsImage
+                            isGroupStart: ListItemData.isGroupStart
+                            isGroupEnd: ListItemData.isGroupEnd
+                            showAvatar: ListItemData.showAvatar
+                            showUsername: ListItemData.showUsername
+                            showTimestamp: ListItemData.showTimestamp
+                            pending: ListItemData.pending
+                            failed: ListItemData.failed
+                            edited: ListItemData.edited
 
-                Container {
-                    id: scrollContent
-                    horizontalAlignment: HorizontalAlignment.Fill
-                    topPadding: chatPage.bottomFillPadding
-
-                    layout: StackLayout {}
-
-                    Container {
-                        visible: appStore.chatLoadingBefore
-                        preferredHeight: ui.du(7.0)
-                        horizontalAlignment: HorizontalAlignment.Fill
-
-                        layout: DockLayout {}
-
-                        ActivityIndicator {
-                            running: appStore.chatLoadingBefore
-                            horizontalAlignment: HorizontalAlignment.Center
-                            verticalAlignment: VerticalAlignment.Center
-                        }
-                    }
-
-                    Container {
-                        id: messagesContainer
-                        horizontalAlignment: HorizontalAlignment.Fill
-
-                        layout: StackLayout {
-                            orientation: LayoutOrientation.TopToBottom
-                        }
-
-                        attachedObjects: [
-                            LayoutUpdateHandler {
-                                onLayoutFrameChanged: {
-                                    chatPage.messagesHeight = layoutFrame.height;
-                                    chatPage.updateBottomPadding();
-
-                                    if (chatPage.pendingScrollToBottom) {
-                                        chatPage.scrollToBottomNow();
-                                    } else if (chatPage.pendingScrollRestore) {
-                                        chatPage.restoreScrollPositionNow();
-                                    }
-                                }
+                            onDeleteRequested: {
+                                ListItem.view.deleteMessage(messageId);
                             }
-                        ]
+
+                            onEditRequested: {
+                                ListItem.view.startEditMessage(messageId, messageText);
+                            }
+
+                            onReplyRequested: {
+                                ListItem.view.setReplyMessage(messageId, author, replyText);
+                            }
+
+                            onAttachmentOpenRequested: {
+                                ListItem.view.openAttachment(url);
+                            }
+
+                            onAttachmentImageLoadRequested: {
+                                ListItem.view.requestCachedImage(url);
+                            }
+                        }
                     }
+                ]
+
+                function itemType(data, indexPath) {
+                    return "";
+                }
+
+                function startEditMessage(messageId, messageText) {
+                    chatPage.startEdit(messageId, messageText);
+                }
+
+                function setReplyMessage(messageId, author, replyText) {
+                    chatPage.setReply(messageId, author, replyText);
+                }
+
+                function requestOlderFromFirstItem(indexPath) {
+                    chatPage.requestOlderFromFirstItem(indexPath);
+                }
+
+                function deleteMessage(messageId) {
+                    chatController.deleteMessage(messageId);
+                }
+
+                function openAttachment(url) {
+                    chatController.openAttachment(url);
+                }
+
+                function requestCachedImage(url) {
+                    chatController.requestCachedImage(url);
+                }
+
+                attachedObjects: [
+                    ListScrollStateHandler {
+                        onAtBeginningChanged: {
+                            if (atBeginning) {
+                                chatPage.requestOlderFromScroll();
+                            }
+                        }
+                    }
+                ]
+            }
+
+            Container {
+                visible: appStore.chatLoadingBefore
+                preferredHeight: ui.du(7.0)
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Top
+                background: Color.create("#18191C")
+
+                layout: DockLayout {}
+
+                ActivityIndicator {
+                    running: appStore.chatLoadingBefore
+                    horizontalAlignment: HorizontalAlignment.Center
+                    verticalAlignment: VerticalAlignment.Center
                 }
             }
         }
@@ -333,10 +365,6 @@ Page {
     }
 
     attachedObjects: [
-        ComponentDefinition {
-            id: messageBubbleDefinition
-            source: "asset:///MessageBubble.qml"
-        },
         SystemPrompt {
             id: attachmentPathPrompt
             title: qsTr("Attach file")
@@ -353,142 +381,6 @@ Page {
             }
         }
     ]
-
-    function updateBottomPadding() {
-        var missingHeight = viewportHeight - messagesHeight;
-
-        if (missingHeight > 0) {
-            bottomFillPadding = missingHeight;
-        } else {
-            bottomFillPadding = 0;
-        }
-    }
-
-    function refreshMessages(scrollToBottom) {
-        if (!active) {
-            return;
-        }
-
-        var previousY = messageScroll.viewableArea.y;
-        var previousHeight = messagesHeight;
-
-        renderedChannelId = chatController.currentChannelId;
-        clearMessageBubbles();
-
-        var messages = chatController.currentMessages();
-        var start = scrollToBottom ? messages.length - maxRenderedMessages : 0;
-        if (start < 0) {
-            start = 0;
-        }
-
-        bulkRefreshingMessages = true;
-        for (var i = start; i < messages.length; ++i) {
-            appendMessage(messages[i], false);
-        }
-        bulkRefreshingMessages = false;
-
-        if (scrollToBottom) {
-            requestScrollToBottom();
-        } else {
-            updateBottomPadding();
-            preserveScrollPosition(previousY, previousHeight, false);
-        }
-    }
-
-    function clearMessageBubbles() {                                      
-        while (messagesContainer.controls.length > 0) {
-            var bubble = messagesContainer.controls[0];
-            cancelBubbleImageRequest(bubble);
-            messagesContainer.remove(bubble);
-            bubble.destroy();
-        }
-    }
-
-    function appendMessage(message, scrollToBottom) {
-        if (!active) {
-            return;
-        }
-
-        if (message.channelId && message.channelId != renderedChannelId) {
-            return;
-        }
-
-        var wasNearBottom = isNearBottom();
-        var item = normalizeMessage(message);
-        var lastIndex = messagesContainer.controls.length - 1;
-
-        if (lastIndex >= 0) {
-            var previousBubble = messagesContainer.controls[lastIndex];
-            var previous = messageFromBubble(previousBubble);
-
-            if (shouldGroup(previous, item)) {
-                previousBubble.isGroupEnd = false;
-
-                item.isGroupStart = false;
-                item.showAvatar = false;
-                item.showUsername = false;
-                item.showTimestamp = false;
-            }
-        }
-
-        addMessageBubble(item);
-
-        if (bulkRefreshingMessages) {
-            return;
-        }
-
-        if (scrollToBottom || wasNearBottom) {
-            trimRenderedMessagesFromTop();
-        }
-        if (messagesContainer.controls.length >= maxRenderedMessages || !wasNearBottom) {
-            regroupVisibleMessages();
-        }
-
-        if (scrollToBottom || wasNearBottom) {
-            requestScrollToBottom();
-        } else {
-            updateBottomPadding();
-        }
-    }
-
-    function prependMessages(messages) {
-        if (!active) {
-            return;
-        }
-
-        if (chatController.currentChannelId != renderedChannelId) {
-            return;
-        }
-
-        var previousY = messageScroll.viewableArea.y;
-        var previousHeight = messagesHeight;
-        var normalized = [];
-
-        for (var i = 0; i < messages.length; ++i) {
-            normalized.push(normalizeMessage(messages[i]));
-        }
-
-        for (var j = normalized.length - 1; j >= 0; --j) {
-            addMessageBubbleAtTop(normalized[j]);
-        }
-
-        regroupVisibleMessages();
-        updateBottomPadding();
-        preserveScrollPosition(previousY, previousHeight, true);
-    }
-
-    function requestScrollToBottom() {
-        suppressOlderLoadUntilBottom = true;
-        pendingScrollToBottom = true;
-    }
-
-    function isNearBottom() {
-        var scrollY = messageScroll.viewableArea.y;
-        var visibleBottom = scrollY + viewportHeight;
-        var threshold = ui.du(4.0);
-
-        return messagesHeight <= viewportHeight || visibleBottom + threshold >= messagesHeight;
-    }
 
     function setReply(messageId, author, message) {
         replyMessageId = messageId;
@@ -515,261 +407,6 @@ Page {
         editingMessageId = "";
     }
 
-    function addMessageBubble(item) {
-        var bubble = messageBubbleDefinition.createObject();
-
-        setupMessageBubble(bubble, item);
-        messagesContainer.add(bubble);
-    }
-
-    function addMessageBubbleAtTop(item) {
-        var bubble = messageBubbleDefinition.createObject();
-
-        setupMessageBubble(bubble, item);
-        messagesContainer.insert(0, bubble);
-    }
-
-    function setupMessageBubble(bubble, item) {
-        bubble.messageId = item.id;
-        bubble.authorId = item.authorId;
-        bubble.author = item.author;
-        bubble.initials = item.initials;
-        bubble.avatarSource = item.avatarSource;
-        bubble.avatarColor = item.avatarColor;
-        bubble.time = item.time;
-        bubble.timestampMs = item.timestampMs;
-        bubble.message = item.message;
-        bubble.replyAuthor = item.replyAuthor;
-        bubble.replyMessage = item.replyMessage;
-        bubble.image = item.image;
-        bubble.imageLoading = item.imageLoading;
-        bubble.imageLoadFailed = item.imageLoadFailed;
-        bubble.imageWidth = item.imageWidth;
-        bubble.imageHeight = item.imageHeight;
-        bubble.attachmentUrl = item.attachmentUrl;
-        bubble.attachmentName = item.attachmentName;
-        bubble.attachmentIsImage = item.attachmentIsImage;
-        bubble.isGroupStart = item.isGroupStart;
-        bubble.isGroupEnd = item.isGroupEnd;
-        bubble.showAvatar = item.showAvatar;
-        bubble.showUsername = item.showUsername;
-        bubble.showTimestamp = item.showTimestamp;
-        bubble.pending = item.pending;
-        bubble.failed = item.failed;
-        bubble.edited = item.edited;
-        bubble.deleteRequested.connect(function (messageId) {
-            chatController.deleteMessage(messageId);
-        });
-        bubble.editRequested.connect(function (messageId, messageText) {
-            chatPage.startEdit(messageId, messageText);
-        });
-        bubble.replyRequested.connect(function (messageId, author, replyText) {
-            chatPage.setReply(messageId, author, replyText);
-        });
-        bubble.attachmentOpenRequested.connect(function (url) {
-            chatController.openAttachment(url);
-        });
-        bubble.attachmentImageLoadRequested.connect(function (url) {
-            chatPage.loadAttachmentImage(url);
-        });
-
-        if (bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "" && !bubble.imageLoadFailed) {
-            chatPage.loadAttachmentImage(bubble.attachmentUrl);
-        }
-
-    }
-
-    function messageFromBubble(bubble) {
-        if (!bubble) {
-            return null;
-        }
-
-        return {
-            "author": bubble.author,
-            "timestampMs": bubble.timestampMs
-        };
-    }
-
-    function normalizeMessage(message) {
-        var timestampMs = message.timestampMs || new Date().getTime();
-        var authorId = message.authorId || "";
-        var avatarHash = message.avatarHash || "";
-        var avatarSource = "";
-        var attachmentUrl = message.attachmentUrl || "";
-        var attachmentIsImage = message.attachmentIsImage == true;
-        var imageSource = message.image || "";
-        var imageLoadFailed = attachmentIsImage && attachmentUrl !== "" && failedAttachmentImages[attachmentUrl] == true;
-        var imageLoading = attachmentIsImage && attachmentUrl !== "" && loadingAttachmentImages[attachmentUrl] == true;
-
-        if (isRemoteImageSource(imageSource)) {
-            if (attachmentUrl === "") {
-                attachmentUrl = imageSource;
-            }
-            imageSource = "";
-        }
-
-        if (attachmentIsImage) {
-            if (attachmentUrl !== "" && !isRemoteImageSource(attachmentUrl)) {
-                imageSource = attachmentUrl;
-                imageLoading = false;
-                imageLoadFailed = false;
-            } else {
-                imageSource = cachedAttachmentImageSource(attachmentUrl);
-                imageLoading = imageSource === "" && !imageLoadFailed;
-            }
-        }
-
-        if (authorId !== "") {
-            avatarSource = avatarSourceCache[authorId] || "";
-            if (avatarSource === "" && avatarHash !== "" && requestedAvatarIds[authorId] !== true) {
-                requestedAvatarIds[authorId] = true;
-                avatarSource = chatController.avatarSource(authorId, avatarHash);
-                if (avatarSource !== "") {
-                    avatarSourceCache[authorId] = avatarSource;
-                }
-            }
-        }
-
-        return {
-            "id": message.id || "",
-            "author": message.author || "",
-            "authorId": authorId,
-            "initials": message.initials || "",
-            "avatarHash": avatarHash,
-            "avatarSource": avatarSource,
-            "avatarColor": message.avatarColor || "#5865F2",
-            "time": message.time || "Now",
-            "timestampMs": timestampMs,
-            "message": message.message || "",
-            "replyAuthor": message.replyAuthor || "",
-            "replyMessage": message.replyMessage || "",
-            "image": imageSource,
-            "imageWidth": message.imageWidth || 0,
-            "imageHeight": message.imageHeight || 0,
-            "attachmentUrl": attachmentUrl,
-            "attachmentName": message.attachmentName || "",
-            "attachmentIsImage": attachmentIsImage,
-            "imageLoading": imageLoading,
-            "imageLoadFailed": imageLoadFailed,
-            "pending": message.pending == true,
-            "failed": message.failed == true,
-            "edited": message.edited == true,
-            "isGroupStart": true,
-            "isGroupEnd": true,
-            "showAvatar": true,
-            "showUsername": true,
-            "showTimestamp": true
-        };
-    }
-
-    function shouldGroup(previous, current) {
-        if (!previous || !current) {
-            return false;
-        }
-
-        if (previous.author != current.author) {
-            return false;
-        }
-
-        return current.timestampMs - previous.timestampMs < 7 * 60 * 1000;
-    }
-
-    function isRemoteImageSource(source) {
-        if (!source) {
-            return false;
-        }
-
-        var lower = source.toLowerCase();
-        return lower.indexOf("https://") == 0 || lower.indexOf("http://") == 0;
-    }
-
-    function cachedAttachmentImageSource(url) {
-        if (url === "") {
-            return "";
-        }
-
-        try {
-            var imageSource = chatController.cachedImageSource(url);
-            return isRemoteImageSource(imageSource) ? "" : imageSource;
-        } catch (e) {
-            return "";
-        }
-    }
-
-    function regroupVisibleMessages() {
-        var previous = null;
-
-        for (var i = 0; i < messagesContainer.controls.length; ++i) {
-            var bubble = messagesContainer.controls[i];
-            var current = messageFromBubble(bubble);
-            var grouped = shouldGroup(previous, current);
-
-            bubble.isGroupStart = !grouped;
-            bubble.showAvatar = !grouped;
-            bubble.showUsername = !grouped;
-            bubble.showTimestamp = !grouped;
-            bubble.isGroupEnd = true;
-
-            if (grouped && i > 0) {
-                messagesContainer.controls[i - 1].isGroupEnd = false;
-            }
-
-            previous = current;
-        }
-    }
-
-    function trimRenderedMessagesFromTop() {
-        var removeCount = messagesContainer.controls.length - maxRenderedMessages;
-
-        while (removeCount > 0 && messagesContainer.controls.length > 0) {
-            var bubble = messagesContainer.controls[0];
-            cancelBubbleImageRequest(bubble);
-            messagesContainer.remove(bubble);
-            bubble.destroy();
-            --removeCount;
-        }
-    }
-
-    function scrollToBottomNow() {
-        updateBottomPadding();
-
-        if (viewportHeight <= 0 || messagesHeight <= 0) {
-            return;
-        }
-
-        var scrollY = messagesHeight - viewportHeight;
-
-        if (scrollY < 0) {
-            scrollY = 0;
-        }
-
-        messageScroll.scrollToPoint(0, scrollY, ScrollAnimation.None);
-
-        pendingScrollToBottom = false;
-        suppressOlderLoadUntilBottom = false;
-    }
-
-    function preserveScrollPosition(scrollY, previousHeight, adjustForHeightChange) {
-        restoreScrollY = scrollY;
-        restoreMessagesHeight = previousHeight;
-        restoreAdjustForHeightChange = adjustForHeightChange == true;
-        pendingScrollRestore = true;
-    }
-
-    function restoreScrollPositionNow() {
-        var scrollY = restoreScrollY;
-        if (restoreAdjustForHeightChange) {
-            scrollY += messagesHeight - restoreMessagesHeight;
-        }
-        if (scrollY < 0) {
-            scrollY = 0;
-        }
-
-        messageScroll.scrollToPoint(0, scrollY, ScrollAnimation.None);
-        pendingScrollRestore = false;
-        restoreAdjustForHeightChange = false;
-    }
-
     function sendCurrentMessage() {
         var text = inputMessage.text.replace(/^\s+|\s+$/g, "");
 
@@ -791,219 +428,59 @@ Page {
         inputMessage.text = "";
     }
 
-    function requestOlderIfNearTop() {
+    function requestOlderFromFirstItem(indexPath) {
+        if (!active || !indexPath || indexPath.length <= 0 || indexPath[0] !== 0) {
+            return;
+        }
+
+        requestOlderFromScroll();
+    }
+
+    function requestOlderFromScroll() {
         if (!active) {
             return;
         }
 
-        if (pendingScrollToBottom || suppressOlderLoadUntilBottom) {
+        if (olderLoadRequested || chatController.isLoadingBefore() || !chatController.hasMoreBefore()) {
             return;
         }
 
-        if (messagesContainer.controls.length <= 0) {
-            return;
-        }
-
-        if (messageScroll.viewableArea.y > ui.du(2.0)) {
-            return;
-        }
-
-        if (chatController.isLoadingBefore() || !chatController.hasMoreBefore()) {
-            return;
-        }
-
+        olderLoadRequested = true;
         chatController.requestOlderMessages();
     }
 
     function clearForChannelSwitch() {
-        if (!active) {
-            return;
-        }
-
-        renderedChannelId = chatController.currentChannelId;
-        pendingScrollToBottom = false;
-        suppressOlderLoadUntilBottom = true;
         replyMessageId = "";
         replyAuthor = "";
         replyMessage = "";
         editingMessageId = "";
-        clearMessageBubbles();
-        bottomFillPadding = 0;
-        messageScroll.scrollToPoint(0, 0, ScrollAnimation.None);
+        olderLoadRequested = false;
     }
 
     function deactivatePage() {
         active = false;
-        clearMessageBubbles();
     }
 
     function reactivatePage() {
-        if (active) {
-            return;
-        }
-
         active = true;
-        refreshMessages(true);
     }
 
     onCreationCompleted: {
         active = true;
-        renderedChannelId = chatController.currentChannelId;
-        refreshMessages(true);
+        channelName = chatController.currentChannelName;
         chatController.currentChannelChanged.connect(function () {
             chatPage.channelName = chatController.currentChannelName;
             chatPage.clearForChannelSwitch();
-            if (chatController.isInitialLoaded()) {
-                chatPage.refreshMessages(true);
+        });
+        appStore.chatMessagesPrepended.connect(function (channelId, messages) {
+            if (channelId == chatController.currentChannelId) {
+                chatPage.olderLoadRequested = false;
             }
         });
         appStore.chatMessagesReset.connect(function (channelId, messages) {
-            if (channelId == chatPage.renderedChannelId) {
-                chatPage.refreshMessages(true);
+            if (channelId == chatController.currentChannelId) {
+                chatPage.olderLoadRequested = false;
             }
         });
-        appStore.chatMessagesPrepended.connect(function (channelId, messages) {
-            if (channelId == chatPage.renderedChannelId) {
-                chatPage.prependMessages(messages);
-            }
-        });
-        appStore.chatMessageAdded.connect(function (channelId, message) {
-            if (channelId == chatPage.renderedChannelId) {
-                chatPage.appendMessage(message, false);
-            }
-        });
-        appStore.chatMessageUpdated.connect(function (channelId, message) {
-            if (channelId == chatPage.renderedChannelId) {
-                chatPage.refreshMessages(false);
-            }
-        });
-        appStore.chatMessageDeleted.connect(function (channelId, messageId) {
-            if (channelId == chatPage.renderedChannelId) {
-                chatPage.refreshMessages(false);
-            }
-        });
-        appStore.chatAvatarChanged.connect(function (userId, avatarSource) {
-            chatPage.updateAvatarSource(userId, avatarSource);
-        });
-        chatController.attachmentImageCached.connect(function (url, imageSource) {
-            chatPage.updateCachedAttachmentImage(url, imageSource);
-        });
-        chatController.attachmentImageFailed.connect(function (url) {
-            chatPage.markAttachmentImageFailed(url);
-        });
-    }
-
-    function updateAvatarSource(userId, avatarSource) {
-        if (userId === "" || avatarSource === "") {
-            return;
-        }
-
-        for (var i = 0; i < messagesContainer.controls.length; ++i) {
-            var bubble = messagesContainer.controls[i];
-            if (bubble.authorId == userId) {
-                bubble.avatarSource = avatarSource;
-            }
-        }
-
-        avatarSourceCache[userId] = avatarSource;
-        requestedAvatarIds[userId] = true;
-    }
-
-    function loadAttachmentImage(url) {
-        if (url === "") {
-            return;
-        }
-
-        if (failedAttachmentImages[url] == true) {
-            markAttachmentImageFailed(url);
-            return;
-        }
-
-        var imageSource = "";
-        imageSource = cachedAttachmentImageSource(url);
-
-        if (imageSource !== "") {
-            updateCachedAttachmentImage(url, imageSource);
-            return;
-        }
-
-        beginAttachmentImageLoading(url);
-        try {
-            chatController.requestCachedImage(url);
-        } catch (e2) {
-            markAttachmentImageFailed(url);
-        }
-    }
-
-    function updateCachedAttachmentImage(url, imageSource) {
-        if (url === "" || imageSource === "") {
-            return;
-        }
-
-        loadingAttachmentImages[url] = false;
-        for (var i = 0; i < messagesContainer.controls.length; ++i) {
-            var bubble = messagesContainer.controls[i];
-            if (bubble.attachmentUrl == url) {
-                bubble.imageLoading = false;
-                bubble.imageLoadFailed = false;
-                bubble.image = imageSource;
-            }
-        }
-    }
-
-    function beginAttachmentImageLoading(url) {
-        if (url === "") {
-            return;
-        }
-
-        loadingAttachmentImages[url] = true;
-        for (var i = 0; i < messagesContainer.controls.length; ++i) {
-            var bubble = messagesContainer.controls[i];
-            if (bubble.attachmentUrl == url && bubble.image === "") {
-                bubble.imageLoading = true;
-                bubble.imageLoadFailed = false;
-            }
-        }
-    }
-
-    function requestVisibleImagePreviews() {
-        var requested = 0;
-
-        for (var i = messagesContainer.controls.length - 1; i >= 0 && requested < maxAutoImagePreviews; --i) {
-            var bubble = messagesContainer.controls[i];
-            if (bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "" && !bubble.imageLoadFailed) {
-                try {
-                    loadAttachmentImage(bubble.attachmentUrl);
-                    ++requested;
-                } catch (e) {
-                    bubble.imageLoadFailed = true;
-                    failedAttachmentImages[bubble.attachmentUrl] = true;
-                }
-            }
-        }
-    }
-
-    function markAttachmentImageFailed(url) {
-        if (url === "") {
-            return;
-        }
-
-        failedAttachmentImages[url] = true;
-        loadingAttachmentImages[url] = false;
-        for (var i = 0; i < messagesContainer.controls.length; ++i) {
-            var bubble = messagesContainer.controls[i];
-            if (bubble.attachmentUrl == url) {
-                bubble.image = "";
-                bubble.imageLoading = false;
-                bubble.imageLoadFailed = true;
-            }
-        }
-    }
-
-    function cancelBubbleImageRequest(bubble) {
-        if (bubble && bubble.attachmentIsImage && bubble.attachmentUrl !== "" && bubble.image === "") {
-            loadingAttachmentImages[bubble.attachmentUrl] = false;
-            chatController.cancelCachedImage(bubble.attachmentUrl);
-        }
     }
 }

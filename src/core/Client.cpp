@@ -577,11 +577,6 @@ void DiscordClient::selectGuild(const QString &guildId) {
   if (m_store) {
     m_store->selectGuild(safeGuildId);
   }
-  if (m_networkWorker != 0) {
-    QMetaObject::invokeMethod(m_networkWorker, "sendLazyRequest",
-                              Qt::QueuedConnection, Q_ARG(QString, safeGuildId),
-                              Q_ARG(QString, QString()));
-  }
   scheduleDmChannelsCacheSave();
   if (!sameGuild || m_allGuildChannels.isEmpty()) {
     loadGuildChannels(safeGuildId);
@@ -605,11 +600,6 @@ void DiscordClient::selectChannel(const QString &channelId) {
   }
   if (!guildId.isEmpty()) {
     m_chatGuildByChannelId.insert(safeChannelId, guildId);
-    if (m_networkWorker != 0) {
-      QMetaObject::invokeMethod(m_networkWorker, "sendLazyRequest",
-                                Qt::QueuedConnection, Q_ARG(QString, guildId),
-                                Q_ARG(QString, safeChannelId));
-    }
   }
 
   saveGuildsCache();
@@ -1333,6 +1323,14 @@ void DiscordClient::onGatewayClosed() {
     setLoggedIn(false);
     setStatusText(message);
     emit loginFailed(message);
+    return;
+  }
+
+  if (m_loggedIn && !m_token.trimmed().isEmpty() && m_networkWorker != 0) {
+    setStatusText("Reconnecting gateway...");
+    syncGatewayOrderingStateToWorker();
+    QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
 }
 

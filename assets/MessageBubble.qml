@@ -59,6 +59,7 @@ Container {
             actions: [
                 ActionItem {
                     title: qsTr("Reply")
+                    imageSource: "asset:///images/icons/ic_reply.png"
 
                     onTriggered: {
                         root.replyRequested(root.messageId, root.author, root.message);
@@ -66,6 +67,7 @@ Container {
                 },
                 ActionItem {
                     title: qsTr("Open attachment")
+                    imageSource: "asset:///images/icons/ic_open.png"
                     enabled: root.attachmentUrl !== ""
 
                     onTriggered: {
@@ -74,6 +76,7 @@ Container {
                 },
                 ActionItem {
                     title: qsTr("Edit")
+                    imageSource: "asset:///images/icons/ic_edit.png"
                     enabled: !root.pending && !root.failed
 
                     onTriggered: {
@@ -82,7 +85,7 @@ Container {
                 },
                 ActionItem {
                     title: qsTr("Delete")
-                    imageSource: "asset:///images/icons/sign-out.png"
+                    imageSource: "asset:///images/icons/action_delete.png"
 
                     onTriggered: {
                         root.deleteRequested(root.messageId);

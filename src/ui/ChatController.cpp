@@ -23,7 +23,8 @@ const qint64 kMaxCachedAttachmentImageBytes = 2 * 1024 * 1024;
 
 ChatController::ChatController(DiscordClient *client, AppStore *store,
                                QObject *parent)
-    : QObject(parent), m_client(client), m_store(store), m_imageThread(0),
+    : QObject(parent), m_client(client), m_store(store),
+      m_chatDataModel(new bb::cascades::ArrayDataModel(this)), m_imageThread(0),
       m_imageWorker(0), m_pendingAttachmentIsImage(false) {
   if (m_client) {
     connect(this, SIGNAL(initialMessagesRequested(QString, QString)), m_client,
@@ -39,6 +40,23 @@ ChatController::ChatController(DiscordClient *client, AppStore *store,
             m_client, SLOT(editChatMessage(QString, QString, QString)));
     connect(this, SIGNAL(deleteMessageRequested(QString, QString)), m_client,
             SLOT(deleteChatMessage(QString, QString)));
+  }
+
+  if (m_store) {
+    connect(m_store, SIGNAL(currentChannelMessagesChanged()), this,
+            SLOT(onCurrentChannelMessagesChanged()));
+    connect(m_store, SIGNAL(chatMessagesReset(QString, QVariantList)), this,
+            SLOT(onChatMessagesReset(QString, QVariantList)));
+    connect(m_store, SIGNAL(chatMessagesPrepended(QString, QVariantList)), this,
+            SLOT(onChatMessagesPrepended(QString, QVariantList)));
+    connect(m_store, SIGNAL(chatMessageAdded(QString, QVariantMap)), this,
+            SLOT(onChatMessageAdded(QString, QVariantMap)));
+    connect(m_store, SIGNAL(chatMessageUpdated(QString, QVariantMap)), this,
+            SLOT(onChatMessageUpdated(QString, QVariantMap)));
+    connect(m_store, SIGNAL(chatMessageDeleted(QString, QString)), this,
+            SLOT(onChatMessageDeleted(QString, QString)));
+    connect(m_store, SIGNAL(chatAvatarChanged(QString, QString)), this,
+            SLOT(onChatAvatarChanged(QString, QString)));
   }
 }
 
@@ -82,6 +100,10 @@ QString ChatController::pendingAttachmentError() const {
   return m_pendingAttachmentError;
 }
 
+bb::cascades::DataModel *ChatController::chatDataModel() const {
+  return m_chatDataModel;
+}
+
 void ChatController::openChannel(const QString &channelId,
                                  const QString &guildId,
                                  const QString &channelName) {
@@ -105,6 +127,7 @@ void ChatController::openChannel(const QString &channelId,
   }
 
   if (changed) {
+    rebuildChatDataModel();
     emit currentChannelChanged();
   }
 
@@ -120,6 +143,8 @@ void ChatController::closeChannel() {
   m_currentChannelId.clear();
   m_currentGuildId.clear();
   m_currentChannelName.clear();
+  m_chatDataModel->clear();
+  emit chatDataModelChanged();
   emit currentChannelChanged();
 }
 
@@ -426,16 +451,96 @@ void ChatController::cancelCachedImage(const QString &url) {
                             Q_ARG(QString, safeUrl));
 }
 
+void ChatController::onCurrentChannelMessagesChanged() {
+  if (m_chatDataModel->size() == 0) {
+    rebuildChatDataModel();
+  }
+}
+
+void ChatController::onChatMessagesReset(const QString &channelId,
+                                         const QVariantList &messages) {
+  if (channelId != safeCurrentChannelId()) {
+    return;
+  }
+
+  syncChatDataModel(messages);
+}
+
+void ChatController::onChatMessagesPrepended(const QString &channelId,
+                                             const QVariantList &messages) {
+  if (channelId != safeCurrentChannelId() || messages.isEmpty()) {
+    return;
+  }
+
+  syncChatDataModel(currentMessages());
+}
+
+void ChatController::onChatMessageAdded(const QString &channelId,
+                                        const QVariantMap &message) {
+  if (channelId != safeCurrentChannelId()) {
+    return;
+  }
+
+  QVariantMap item = prepareMessageForModel(message);
+  int index = chatDataModelIndexForMessage(item.value("id").toString());
+  if (index >= 0) {
+    m_chatDataModel->replace(index, item);
+    return;
+  }
+
+  m_chatDataModel->append(item);
+}
+
+void ChatController::onChatMessageUpdated(const QString &channelId,
+                                          const QVariantMap &message) {
+  if (channelId != safeCurrentChannelId()) {
+    return;
+  }
+
+  replaceGroupedMessage(message);
+}
+
+void ChatController::onChatMessageDeleted(const QString &channelId,
+                                          const QString &messageId) {
+  if (channelId != safeCurrentChannelId()) {
+    return;
+  }
+
+  int index = chatDataModelIndexForMessage(messageId);
+  if (index < 0) {
+    return;
+  }
+
+  syncChatDataModel(currentMessages());
+}
+
+void ChatController::onChatAvatarChanged(const QString &userId,
+                                         const QString &avatarSource) {
+  if (userId.isEmpty() || avatarSource.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_chatDataModel->size(); ++i) {
+    QVariantMap message = m_chatDataModel->value(i).toMap();
+    if (message.value("authorId").toString() == userId) {
+      message["avatarSource"] = avatarSource;
+      m_chatDataModel->replace(i, message);
+    }
+  }
+}
+
 void ChatController::onAttachmentImageCached(const QString &url,
                                              const QString &path) {
   m_loadingAttachmentImages.remove(url);
   QString source = filePreviewSource(path);
   m_cachedAttachmentImages.insert(url, source);
+  updateAttachmentImageInModel(url, source, false, false);
   emit attachmentImageCached(url, source);
 }
 
 void ChatController::onAttachmentImageFailed(const QString &url) {
   m_loadingAttachmentImages.remove(url);
+  updateAttachmentImageInModel(url, QString(), false, true);
   emit attachmentImageFailed(url);
 }
 
@@ -460,6 +565,215 @@ QVariantMap ChatController::findCachedMessage(const QString &messageId) const {
     }
   }
   return QVariantMap();
+}
+
+void ChatController::rebuildChatDataModel() {
+  replaceChatDataModel(currentMessages());
+}
+
+void ChatController::replaceChatDataModel(const QVariantList &messages) {
+  m_chatDataModel->clear();
+  for (int i = 0; i < messages.size(); ++i) {
+    m_chatDataModel->append(prepareMessageForModel(messages.at(i).toMap()));
+  }
+  emit chatDataModelChanged();
+}
+
+void ChatController::syncChatDataModel(const QVariantList &messages) {
+  int i = 0;
+  while (i < messages.size() && i < m_chatDataModel->size()) {
+    QVariantMap item = prepareMessageForModel(messages.at(i).toMap());
+    QVariantMap existing = m_chatDataModel->value(i).toMap();
+    QString itemId = item.value("id").toString();
+    QString existingId = existing.value("id").toString();
+    QString itemNonce = item.value("nonce").toString();
+    QString existingNonce = existing.value("nonce").toString();
+
+    if (itemId == existingId ||
+        (!itemNonce.isEmpty() && itemNonce == existingId) ||
+        (!existingNonce.isEmpty() && existingNonce == itemId) ||
+        (!itemNonce.isEmpty() && itemNonce == existingNonce)) {
+      m_chatDataModel->replace(i, item);
+      ++i;
+      continue;
+    }
+
+    replaceChatDataModel(messages);
+    return;
+  }
+
+  while (i < messages.size()) {
+    m_chatDataModel->append(prepareMessageForModel(messages.at(i).toMap()));
+    ++i;
+  }
+
+  if (m_chatDataModel->size() != messages.size()) {
+    replaceChatDataModel(messages);
+  }
+}
+
+QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
+  QVariantMap item = message;
+  QString authorId = item.value("authorId").toString();
+  QString avatarHash = item.value("avatarHash").toString();
+  QString attachmentUrl = item.value("attachmentUrl").toString();
+  bool attachmentIsImage = item.value("attachmentIsImage").toBool();
+  QString imageSource = item.value("image").toString();
+  bool imageFailed = attachmentIsImage && !attachmentUrl.isEmpty() &&
+                     item.value("imageLoadFailed").toBool();
+  bool imageLoading = attachmentIsImage && !attachmentUrl.isEmpty() &&
+                      item.value("imageLoading").toBool();
+
+  if (isRemoteImageUrl(imageSource)) {
+    if (attachmentUrl.isEmpty()) {
+      attachmentUrl = imageSource;
+      item["attachmentUrl"] = attachmentUrl;
+    }
+    imageSource.clear();
+  }
+
+  if (!authorId.isEmpty()) {
+    QString avatarSource =
+        m_cachedAttachmentImages.value(QString("avatar:%1").arg(authorId));
+    if (avatarSource.isEmpty() && m_client != 0) {
+      avatarSource = m_client->avatarSourceForUser(authorId);
+      if (avatarSource.isEmpty() && !avatarHash.isEmpty()) {
+        m_client->loadUserAvatar(authorId, avatarHash);
+      }
+    }
+    if (!avatarSource.isEmpty()) {
+      item["avatarSource"] = avatarSource;
+      m_cachedAttachmentImages.insert(QString("avatar:%1").arg(authorId),
+                                      avatarSource);
+    }
+  }
+
+  if (attachmentIsImage && !attachmentUrl.isEmpty()) {
+    if (!isRemoteImageUrl(attachmentUrl)) {
+      imageSource = attachmentUrl;
+      imageLoading = false;
+      imageFailed = false;
+    } else {
+      QString cached = cachedImageSource(attachmentUrl);
+      if (!cached.isEmpty()) {
+        imageSource = cached;
+        imageLoading = false;
+        imageFailed = false;
+      } else if (!imageFailed) {
+        imageSource.clear();
+        imageLoading = true;
+        requestCachedImage(attachmentUrl);
+      }
+    }
+  }
+
+  item["id"] = item.value("id").toString();
+  item["author"] = item.value("author").toString();
+  item["authorId"] = authorId;
+  item["initials"] = item.value("initials").toString();
+  item["avatarHash"] = avatarHash;
+  item["avatarSource"] = item.value("avatarSource").toString();
+  item["avatarColor"] = item.value("avatarColor", "#5865F2").toString();
+  if (item.value("avatarColor").toString().isEmpty()) {
+    item["avatarColor"] = "#5865F2";
+  }
+  item["time"] = item.value("time", "Now").toString();
+  item["timestampMs"] = item.value("timestampMs");
+  item["message"] = item.value("message").toString();
+  item["replyAuthor"] = item.value("replyAuthor").toString();
+  item["replyMessage"] = item.value("replyMessage").toString();
+  item["image"] = imageSource;
+  item["imageLoading"] = imageLoading;
+  item["imageLoadFailed"] = imageFailed;
+  item["imageWidth"] = item.value("imageWidth", 0).toInt();
+  item["imageHeight"] = item.value("imageHeight", 0).toInt();
+  item["attachmentUrl"] = attachmentUrl;
+  item["attachmentName"] = item.value("attachmentName").toString();
+  item["attachmentIsImage"] = attachmentIsImage;
+  item["pending"] = item.value("pending").toBool();
+  item["failed"] = item.value("failed").toBool();
+  item["edited"] = item.value("edited").toBool();
+  item["isGroupStart"] = item.value("isGroupStart", true).toBool();
+  item["isGroupEnd"] = item.value("isGroupEnd", true).toBool();
+  item["showAvatar"] = item.value("showAvatar", true).toBool();
+  item["showUsername"] = item.value("showUsername", true).toBool();
+  item["showTimestamp"] = item.value("showTimestamp", true).toBool();
+  return item;
+}
+
+int ChatController::chatDataModelIndexForMessage(
+    const QString &messageId) const {
+  if (messageId.isEmpty()) {
+    return -1;
+  }
+
+  for (int i = 0; i < m_chatDataModel->size(); ++i) {
+    QVariantMap message = m_chatDataModel->value(i).toMap();
+    if (message.value("id").toString() == messageId) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int ChatController::chatDataModelIndexForNonce(const QString &nonce) const {
+  if (nonce.isEmpty()) {
+    return -1;
+  }
+
+  for (int i = 0; i < m_chatDataModel->size(); ++i) {
+    QVariantMap message = m_chatDataModel->value(i).toMap();
+    if (message.value("nonce").toString() == nonce) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+void ChatController::replaceGroupedMessage(const QVariantMap &message) {
+  QVariantMap item = prepareMessageForModel(message);
+  QString messageId = item.value("id").toString();
+  int index = chatDataModelIndexForMessage(messageId);
+  if (index < 0) {
+    index = chatDataModelIndexForNonce(item.value("nonce").toString());
+  }
+  if (index < 0) {
+    m_chatDataModel->append(item);
+    return;
+  }
+
+  m_chatDataModel->replace(index, item);
+
+  QVariantList messages = currentMessages();
+  for (int i = index - 1; i <= index + 1; ++i) {
+    if (i < 0 || i >= m_chatDataModel->size() || i >= messages.size()) {
+      continue;
+    }
+
+    QVariantMap grouped = prepareMessageForModel(messages.at(i).toMap());
+    if (grouped.value("id").toString() ==
+        m_chatDataModel->value(i).toMap().value("id").toString()) {
+      m_chatDataModel->replace(i, grouped);
+    }
+  }
+}
+
+void ChatController::updateAttachmentImageInModel(const QString &url,
+                                                  const QString &image,
+                                                  bool loading, bool failed) {
+  if (url.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_chatDataModel->size(); ++i) {
+    QVariantMap message = m_chatDataModel->value(i).toMap();
+    if (message.value("attachmentUrl").toString() == url) {
+      message["image"] = image;
+      message["imageLoading"] = loading;
+      message["imageLoadFailed"] = failed;
+      m_chatDataModel->replace(i, message);
+    }
+  }
 }
 
 QString ChatController::filePreviewSource(const QString &filePath) const {

@@ -87,7 +87,7 @@ NavigationPane {
 
             ActionItem {
                 title: "Log out"
-                imageSource: "asset:///images/icons/sign-out.png"
+                imageSource: "asset:///images/icons/ic_sign_out.png"
                 enabled: appStore.loggedIn
 
                 onTriggered: {

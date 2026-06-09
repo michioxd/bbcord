@@ -8,6 +8,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <bb/cascades/ArrayDataModel>
+#include <bb/cascades/DataModel>
+
 class AppStore;
 class AttachmentImageCacheWorker;
 class DiscordClient;
@@ -31,6 +34,8 @@ class ChatController : public QObject {
                  pendingAttachmentChanged)
   Q_PROPERTY(QString pendingAttachmentError READ pendingAttachmentError NOTIFY
                  pendingAttachmentChanged)
+  Q_PROPERTY(bb::cascades::DataModel *chatDataModel READ chatDataModel NOTIFY
+                 chatDataModelChanged)
 
 public:
   explicit ChatController(DiscordClient *client, AppStore *store,
@@ -45,6 +50,7 @@ public:
   QString pendingAttachmentPreview() const;
   bool pendingAttachmentIsImage() const;
   QString pendingAttachmentError() const;
+  bb::cascades::DataModel *chatDataModel() const;
 
   Q_INVOKABLE void openChannel(const QString &channelId, const QString &guildId,
                                const QString &channelName);
@@ -80,6 +86,7 @@ public:
 Q_SIGNALS:
   void currentChannelChanged();
   void pendingAttachmentChanged();
+  void chatDataModelChanged();
   void attachmentImageCached(const QString &url, const QString &imageSource);
   void attachmentImageFailed(const QString &url);
   void initialMessagesRequested(const QString &channelId,
@@ -95,6 +102,16 @@ Q_SIGNALS:
                               const QString &messageId);
 
 private Q_SLOTS:
+  void onCurrentChannelMessagesChanged();
+  void onChatMessagesReset(const QString &channelId,
+                           const QVariantList &messages);
+  void onChatMessagesPrepended(const QString &channelId,
+                               const QVariantList &messages);
+  void onChatMessageAdded(const QString &channelId, const QVariantMap &message);
+  void onChatMessageUpdated(const QString &channelId,
+                            const QVariantMap &message);
+  void onChatMessageDeleted(const QString &channelId, const QString &messageId);
+  void onChatAvatarChanged(const QString &userId, const QString &avatarSource);
   void onAttachmentImageCached(const QString &url, const QString &path);
   void onAttachmentImageFailed(const QString &url);
 
@@ -108,9 +125,19 @@ private:
   bool isRemoteImageUrl(const QString &url) const;
   QString attachmentImageCachePath(const QString &url) const;
   void ensureAttachmentImageWorker();
+  void rebuildChatDataModel();
+  void replaceChatDataModel(const QVariantList &messages);
+  void syncChatDataModel(const QVariantList &messages);
+  int chatDataModelIndexForNonce(const QString &nonce) const;
+  void replaceGroupedMessage(const QVariantMap &message);
+  QVariantMap prepareMessageForModel(const QVariantMap &message);
+  int chatDataModelIndexForMessage(const QString &messageId) const;
+  void updateAttachmentImageInModel(const QString &url, const QString &image,
+                                    bool loading, bool failed);
 
   DiscordClient *m_client;
   AppStore *m_store;
+  bb::cascades::ArrayDataModel *m_chatDataModel;
   QThread *m_imageThread;
   AttachmentImageCacheWorker *m_imageWorker;
   QHash<QString, QString> m_cachedAttachmentImages;

@@ -129,12 +129,13 @@ QByteArray DiscordJsonParser::buildLazyRequestPayload(const QString &guildId,
                                                       QString *errorMessage) {
   QVariantMap data;
   data["guild_id"] = guildId.trimmed();
-  data["typing"] = true;
-  data["activities"] = true;
-  data["threads"] = true;
 
   QString safeChannelId = channelId.trimmed();
   if (!safeChannelId.isEmpty()) {
+    data["typing"] = true;
+    data["activities"] = true;
+    data["threads"] = true;
+
     QVariantList range;
     range.append(0);
     range.append(99);

@@ -100,6 +100,24 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
     break;
   }
 
+  case MG_EV_WS_CTL: {
+    struct mg_ws_message *message =
+        static_cast<struct mg_ws_message *>(eventData);
+    int opcode = message != NULL ? (message->flags & 0x0f) : -1;
+    int closeCode = -1;
+    if (opcode == WEBSOCKET_OP_CLOSE && message != NULL &&
+        message->data.len >= 2) {
+      const unsigned char *bytes =
+          reinterpret_cast<const unsigned char *>(message->data.buf);
+      closeCode =
+          (static_cast<int>(bytes[0]) << 8) | static_cast<int>(bytes[1]);
+    }
+    qDebug() << "[discord-gateway] control frame opcode" << opcode
+             << "closeCode" << closeCode << "payloadBytes"
+             << (message != NULL ? static_cast<int>(message->data.len) : 0);
+    break;
+  }
+
   case MG_EV_ERROR: {
     QString message = QString::fromUtf8(
         eventData ? static_cast<char *>(eventData) : "Gateway error");

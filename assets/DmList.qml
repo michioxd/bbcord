@@ -274,8 +274,8 @@ Container {
     ]
 
     function refreshDms() {
-        var model = this.dmModelRef;
-        var store = this.storeRef;
+        var model = dmList.dmModelRef;
+        var store = dmList.storeRef;
         model.clear();
         for (var i = 0; i < store.dmChannels.length; ++i) {
             model.append(store.dmChannels[i]);
@@ -289,8 +289,8 @@ Container {
     }
 
     function appendDms(channels) {
-        var model = this.dmModelRef;
-        var store = this.storeRef;
+        var model = dmList.dmModelRef;
+        var store = dmList.storeRef;
         if (model.size() > 0) {
             var lastIndex = model.size() - 1;
             var last = model.data([lastIndex]);
@@ -311,8 +311,8 @@ Container {
     }
 
     function refreshDmsIfNeeded() {
-        var model = this.dmModelRef;
-        var store = this.storeRef;
+        var model = dmList.dmModelRef;
+        var store = dmList.storeRef;
         var loadingOffset = 0;
         if (model.size() > 0) {
             var last = model.data([model.size() - 1]);
@@ -360,8 +360,8 @@ Container {
     }
 
     function updateDmLoading() {
-        var model = this.dmModelRef;
-        var store = this.storeRef;
+        var model = dmList.dmModelRef;
+        var store = dmList.storeRef;
         if (model.size() > 0) {
             var lastIndex = model.size() - 1;
             var last = model.data([lastIndex]);
@@ -387,7 +387,7 @@ Container {
     }
 
     function updateDmAvatar(channelId, avatarSource) {
-        var model = this.dmModelRef;
+        var model = dmList.dmModelRef;
         if (model.size() == 0 || !avatarSource)
             return;
         var loadingOffset = 0;
@@ -407,7 +407,7 @@ Container {
     }
 
     function updateDmAvatar2(channelId, avatarSource) {
-        var model = this.dmModelRef;
+        var model = dmList.dmModelRef;
         if (model.size() == 0 || !avatarSource)
             return;
         var loadingOffset = 0;
