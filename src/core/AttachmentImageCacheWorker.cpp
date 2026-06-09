@@ -179,6 +179,11 @@ void AttachmentImageCacheWorker::timerEvent(QTimerEvent *event) {
     return;
   }
 
+  if (m_activeDownloads.isEmpty()) {
+    stopTimerIfIdle();
+    return;
+  }
+
   mg_mgr_poll(m_mgr, 0);
 
   QList<struct mg_connection *> timedOut;

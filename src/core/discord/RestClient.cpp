@@ -534,6 +534,12 @@ void DiscordRestClient::cancel() {
 
 void DiscordRestClient::timerEvent(QTimerEvent *event) {
   Q_UNUSED(event);
+
+  if (m_connection == NULL || m_finished) {
+    stopTimerIfIdle();
+    return;
+  }
+
   mg_mgr_poll(m_mgr, 0);
 
   if (m_connection != NULL && !m_finished) {
@@ -786,7 +792,7 @@ void DiscordRestClient::startTimerIfNeeded() {
 }
 
 void DiscordRestClient::stopTimerIfIdle() {
-  if (m_timerId != 0 && m_connection == NULL) {
+  if (m_timerId != 0 && (m_connection == NULL || m_finished)) {
     killTimer(m_timerId);
     m_timerId = 0;
   }
