@@ -20,7 +20,7 @@ Page {
 
             ListView {
                 id: guildListView
-                dataModel: serverModel
+                dataModel: mainPageController.serverDataModel
                 verticalAlignment: VerticalAlignment.Fill
 
                 function loadVisibleGuildIcon(guildId) {
@@ -28,7 +28,7 @@ Page {
                 }
 
                 onTriggered: {
-                    var item = serverModel.data(indexPath);
+                    var item = mainPageController.serverDataModel.data(indexPath);
 
                     if (item.type == "dm") {
                         mainPage.loadDmList();
@@ -235,63 +235,11 @@ Page {
     }
 
     onCreationCompleted: {
-        resetServers();
-
         loadDmList();
-        appStore.guildIconChanged.connect(updateServerIcon);
-        appStore.guildsChanged.connect(refreshServersIfNeeded);
         mainPageController.loadMainData();
     }
 
-    function resetServers() {
-        serverModel.clear();
-        serverModel.append({
-            "type": "dm",
-            "name": "Home",
-            "id": "home",
-            "icon": "asset:///images/icons/first.png",
-            "mentionCount": 0,
-            "unread": false
-        });
-
-        for (var i = 0; i < appStore.guilds.length; ++i) {
-            serverModel.append(appStore.guilds[i]);
-        }
-    }
-
-    function refreshServersIfNeeded() {
-        if (serverModel.size() - 1 != appStore.guilds.length) {
-            resetServers();
-            return;
-        }
-
-        for (var i = 0; i < appStore.guilds.length; ++i) {
-            var item = serverModel.data([i + 1]);
-            if (item.id != appStore.guilds[i].id) {
-                resetServers();
-                return;
-            }
-
-            if (item.icon != appStore.guilds[i].icon || item.mentionCount != appStore.guilds[i].mentionCount || item.unread != appStore.guilds[i].unread) {
-                serverModel.replace([i + 1], appStore.guilds[i]);
-            }
-        }
-    }
-
-    function updateServerIcon(guildId, iconSource) {
-        for (var i = 1; i < serverModel.size(); ++i) {
-            var item = serverModel.data([i]);
-            if (item.id == guildId) {
-                item.icon = iconSource;
-                serverModel.replace([i], item);
-                break;
-            }
-        }
-    }
     attachedObjects: [
-        ArrayDataModel {
-            id: serverModel
-        },
         ComponentDefinition {
             id: chatCardDefinition
             source: "asset:///ChatCard.qml"
