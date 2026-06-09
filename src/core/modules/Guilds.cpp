@@ -80,12 +80,20 @@ void DiscordClient::selectGuild(const QString &guildId) {
 
 void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
   QVariantMap existingIconsByGuildId;
+  QVariantMap existingUnreadByGuildId;
+  QVariantMap existingMentionCountByGuildId;
   for (int i = 0; i < m_guilds.size(); ++i) {
     QVariantMap existingGuild = m_guilds.at(i).toMap();
     QString guildId = existingGuild.value("id").toString();
     QString icon = existingGuild.value("icon").toString();
     if (!guildId.isEmpty() && !icon.isEmpty()) {
       existingIconsByGuildId.insert(guildId, icon);
+    }
+    if (!guildId.isEmpty()) {
+      existingUnreadByGuildId.insert(guildId,
+                                     existingGuild.value("unread").toBool());
+      existingMentionCountByGuildId.insert(
+          guildId, existingGuild.value("mentionCount").toInt());
     }
   }
 
@@ -104,6 +112,15 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
           existingIconsByGuildId.value(item.value("id").toString()).toString();
       if (!existingIcon.isEmpty()) {
         item["icon"] = existingIcon;
+      }
+      if (existingUnreadByGuildId.contains(item.value("id").toString())) {
+        item["unread"] =
+            existingUnreadByGuildId.value(item.value("id").toString()).toBool();
+      }
+      if (existingMentionCountByGuildId.contains(item.value("id").toString())) {
+        item["mentionCount"] =
+            existingMentionCountByGuildId.value(item.value("id").toString())
+                .toInt();
       }
       m_guilds.append(item);
       m_lastGuildId = item.value("id").toString();

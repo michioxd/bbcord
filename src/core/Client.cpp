@@ -596,8 +596,7 @@ void DiscordClient::onGatewayGuildsAndDmsReady(
     int guildIndex = guildsById.value(guildId).toInt();
     QVariantMap existingGuild = updatedGuilds.at(guildIndex).toMap();
     existingGuild["unread"] = gatewayGuild.value("unread").toBool();
-    existingGuild["mention_count"] =
-        gatewayGuild.value("mention_count").toInt();
+    existingGuild["mentionCount"] = gatewayGuild.value("mention_count").toInt();
     updatedGuilds.replace(guildIndex, existingGuild);
   }
 
