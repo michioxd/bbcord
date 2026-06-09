@@ -66,6 +66,7 @@ private:
   void insertSorted(ChannelState &state, const DiscordMessage &message);
   void trimChannel(ChannelState &state);
   void trimChannelFromBack(ChannelState &state);
+  void recalculateGrouping(ChannelState &state);
   int compareMessageIds(const QString &left, const QString &right) const;
   void refreshBounds(ChannelState &state);
 

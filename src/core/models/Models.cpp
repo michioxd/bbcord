@@ -165,6 +165,11 @@ QVariantMap DiscordMessage::toVariantMap() const {
   data["replyMessage"] = replyContent;
   data["pending"] = pending;
   data["failed"] = failed;
+  data["isGroupStart"] = isGroupStart;
+  data["isGroupEnd"] = isGroupEnd;
+  data["showAvatar"] = showAvatar;
+  data["showUsername"] = showUsername;
+  data["showTimestamp"] = showTimestamp;
 
   QVariantList attachmentList;
   for (int i = 0; i < attachments.size(); ++i) {

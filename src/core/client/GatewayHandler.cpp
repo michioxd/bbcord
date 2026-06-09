@@ -9,8 +9,13 @@
 
 GatewayHandler::GatewayHandler(DiscordClient *client, AppStore *store,
                                QObject *parent)
-    : QObject(parent), m_client(client), m_store(store) {}
-GatewayHandler::~GatewayHandler() {}
+    : QObject(parent), m_client(client), m_store(store), m_batchTimer(0) {
+  m_batchTimer = new QTimer(this);
+  m_batchTimer->setSingleShot(true);
+  m_batchTimer->setInterval(150);
+  connect(m_batchTimer, SIGNAL(timeout()), this, SLOT(flushMessageQueue()));
+}
+GatewayHandler::~GatewayHandler() { flushMessageQueue(); }
 void GatewayHandler::applyGatewayOrderingEvent(
     const QString &eventName, const QVariantMap &payload,
     QStringList &pendingUnreadGuildIds,
@@ -24,7 +29,8 @@ void GatewayHandler::applyGatewayOrderingEvent(
       DiscordMessage message = DiscordMessage::fromVariantMap(payload);
       message.pending = false;
       message.failed = false;
-      m_store->addOrReplaceChatMessage(message);
+      m_messageQueue.append(message);
+      m_batchTimer->start();
     }
     if (guildId.isEmpty() && !channelId.isEmpty()) {
       QMetaObject::invokeMethod(m_client, "moveDmToTop", Qt::DirectConnection,
@@ -91,6 +97,17 @@ void GatewayHandler::applyGatewayOrderingEvent(
     }
     return;
   }
+}
+
+void GatewayHandler::flushMessageQueue() {
+  if (m_messageQueue.isEmpty()) {
+    return;
+  }
+
+  if (m_store != 0) {
+    m_store->addOrReplaceChatMessages(m_messageQueue);
+  }
+  m_messageQueue.clear();
 }
 
 bool GatewayHandler::shouldApplyChatEvent(const QString &channelId) const {

@@ -108,6 +108,7 @@ public:
                                 const QList<DiscordMessage> &messages,
                                 bool hasMoreBefore);
   void addOrReplaceChatMessage(const DiscordMessage &message);
+  void addOrReplaceChatMessages(const QList<DiscordMessage> &messages);
   void updateChatMessage(const DiscordMessage &message);
   void deleteChatMessage(const QString &channelId, const QString &messageId);
   QString addPendingChatMessage(const DiscordMessage &message);

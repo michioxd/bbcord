@@ -80,8 +80,15 @@ struct DiscordMessage {
   QList<DiscordAttachment> attachments;
   bool pending;
   bool failed;
+  bool isGroupStart;
+  bool isGroupEnd;
+  bool showAvatar;
+  bool showUsername;
+  bool showTimestamp;
 
-  DiscordMessage() : pending(false), failed(false) {}
+  DiscordMessage()
+      : pending(false), failed(false), isGroupStart(true), isGroupEnd(true),
+        showAvatar(true), showUsername(true), showTimestamp(true) {}
 
   bool isEdited() const;
   qint64 timestampMs() const;

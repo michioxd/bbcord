@@ -1,5 +1,7 @@
 #include "AppStore.hpp"
 
+#include <QStringList>
+
 namespace {
 const char *kDefaultUserAvatar = "asset:///images/default-avt.png";
 }
@@ -495,6 +497,41 @@ void AppStore::addOrReplaceChatMessage(const DiscordMessage &message) {
     emit chatMessageAdded(channelId, item);
   }
   if (channelId == m_selectedChannelId) {
+    emit currentChannelMessagesChanged();
+    emit currentChatStateChanged();
+  }
+}
+
+void AppStore::addOrReplaceChatMessages(const QList<DiscordMessage> &messages) {
+  if (messages.isEmpty()) {
+    return;
+  }
+
+  QStringList changedChannelIds;
+  bool selectedChanged = false;
+
+  for (int i = 0; i < messages.size(); ++i) {
+    QVariantMap item = m_messageCache.addOrReplaceMessage(messages.at(i));
+    QString channelId = item.value("channelId").toString();
+    if (channelId.isEmpty()) {
+      continue;
+    }
+
+    if (!changedChannelIds.contains(channelId)) {
+      changedChannelIds.append(channelId);
+    }
+    if (channelId == m_selectedChannelId) {
+      selectedChanged = true;
+    }
+  }
+
+  for (int i = 0; i < changedChannelIds.size(); ++i) {
+    const QString &channelId = changedChannelIds.at(i);
+    emit chatMessagesReset(channelId,
+                           m_messageCache.messagesForChannel(channelId));
+  }
+
+  if (selectedChanged) {
     emit currentChannelMessagesChanged();
     emit currentChatStateChanged();
   }

@@ -2,7 +2,8 @@
 
 namespace {
 const int kDefaultPageSize = 50;
-}
+const qint64 kMessageGroupWindowMs = 7LL * 60LL * 1000LL;
+} // namespace
 
 MessageCache::ChannelState::ChannelState()
     : initialLoaded(false), hasMoreBefore(true), loadingInitial(false),
@@ -116,6 +117,7 @@ void MessageCache::setInitialMessages(const QString &channelId,
   state.loadingInitial = false;
   state.loadingBefore = false;
   trimChannel(state);
+  recalculateGrouping(state);
   refreshBounds(state);
 }
 
@@ -125,6 +127,7 @@ MessageCache::prependOlderMessages(const QString &channelId,
                                    bool hasMore) {
   ChannelState &state = ensureChannel(channelId);
   QVariantList added;
+  QStringList addedIds;
 
   for (int i = 0; i < messages.size(); ++i) {
     const DiscordMessage &message = messages.at(i);
@@ -132,13 +135,21 @@ MessageCache::prependOlderMessages(const QString &channelId,
       continue;
     }
     insertSorted(state, message);
-    added.append(message.toVariantMap());
+    addedIds.append(message.id);
   }
 
   state.hasMoreBefore = hasMore;
   state.loadingBefore = false;
   trimChannelFromBack(state);
+  recalculateGrouping(state);
   refreshBounds(state);
+
+  for (int i = 0; i < addedIds.size(); ++i) {
+    const QString &id = addedIds.at(i);
+    if (state.messagesById.contains(id)) {
+      added.append(state.messagesById.value(id).toVariantMap());
+    }
+  }
   return added;
 }
 
@@ -176,8 +187,9 @@ QVariantMap MessageCache::addOrReplaceMessage(const DiscordMessage &message) {
 
   insertSorted(state, message);
   trimChannel(state);
+  recalculateGrouping(state);
   refreshBounds(state);
-  return message.toVariantMap();
+  return state.messagesById.value(message.id).toVariantMap();
 }
 
 QVariantMap MessageCache::updateMessage(const DiscordMessage &message) {
@@ -204,13 +216,15 @@ QVariantMap MessageCache::updateMessage(const DiscordMessage &message) {
       merged.attachments = message.attachments;
     }
     state.messagesById.insert(message.id, merged);
-    return merged.toVariantMap();
+    recalculateGrouping(state);
+    return state.messagesById.value(message.id).toVariantMap();
   }
 
   insertSorted(state, message);
   trimChannel(state);
+  recalculateGrouping(state);
   refreshBounds(state);
-  return message.toVariantMap();
+  return state.messagesById.value(message.id).toVariantMap();
 }
 
 bool MessageCache::deleteMessage(const QString &channelId,
@@ -223,6 +237,7 @@ bool MessageCache::deleteMessage(const QString &channelId,
   state->messagesById.remove(messageId);
   state->orderedIds.removeAll(messageId);
   state->pendingNonces.remove(messageId);
+  recalculateGrouping(*state);
   refreshBounds(*state);
   return true;
 }
@@ -239,6 +254,7 @@ QString MessageCache::addPendingMessage(const DiscordMessage &message) {
   state.pendingNonces.insert(pending.id);
   insertSorted(state, pending);
   trimChannel(state);
+  recalculateGrouping(state);
   refreshBounds(state);
   return pending.id;
 }
@@ -255,6 +271,7 @@ void MessageCache::markPendingFailed(const QString &channelId,
   message.failed = true;
   state.messagesById.insert(messageId, message);
   state.pendingNonces.remove(messageId);
+  recalculateGrouping(state);
 }
 
 void MessageCache::clear() { m_channels.clear(); }
@@ -331,6 +348,53 @@ void MessageCache::trimChannelFromBack(ChannelState &state) {
     state.orderedIds.removeAt(removeIndex);
     state.messagesById.remove(removeId);
     state.pendingNonces.remove(removeId);
+  }
+}
+
+void MessageCache::recalculateGrouping(ChannelState &state) {
+  for (int i = 0; i < state.orderedIds.size(); ++i) {
+    const QString &id = state.orderedIds.at(i);
+    if (!state.messagesById.contains(id)) {
+      continue;
+    }
+
+    DiscordMessage message = state.messagesById.value(id);
+    message.isGroupStart = true;
+    message.isGroupEnd = true;
+    message.showAvatar = true;
+    message.showUsername = true;
+    message.showTimestamp = true;
+    state.messagesById.insert(id, message);
+  }
+
+  for (int i = 1; i < state.orderedIds.size(); ++i) {
+    const QString previousId = state.orderedIds.at(i - 1);
+    const QString currentId = state.orderedIds.at(i);
+    if (!state.messagesById.contains(previousId) ||
+        !state.messagesById.contains(currentId)) {
+      continue;
+    }
+
+    DiscordMessage previous = state.messagesById.value(previousId);
+    DiscordMessage current = state.messagesById.value(currentId);
+    qint64 previousTimestamp = previous.timestampMs();
+    qint64 currentTimestamp = current.timestampMs();
+    qint64 timestampDistance = currentTimestamp - previousTimestamp;
+    if (timestampDistance < 0) {
+      timestampDistance = -timestampDistance;
+    }
+
+    if (!previous.author.id.isEmpty() &&
+        previous.author.id == current.author.id && previousTimestamp > 0 &&
+        currentTimestamp > 0 && timestampDistance < kMessageGroupWindowMs) {
+      previous.isGroupEnd = false;
+      current.isGroupStart = false;
+      current.showAvatar = false;
+      current.showUsername = false;
+      current.showTimestamp = false;
+      state.messagesById.insert(previousId, previous);
+      state.messagesById.insert(currentId, current);
+    }
   }
 }
 
