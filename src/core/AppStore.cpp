@@ -527,8 +527,8 @@ void AppStore::addOrReplaceChatMessages(const QList<DiscordMessage> &messages) {
 
   for (int i = 0; i < changedChannelIds.size(); ++i) {
     const QString &channelId = changedChannelIds.at(i);
-    emit chatMessagesReset(channelId,
-                           m_messageCache.messagesForChannel(channelId));
+    emit chatMessagesBatched(channelId,
+                             m_messageCache.messagesForChannel(channelId));
   }
 
   if (selectedChanged) {

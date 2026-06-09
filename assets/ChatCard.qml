@@ -97,24 +97,24 @@ Page {
                             failed: ListItemData.failed
                             edited: ListItemData.edited
 
-                            onDeleteRequested: {
-                                ListItem.view.deleteMessage(messageId);
+                            onEditRequested: {
+                                ListItem.view.startEdit(messageId, message);
                             }
 
-                            onEditRequested: {
-                                ListItem.view.startEditMessage(messageId, messageText);
+                            onDeleteRequested: {
+                                chatController.deleteMessage(messageId);
                             }
 
                             onReplyRequested: {
-                                ListItem.view.setReplyMessage(messageId, author, replyText);
+                                ListItem.view.setReply(messageId, author, message);
                             }
 
                             onAttachmentOpenRequested: {
-                                ListItem.view.openAttachment(url);
+                                chatController.openAttachment(url);
                             }
 
                             onAttachmentImageLoadRequested: {
-                                ListItem.view.requestCachedImage(url);
+                                ListItem.view.loadAttachmentImage(url);
                             }
                         }
                     }
@@ -124,28 +124,20 @@ Page {
                     return "";
                 }
 
-                function startEditMessage(messageId, messageText) {
-                    chatPage.startEdit(messageId, messageText);
+                function startEdit(messageId, message) {
+                    chatPage.startEdit(messageId, message);
                 }
 
-                function setReplyMessage(messageId, author, replyText) {
-                    chatPage.setReply(messageId, author, replyText);
+                function setReply(messageId, author, message) {
+                    chatPage.setReply(messageId, author, message);
                 }
 
-                function requestOlderFromFirstItem(indexPath) {
-                    chatPage.requestOlderFromFirstItem(indexPath);
-                }
-
-                function deleteMessage(messageId) {
-                    chatController.deleteMessage(messageId);
-                }
-
-                function openAttachment(url) {
-                    chatController.openAttachment(url);
-                }
-
-                function requestCachedImage(url) {
+                function loadAttachmentImage(url) {
                     chatController.requestCachedImage(url);
+                }
+
+                onDataModelChanged: {
+                    chatPage.scrollToBottom();
                 }
 
                 attachedObjects: [
@@ -429,14 +421,6 @@ Page {
         inputMessage.text = "";
     }
 
-    function requestOlderFromFirstItem(indexPath) {
-        if (!active || !indexPath || indexPath.length <= 0 || indexPath[0] !== 0) {
-            return;
-        }
-
-        requestOlderFromScroll();
-    }
-
     function requestOlderFromScroll() {
         if (!active) {
             return;
@@ -448,6 +432,15 @@ Page {
 
         olderLoadRequested = true;
         chatController.requestOlderMessages();
+    }
+
+    function scrollToBottom() {
+        var count = chatController.chatDataModel.size();
+        if (count <= 0) {
+            return;
+        }
+
+        messageList.scrollToItem([ count - 1 ], ScrollAnimation.Default);
     }
 
     function clearForChannelSwitch() {
@@ -481,6 +474,17 @@ Page {
         appStore.chatMessagesReset.connect(function (channelId, messages) {
             if (channelId == chatController.currentChannelId) {
                 chatPage.olderLoadRequested = false;
+                chatPage.scrollToBottom();
+            }
+        });
+        appStore.chatMessagesBatched.connect(function (channelId, messages) {
+            if (channelId == chatController.currentChannelId) {
+                chatPage.scrollToBottom();
+            }
+        });
+        appStore.chatMessageAdded.connect(function (channelId, message) {
+            if (channelId == chatController.currentChannelId) {
+                chatPage.scrollToBottom();
             }
         });
     }

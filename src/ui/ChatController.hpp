@@ -107,6 +107,8 @@ private Q_SLOTS:
                            const QVariantList &messages);
   void onChatMessagesPrepended(const QString &channelId,
                                const QVariantList &messages);
+  void onChatMessagesBatched(const QString &channelId,
+                             const QVariantList &messages);
   void onChatMessageAdded(const QString &channelId, const QVariantMap &message);
   void onChatMessageUpdated(const QString &channelId,
                             const QVariantMap &message);

@@ -137,6 +137,8 @@ Q_SIGNALS:
                          const QVariantList &messages);
   void chatMessagesPrepended(const QString &channelId,
                              const QVariantList &messages);
+  void chatMessagesBatched(const QString &channelId,
+                           const QVariantList &messages);
   void chatMessageAdded(const QString &channelId, const QVariantMap &message);
   void chatMessageUpdated(const QString &channelId, const QVariantMap &message);
   void chatMessageDeleted(const QString &channelId, const QString &messageId);

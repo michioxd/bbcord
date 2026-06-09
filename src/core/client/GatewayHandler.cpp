@@ -12,7 +12,7 @@ GatewayHandler::GatewayHandler(DiscordClient *client, AppStore *store,
     : QObject(parent), m_client(client), m_store(store), m_batchTimer(0) {
   m_batchTimer = new QTimer(this);
   m_batchTimer->setSingleShot(true);
-  m_batchTimer->setInterval(150);
+  m_batchTimer->setInterval(100);
   connect(m_batchTimer, SIGNAL(timeout()), this, SLOT(flushMessageQueue()));
 }
 GatewayHandler::~GatewayHandler() { flushMessageQueue(); }

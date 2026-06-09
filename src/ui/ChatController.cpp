@@ -49,6 +49,8 @@ ChatController::ChatController(DiscordClient *client, AppStore *store,
             SLOT(onChatMessagesReset(QString, QVariantList)));
     connect(m_store, SIGNAL(chatMessagesPrepended(QString, QVariantList)), this,
             SLOT(onChatMessagesPrepended(QString, QVariantList)));
+    connect(m_store, SIGNAL(chatMessagesBatched(QString, QVariantList)), this,
+            SLOT(onChatMessagesBatched(QString, QVariantList)));
     connect(m_store, SIGNAL(chatMessageAdded(QString, QVariantMap)), this,
             SLOT(onChatMessageAdded(QString, QVariantMap)));
     connect(m_store, SIGNAL(chatMessageUpdated(QString, QVariantMap)), this,
@@ -473,6 +475,15 @@ void ChatController::onChatMessagesPrepended(const QString &channelId,
   }
 
   syncChatDataModel(currentMessages());
+}
+
+void ChatController::onChatMessagesBatched(const QString &channelId,
+                                           const QVariantList &messages) {
+  if (channelId != safeCurrentChannelId()) {
+    return;
+  }
+
+  syncChatDataModel(messages);
 }
 
 void ChatController::onChatMessageAdded(const QString &channelId,

@@ -301,6 +301,7 @@ void MessageCache::insertSorted(ChannelState &state,
 
   if (state.messagesById.contains(message.id)) {
     state.messagesById.insert(message.id, message);
+    recalculateGrouping(state);
     return;
   }
 
@@ -314,6 +315,7 @@ void MessageCache::insertSorted(ChannelState &state,
 
   state.orderedIds.insert(insertAt, message.id);
   state.messagesById.insert(message.id, message);
+  recalculateGrouping(state);
 }
 
 void MessageCache::trimChannel(ChannelState &state) {
@@ -327,6 +329,7 @@ void MessageCache::trimChannel(ChannelState &state) {
     state.messagesById.remove(removeId);
     state.pendingNonces.remove(removeId);
   }
+  recalculateGrouping(state);
 }
 
 void MessageCache::trimChannelFromBack(ChannelState &state) {
@@ -349,6 +352,7 @@ void MessageCache::trimChannelFromBack(ChannelState &state) {
     state.messagesById.remove(removeId);
     state.pendingNonces.remove(removeId);
   }
+  recalculateGrouping(state);
 }
 
 void MessageCache::recalculateGrouping(ChannelState &state) {
