@@ -106,6 +106,9 @@ private Q_SLOTS:
   void onGuildIconCacheHit(const QString &guildId, const QString &path);
   void onGuildIconCacheMiss(const QString &guildId, const QString &path);
   void onGatewayDispatch(const QString &eventName, const QVariantMap &payload);
+  void onGatewayReady(const QString &sessionId);
+  void onGatewayError(const QString &message);
+  void onGatewayClosed();
   void onGatewayGuildsAndDmsReady(const QVariantList &guilds,
                                   const QVariantList &allDmChannels,
                                   const QVariantList &visibleDmChannels,

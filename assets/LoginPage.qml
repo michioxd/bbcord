@@ -1,7 +1,13 @@
 import bb.cascades 1.4
+import bb.system 1.2
 
 Page {
     signal loginSucceeded()
+
+    function showLoginFailed(message) {
+        loginFailToast.body = message.length > 0 ? message : qsTr("Login failed")
+        loginFailToast.show()
+    }
 
     Container {
         layout: DockLayout {}
@@ -36,6 +42,7 @@ Page {
                 textFormat: TextFormat.Plain
                 inputMode: TextFieldInputMode.Text
                 text: ""
+                visible: !appStore.busy
             }
 
             Button {
@@ -44,6 +51,7 @@ Page {
                 text: qsTr("Login")
                 horizontalAlignment: HorizontalAlignment.Fill
                 enabled: !appStore.busy
+                visible: !appStore.busy
 
                 onClicked: {
                     discordClient.login(tokenField.text)
@@ -63,6 +71,14 @@ Page {
                 }
             }
 
+            ActivityIndicator {
+                running: appStore.busy
+                visible: appStore.busy
+                horizontalAlignment: HorizontalAlignment.Center
+                topMargin: ui.du(4.0)
+                preferredWidth: ui.du(8.0)
+            }
+
             Label {
                 text: appStore.statusText
                 horizontalAlignment: HorizontalAlignment.Center
@@ -74,6 +90,7 @@ Page {
                 id: btnInst
                 text: qsTr("How to get token")
                 horizontalAlignment: HorizontalAlignment.Fill
+                visible: !appStore.busy
             }
 
             Label {
@@ -86,5 +103,15 @@ Page {
                 opacity: 0.5
             }
         }
+    }
+
+    attachedObjects: [
+        SystemToast {
+            id: loginFailToast
+        }
+    ]
+
+    onCreationCompleted: {
+        discordClient.loginFailed.connect(showLoginFailed)
     }
 }

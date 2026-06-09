@@ -219,6 +219,12 @@ void DiscordClient::initializeNetworkWorker() {
   connect(m_networkWorker,
           SIGNAL(gatewayDispatchReceived(QString, QVariantMap)), this,
           SLOT(onGatewayDispatch(QString, QVariantMap)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(gatewayReady(QString)), this,
+          SLOT(onGatewayReady(QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(gatewayError(QString)), this,
+          SLOT(onGatewayError(QString)), Qt::QueuedConnection);
+  connect(m_networkWorker, SIGNAL(gatewayClosed()), this,
+          SLOT(onGatewayClosed()), Qt::QueuedConnection);
   connect(
       m_networkWorker,
       SIGNAL(guildsAndDmsReady(QVariantList, QVariantList, QVariantList,
@@ -770,17 +776,12 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
     loadMoreDmChannels();
   }
 
-  saveToken();
-  setBusy(false);
-  setLoggedIn(true);
-  setStatusText("Connected");
+  setStatusText("Connecting gateway...");
   if (m_networkWorker != 0) {
     syncGatewayOrderingStateToWorker();
     QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
-  loadGuilds();
-  emit loginSucceeded();
 }
 
 void DiscordClient::onRestLoginFailed(const QString &message) {
@@ -1296,6 +1297,45 @@ void DiscordClient::onGatewayDispatch(const QString &eventName,
       m_pendingDmUiUpdate, m_gatewayUiUpdateQueued);
 }
 
+void DiscordClient::onGatewayReady(const QString &sessionId) {
+  Q_UNUSED(sessionId);
+
+  if (m_loggedIn) {
+    return;
+  }
+
+  saveToken();
+  setBusy(false);
+  setLoggedIn(true);
+  setStatusText("Connected");
+  loadGuilds();
+  emit loginSucceeded();
+}
+
+void DiscordClient::onGatewayError(const QString &message) {
+  qDebug() << "[discord-client] gateway error" << message;
+  if (m_busy && !m_loggedIn) {
+    setBusy(false);
+    setLoggedIn(false);
+    setStatusText(message);
+    emit loginFailed(message);
+    return;
+  }
+
+  setStatusText(message);
+}
+
+void DiscordClient::onGatewayClosed() {
+  qDebug() << "[discord-client] gateway closed";
+  if (m_busy && !m_loggedIn) {
+    QString message = "Discord gateway connection closed";
+    setBusy(false);
+    setLoggedIn(false);
+    setStatusText(message);
+    emit loginFailed(message);
+  }
+}
+
 void DiscordClient::onGatewayGuildsAndDmsReady(
     const QVariantList &guilds, const QVariantList &allDmChannels,
     const QVariantList &visibleDmChannels, const QStringList &orderedGuildIds,
@@ -1756,10 +1796,7 @@ void DiscordClient::flushGatewayUiUpdates() {
 }
 
 void DiscordClient::appendVisibleGuildChannels() {
-  int nextCount = m_visibleGuildChannelCount + kPageSize;
-  if (nextCount > m_allGuildChannels.size()) {
-    nextCount = m_allGuildChannels.size();
-  }
+  int nextCount = m_allGuildChannels.size();
 
   QVariantList appendedChannels;
   for (int i = m_visibleGuildChannelCount; i < nextCount; ++i) {

@@ -133,15 +133,6 @@ Container {
             return data.type;
         }
 
-        attachedObjects: [
-            ListScrollStateHandler {
-                onAtEndChanged: {
-                    if (atEnd) {
-                        serverListController.loadMoreGuildChannels();
-                    }
-                }
-            }
-        ]
     }
 
     attachedObjects: [

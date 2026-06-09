@@ -68,27 +68,32 @@
 <context>
     <name>LoginPage</name>
     <message>
-        <location filename="../assets/LoginPage.qml" line="28"/>
-        <source>Welcome to BBCord</source>
+        <location filename="../assets/LoginPage.qml" line="8"/>
+        <source>Login failed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../assets/LoginPage.qml" line="34"/>
+        <source>Welcome to BBCord</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/LoginPage.qml" line="40"/>
         <source>Enter your Discord token...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="44"/>
+        <location filename="../assets/LoginPage.qml" line="51"/>
         <source>Login</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="56"/>
+        <location filename="../assets/LoginPage.qml" line="64"/>
         <source>Continue</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="75"/>
+        <location filename="../assets/LoginPage.qml" line="91"/>
         <source>How to get token</source>
         <translation type="unfinished"></translation>
     </message>
