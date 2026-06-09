@@ -5,9 +5,6 @@ Container {
 
     signal dmSelected(string channelId, string channelName)
 
-    property variant dmModelRef: dmModel
-    property variant storeRef: appStore
-
     horizontalAlignment: HorizontalAlignment.Fill
     verticalAlignment: VerticalAlignment.Fill
 
@@ -35,12 +32,12 @@ Container {
 
     ListView {
         id: dmListView
-        dataModel: dmModel
+        dataModel: dmListController.dmDataModel
         verticalAlignment: VerticalAlignment.Fill
         scrollRole: ScrollRole.Main
 
         onTriggered: {
-            var item = dmModel.data(indexPath);
+            var item = dmListController.dmDataModel.data(indexPath);
 
             if (item.type == "dm") {
                 dmList.dmSelected(item.id, item.name);
@@ -266,164 +263,5 @@ Container {
                 }
             }
         ]
-    }
-
-    attachedObjects: [
-        ArrayDataModel {
-            id: dmModel
-        }
-    ]
-
-    function refreshDms() {
-        var model = dmList.dmModelRef;
-        var store = dmList.storeRef;
-        model.clear();
-        for (var i = 0; i < store.dmChannels.length; ++i) {
-            model.append(store.dmChannels[i]);
-        }
-
-        if (store.dataLoading) {
-            model.append({
-                "type": "loading"
-            });
-        }
-    }
-
-    function appendDms(channels) {
-        var model = dmList.dmModelRef;
-        var store = dmList.storeRef;
-        if (model.size() > 0) {
-            var lastIndex = model.size() - 1;
-            var last = model.data([lastIndex]);
-            if (last.type == "loading") {
-                model.removeAt([lastIndex]);
-            }
-        }
-
-        for (var i = 0; i < channels.length; ++i) {
-            model.append(channels[i]);
-        }
-
-        if (store.dataLoading) {
-            model.append({
-                "type": "loading"
-            });
-        }
-    }
-
-    function refreshDmsIfNeeded() {
-        var model = dmList.dmModelRef;
-        var store = dmList.storeRef;
-        var loadingOffset = 0;
-        if (model.size() > 0) {
-            var last = model.data([model.size() - 1]);
-            loadingOffset = last.type == "loading" ? 1 : 0;
-        }
-
-        var end = model.size() - loadingOffset;
-        if (end != store.dmChannels.length) {
-            refreshDms();
-            return;
-        }
-
-        for (var i = 0; i < store.dmChannels.length; ++i) {
-            var item = model.data([i]);
-            if (!item || item.id != store.dmChannels[i].id) {
-                refreshDms();
-                return;
-            }
-
-            if (item.name != store.dmChannels[i].name || item.avatar != store.dmChannels[i].avatar || item.avatar2 != store.dmChannels[i].avatar2 || item.statusColor != store.dmChannels[i].statusColor) {
-                model.replace([i], store.dmChannels[i]);
-            }
-        }
-    }
-
-    function loadingRowOffset() {
-        if (dmModel.size() == 0) {
-            return 0;
-        }
-
-        var last = dmModel.data([dmModel.size() - 1]);
-        return last.type == "loading" ? 1 : 0;
-    }
-
-    function removeDmLoading() {
-        if (dmModel.size() == 0) {
-            return;
-        }
-
-        var lastIndex = dmModel.size() - 1;
-        var last = dmModel.data([lastIndex]);
-        if (last.type == "loading") {
-            dmModel.removeAt([lastIndex]);
-        }
-    }
-
-    function updateDmLoading() {
-        var model = dmList.dmModelRef;
-        var store = dmList.storeRef;
-        if (model.size() > 0) {
-            var lastIndex = model.size() - 1;
-            var last = model.data([lastIndex]);
-            if (last.type == "loading") {
-                model.removeAt([lastIndex]);
-            }
-        }
-
-        if (store.dataLoading) {
-            model.append({
-                "type": "loading"
-            });
-        }
-    }
-
-    onCreationCompleted: {
-        refreshDms();
-        appStore.dmChannelsAppended.connect(appendDms);
-        appStore.dmAvatarChanged.connect(updateDmAvatar);
-        appStore.dmAvatar2Changed.connect(updateDmAvatar2);
-        appStore.dmChannelsChanged.connect(refreshDmsIfNeeded);
-        appStore.dataLoadingChanged.connect(updateDmLoading);
-    }
-
-    function updateDmAvatar(channelId, avatarSource) {
-        var model = dmList.dmModelRef;
-        if (model.size() == 0 || !avatarSource)
-            return;
-        var loadingOffset = 0;
-        var last = model.data([model.size() - 1]);
-        if (last.type == "loading") {
-            loadingOffset = 1;
-        }
-        var end = model.size() - loadingOffset;
-        for (var i = 0; i < end; ++i) {
-            var item = model.data([i]);
-            if (item && item.id == channelId) {
-                item.avatar = avatarSource;
-                model.replace([i], item);
-                break;
-            }
-        }
-    }
-
-    function updateDmAvatar2(channelId, avatarSource) {
-        var model = dmList.dmModelRef;
-        if (model.size() == 0 || !avatarSource)
-            return;
-        var loadingOffset = 0;
-        var last = model.data([model.size() - 1]);
-        if (last.type == "loading") {
-            loadingOffset = 1;
-        }
-        var end = model.size() - loadingOffset;
-        for (var i = 0; i < end; ++i) {
-            var item = model.data([i]);
-            if (item && item.id == channelId) {
-                item.avatar2 = avatarSource;
-                model.replace([i], item);
-                break;
-            }
-        }
     }
 }

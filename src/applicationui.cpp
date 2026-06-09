@@ -34,7 +34,8 @@ ApplicationUI::ApplicationUI()
     : QObject(), m_appStore(new AppStore(this)),
       m_discordClient(new DiscordClient(m_appStore, this)),
       m_chatController(new ChatController(m_discordClient, m_appStore, this)),
-      m_dmListController(new DmListController(m_discordClient, this)),
+      m_dmListController(
+          new DmListController(m_discordClient, m_appStore, this)),
       m_mainPageController(new MainPageController(m_discordClient, this)),
       m_serverListController(new ServerListController(m_discordClient, this)) {
   // prepare the localization
