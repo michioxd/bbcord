@@ -12,6 +12,10 @@ Page {
     property real viewportHeight: 0
     property real messagesHeight: 0
     property real bottomFillPadding: 0
+    property bool pendingScrollRestore: false
+    property real restoreScrollY: 0
+    property real restoreMessagesHeight: 0
+    property bool restoreAdjustForHeightChange: false
     property int maxRenderedMessages: 25
     property int maxAutoImagePreviews: 0
     property bool bulkRefreshingMessages: false
@@ -128,6 +132,8 @@ Page {
 
                                     if (chatPage.pendingScrollToBottom) {
                                         chatPage.scrollToBottomNow();
+                                    } else if (chatPage.pendingScrollRestore) {
+                                        chatPage.restoreScrollPositionNow();
                                     }
                                 }
                             }
@@ -363,11 +369,14 @@ Page {
             return;
         }
 
+        var previousY = messageScroll.viewableArea.y;
+        var previousHeight = messagesHeight;
+
         renderedChannelId = chatController.currentChannelId;
         clearMessageBubbles();
 
         var messages = chatController.currentMessages();
-        var start = messages.length - maxRenderedMessages;
+        var start = scrollToBottom ? messages.length - maxRenderedMessages : 0;
         if (start < 0) {
             start = 0;
         }
@@ -382,6 +391,7 @@ Page {
             requestScrollToBottom();
         } else {
             updateBottomPadding();
+            preserveScrollPosition(previousY, previousHeight, false);
         }
     }
 
@@ -423,12 +433,18 @@ Page {
 
         addMessageBubble(item);
 
-        trimRenderedMessagesFromTop();
-        if (messagesContainer.controls.length >= maxRenderedMessages) {
+        if (bulkRefreshingMessages) {
+            return;
+        }
+
+        if (scrollToBottom || wasNearBottom) {
+            trimRenderedMessagesFromTop();
+        }
+        if (messagesContainer.controls.length >= maxRenderedMessages || !wasNearBottom) {
             regroupVisibleMessages();
         }
 
-        if (scrollToBottom || wasNearBottom || item.pending) {
+        if (scrollToBottom || wasNearBottom) {
             requestScrollToBottom();
         } else {
             updateBottomPadding();
@@ -444,6 +460,7 @@ Page {
             return;
         }
 
+        var previousY = messageScroll.viewableArea.y;
         var previousHeight = messagesHeight;
         var normalized = [];
 
@@ -457,7 +474,7 @@ Page {
 
         regroupVisibleMessages();
         updateBottomPadding();
-        messageScroll.scrollToPoint(0, messageScroll.viewableArea.y + messagesHeight - previousHeight, ScrollAnimation.None);
+        preserveScrollPosition(previousY, previousHeight, true);
     }
 
     function requestScrollToBottom() {
@@ -730,6 +747,27 @@ Page {
 
         pendingScrollToBottom = false;
         suppressOlderLoadUntilBottom = false;
+    }
+
+    function preserveScrollPosition(scrollY, previousHeight, adjustForHeightChange) {
+        restoreScrollY = scrollY;
+        restoreMessagesHeight = previousHeight;
+        restoreAdjustForHeightChange = adjustForHeightChange == true;
+        pendingScrollRestore = true;
+    }
+
+    function restoreScrollPositionNow() {
+        var scrollY = restoreScrollY;
+        if (restoreAdjustForHeightChange) {
+            scrollY += messagesHeight - restoreMessagesHeight;
+        }
+        if (scrollY < 0) {
+            scrollY = 0;
+        }
+
+        messageScroll.scrollToPoint(0, scrollY, ScrollAnimation.None);
+        pendingScrollRestore = false;
+        restoreAdjustForHeightChange = false;
     }
 
     function sendCurrentMessage() {

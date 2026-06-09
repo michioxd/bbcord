@@ -505,9 +505,11 @@ void DiscordRestClient::downloadGuildIcon(const QString &guildId,
 }
 
 void DiscordRestClient::cancel() {
-  if (m_connection != NULL && !m_connection->is_closing) {
+  if (m_connection != NULL) {
     m_connection->fn_data = NULL;
-    m_connection->is_closing = 1;
+    if (!m_connection->is_closing) {
+      m_connection->is_closing = 1;
+    }
   }
   m_connection = NULL;
   m_requestType = NoRequest;
