@@ -2,6 +2,7 @@
 #define RestClient_HPP_
 
 #include <QByteArray>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -9,6 +10,42 @@
 
 struct mg_mgr;
 struct mg_connection;
+
+enum RequestType {
+  NoRequest,
+  LoginRequest,
+  GuildsRequest,
+  DmChannelsRequest,
+  GuildChannelsRequest,
+  ChannelMessagesRequest,
+  SendMessageRequest,
+  UploadMessageRequest,
+  EditMessageRequest,
+  DeleteMessageRequest,
+  AvatarRequest,
+  GuildIconRequest
+};
+
+struct RestRequest {
+  RestRequest() : type(NoRequest) {}
+
+  RequestType type;
+  QString requestPath;
+  QString requestMethod;
+  QByteArray requestBody;
+  QString contentType;
+  QString token;
+  QString guildId;
+  QString channelId;
+  QString messageId;
+  QString beforeMessageId;
+  QString nonce;
+  QString avatarUserId;
+  QString avatarHash;
+  QString iconGuildId;
+  QString iconHash;
+  QString outputPath;
+};
 
 class DiscordRestClient : public QObject {
   Q_OBJECT
@@ -66,25 +103,12 @@ protected:
   virtual void timerEvent(QTimerEvent *event);
 
 private:
-  enum RequestType {
-    NoRequest,
-    LoginRequest,
-    GuildsRequest,
-    DmChannelsRequest,
-    GuildChannelsRequest,
-    ChannelMessagesRequest,
-    SendMessageRequest,
-    UploadMessageRequest,
-    EditMessageRequest,
-    DeleteMessageRequest,
-    AvatarRequest,
-    GuildIconRequest
-  };
-
   static void eventHandler(struct mg_connection *connection, int event,
                            void *eventData);
   void handleEvent(struct mg_connection *connection, int event,
                    void *eventData);
+  void enqueueRequest(const RestRequest &request);
+  void processNextRequest();
   void startTimerIfNeeded();
   void stopTimerIfIdle();
   void finishRequest();
@@ -96,12 +120,10 @@ private:
   void sendApiRequest(struct mg_connection *connection);
   void sendAvatarRequest(struct mg_connection *connection);
   void sendGuildIconRequest(struct mg_connection *connection);
-  QByteArray buildMultipartMessageBody(const QString &content,
-                                       const QString &nonce,
-                                       const QString &replyMessageId,
-                                       const QString &attachmentPath,
-                                       QString *contentType,
-                                       QString *errorMessage) const;
+  QByteArray buildMultipartMessageBody(
+      const QString &content, const QString &nonce, const QString &channelId,
+      const QString &replyMessageId, const QString &attachmentPath,
+      QString *contentType, QString *errorMessage) const;
 
   mg_mgr *m_mgr;
   mg_connection *m_connection;
@@ -123,6 +145,8 @@ private:
   QString m_iconHash;
   QString m_outputPath;
   QString m_contentType;
+  QList<RestRequest> m_requestQueue;
+  bool m_isProcessing;
   bool m_requestSent;
   bool m_finished;
 };

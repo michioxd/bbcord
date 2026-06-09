@@ -83,7 +83,8 @@ QByteArray buildJsonBody(const QVariantMap &data, QString *errorMessage) {
 
 DiscordRestClient::DiscordRestClient(QObject *parent)
     : QObject(parent), m_connection(NULL), m_timerId(0), m_pollTicks(0),
-      m_requestType(NoRequest), m_requestSent(false), m_finished(true) {
+      m_requestType(NoRequest), m_isProcessing(false), m_requestSent(false),
+      m_finished(true) {
   m_mgr = new mg_mgr;
   mg_mgr_init(m_mgr);
   mg_log_set(MG_LL_NONE);
@@ -96,36 +97,22 @@ DiscordRestClient::~DiscordRestClient() {
 }
 
 void DiscordRestClient::loginWithToken(const QString &token) {
-  cancel();
-
-  m_token = token.trimmed();
-  if (m_token.isEmpty()) {
+  RestRequest request;
+  request.token = token.trimmed();
+  if (request.token.isEmpty()) {
     emit loginFailed("Token is empty");
     return;
   }
 
-  m_requestType = LoginRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    finishRequest();
-    emit loginFailed("Could not create Discord REST connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = LoginRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::fetchGuilds(const QString &token, int limit,
                                     const QString &afterId) {
-  cancel();
-
-  m_token = token.trimmed();
-  if (m_token.isEmpty()) {
+  RestRequest request;
+  request.token = token.trimmed();
+  if (request.token.isEmpty()) {
     emit requestFailed("Token is empty");
     return;
   }
@@ -134,33 +121,20 @@ void DiscordRestClient::fetchGuilds(const QString &token, int limit,
     limit = 25;
   }
 
-  m_requestPath = QString("/api/v9/users/@me/guilds?limit=%1").arg(limit);
+  request.requestPath = QString("/api/v9/users/@me/guilds?limit=%1").arg(limit);
   if (!afterId.trimmed().isEmpty()) {
-    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+    request.requestPath += QString("&after=%1").arg(afterId.trimmed());
   }
 
-  m_requestType = GuildsRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    finishRequest();
-    emit requestFailed("Could not create Discord guilds connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = GuildsRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
                                         const QString &afterId) {
-  cancel();
-
-  m_token = token.trimmed();
-  if (m_token.isEmpty()) {
+  RestRequest request;
+  request.token = token.trimmed();
+  if (request.token.isEmpty()) {
     emit requestFailed("Token is empty");
     return;
   }
@@ -169,35 +143,23 @@ void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
     limit = 25;
   }
 
-  m_requestPath = QString("/api/v9/users/@me/channels?limit=%1").arg(limit);
+  request.requestPath =
+      QString("/api/v9/users/@me/channels?limit=%1").arg(limit);
   if (!afterId.trimmed().isEmpty()) {
-    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+    request.requestPath += QString("&after=%1").arg(afterId.trimmed());
   }
 
-  m_requestType = DmChannelsRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    finishRequest();
-    emit requestFailed("Could not create Discord DM connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = DmChannelsRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::fetchGuildChannels(const QString &token,
                                            const QString &guildId, int limit,
                                            const QString &afterId) {
-  cancel();
-
-  m_token = token.trimmed();
-  m_guildId = guildId.trimmed();
-  if (m_token.isEmpty() || m_guildId.isEmpty()) {
+  RestRequest request;
+  request.token = token.trimmed();
+  request.guildId = guildId.trimmed();
+  if (request.token.isEmpty() || request.guildId.isEmpty()) {
     emit requestFailed("Guild request is empty");
     return;
   }
@@ -206,39 +168,27 @@ void DiscordRestClient::fetchGuildChannels(const QString &token,
     limit = 25;
   }
 
-  m_requestPath =
-      QString("/api/v9/guilds/%1/channels?limit=%2").arg(m_guildId).arg(limit);
+  request.requestPath = QString("/api/v9/guilds/%1/channels?limit=%2")
+                            .arg(request.guildId)
+                            .arg(limit);
   if (!afterId.trimmed().isEmpty()) {
-    m_requestPath += QString("&after=%1").arg(afterId.trimmed());
+    request.requestPath += QString("&after=%1").arg(afterId.trimmed());
   }
 
-  m_requestType = GuildChannelsRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    finishRequest();
-    emit requestFailed("Could not create Discord channel connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = GuildChannelsRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::fetchChannelMessages(const QString &token,
                                              const QString &channelId,
                                              int limit,
                                              const QString &beforeMessageId) {
-  cancel();
-
-  m_token = token.trimmed();
-  m_channelId = channelId.trimmed();
-  m_beforeMessageId = beforeMessageId.trimmed();
-  if (m_token.isEmpty() || m_channelId.isEmpty()) {
-    emit chatRequestFailed("messages", m_channelId, QString(),
+  RestRequest restRequest;
+  restRequest.token = token.trimmed();
+  restRequest.channelId = channelId.trimmed();
+  restRequest.beforeMessageId = beforeMessageId.trimmed();
+  if (restRequest.token.isEmpty() || restRequest.channelId.isEmpty()) {
+    emit chatRequestFailed("messages", restRequest.channelId, QString(),
                            "Message request is empty");
     return;
   }
@@ -249,30 +199,17 @@ void DiscordRestClient::fetchChannelMessages(const QString &token,
     limit = 100;
   }
 
-  m_requestMethod = "GET";
-  m_requestPath = QString("/api/v9/channels/%1/messages?limit=%2")
-                      .arg(m_channelId)
-                      .arg(limit);
-  if (!m_beforeMessageId.isEmpty()) {
-    m_requestPath += QString("&before=%1").arg(m_beforeMessageId);
+  restRequest.requestMethod = "GET";
+  restRequest.requestPath = QString("/api/v9/channels/%1/messages?limit=%2")
+                                .arg(restRequest.channelId)
+                                .arg(limit);
+  if (!restRequest.beforeMessageId.isEmpty()) {
+    restRequest.requestPath +=
+        QString("&before=%1").arg(restRequest.beforeMessageId);
   }
 
-  m_requestType = ChannelMessagesRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    QString safeChannelId = m_channelId;
-    finishRequest();
-    emit chatRequestFailed("messages", safeChannelId, QString(),
-                           "Could not create Discord messages connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  restRequest.type = ChannelMessagesRequest;
+  enqueueRequest(restRequest);
 }
 
 void DiscordRestClient::sendChannelMessage(const QString &token,
@@ -281,17 +218,16 @@ void DiscordRestClient::sendChannelMessage(const QString &token,
                                            const QString &nonce,
                                            const QString &replyMessageId,
                                            const QString &attachmentPath) {
-  cancel();
-
-  m_token = token.trimmed();
-  m_channelId = channelId.trimmed();
-  m_nonce = nonce.trimmed();
+  RestRequest restRequest;
+  restRequest.token = token.trimmed();
+  restRequest.channelId = channelId.trimmed();
+  restRequest.nonce = nonce.trimmed();
   QString safeContent = content.trimmed();
   QString safeAttachmentPath = attachmentPath.trimmed();
-  if (m_token.isEmpty() || m_channelId.isEmpty() ||
+  if (restRequest.token.isEmpty() || restRequest.channelId.isEmpty() ||
       (safeContent.isEmpty() && safeAttachmentPath.isEmpty()) ||
-      m_nonce.isEmpty()) {
-    emit chatRequestFailed("send", m_channelId, m_nonce,
+      restRequest.nonce.isEmpty()) {
+    emit chatRequestFailed("send", restRequest.channelId, restRequest.nonce,
                            "Send message request is empty");
     return;
   }
@@ -299,75 +235,62 @@ void DiscordRestClient::sendChannelMessage(const QString &token,
   if (safeAttachmentPath.isEmpty()) {
     QVariantMap body;
     body["content"] = safeContent;
-    body["nonce"] = m_nonce;
+    body["nonce"] = restRequest.nonce;
     body["tts"] = false;
     QString safeReplyMessageId = replyMessageId.trimmed();
     if (!safeReplyMessageId.isEmpty()) {
       QVariantMap reference;
-      reference["channel_id"] = m_channelId;
+      reference["channel_id"] = restRequest.channelId;
       reference["message_id"] = safeReplyMessageId;
       body["message_reference"] = reference;
     }
 
     QString jsonError;
-    m_requestBody = buildJsonBody(body, &jsonError);
+    QByteArray jsonBody = buildJsonBody(body, &jsonError);
+    restRequest.requestBody = jsonBody;
     if (!jsonError.isEmpty()) {
       emit chatRequestFailed(
-          "send", m_channelId, m_nonce,
+          "send", restRequest.channelId, restRequest.nonce,
           QString("Discord REST JSON error: %1").arg(jsonError));
       return;
     }
 
-    m_contentType = "application/json";
-    m_requestType = SendMessageRequest;
+    restRequest.contentType = "application/json";
+    restRequest.type = SendMessageRequest;
   } else {
     QString multipartContentType;
     QString multipartError;
-    m_requestBody = buildMultipartMessageBody(
-        safeContent, m_nonce, replyMessageId, safeAttachmentPath,
-        &multipartContentType, &multipartError);
+    restRequest.requestBody = buildMultipartMessageBody(
+        safeContent, restRequest.nonce, restRequest.channelId, replyMessageId,
+        safeAttachmentPath, &multipartContentType, &multipartError);
     if (!multipartError.isEmpty()) {
-      emit chatRequestFailed("send", m_channelId, m_nonce, multipartError);
+      emit chatRequestFailed("send", restRequest.channelId, restRequest.nonce,
+                             multipartError);
       return;
     }
 
-    m_contentType = multipartContentType;
-    m_requestType = UploadMessageRequest;
+    restRequest.contentType = multipartContentType;
+    restRequest.type = UploadMessageRequest;
   }
 
-  m_requestMethod = "POST";
-  m_requestPath = QString("/api/v9/channels/%1/messages").arg(m_channelId);
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    QString safeChannelId = m_channelId;
-    QString safeNonce = m_nonce;
-    finishRequest();
-    emit chatRequestFailed("send", safeChannelId, safeNonce,
-                           "Could not create Discord send connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  restRequest.requestMethod = "POST";
+  restRequest.requestPath =
+      QString("/api/v9/channels/%1/messages").arg(restRequest.channelId);
+  enqueueRequest(restRequest);
 }
 
 void DiscordRestClient::editChannelMessage(const QString &token,
                                            const QString &channelId,
                                            const QString &messageId,
                                            const QString &content) {
-  cancel();
-
-  m_token = token.trimmed();
-  m_channelId = channelId.trimmed();
-  m_messageId = messageId.trimmed();
+  RestRequest restRequest;
+  restRequest.token = token.trimmed();
+  restRequest.channelId = channelId.trimmed();
+  restRequest.messageId = messageId.trimmed();
   QString safeContent = content.trimmed();
-  if (m_token.isEmpty() || m_channelId.isEmpty() || m_messageId.isEmpty() ||
-      safeContent.isEmpty()) {
-    emit chatRequestFailed("edit", m_channelId, QString(),
+  if (restRequest.token.isEmpty() || restRequest.channelId.isEmpty() ||
+      restRequest.messageId.isEmpty() || safeContent.isEmpty()) {
+    emit chatRequestFailed("edit", restRequest.channelId, QString(),
                            "Edit message request is empty");
     return;
   }
@@ -375,136 +298,83 @@ void DiscordRestClient::editChannelMessage(const QString &token,
   QVariantMap body;
   body["content"] = safeContent;
   QString jsonError;
-  m_requestBody = buildJsonBody(body, &jsonError);
+  QByteArray jsonBody = buildJsonBody(body, &jsonError);
+  restRequest.requestBody = jsonBody;
   if (!jsonError.isEmpty()) {
     emit chatRequestFailed(
-        "edit", m_channelId, QString(),
+        "edit", restRequest.channelId, QString(),
         QString("Discord REST JSON error: %1").arg(jsonError));
     return;
   }
 
-  m_requestMethod = "PATCH";
-  m_requestPath = QString("/api/v9/channels/%1/messages/%2")
-                      .arg(m_channelId)
-                      .arg(m_messageId);
-  m_requestType = EditMessageRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    QString safeChannelId = m_channelId;
-    finishRequest();
-    emit chatRequestFailed("edit", safeChannelId, QString(),
-                           "Could not create Discord edit connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  restRequest.requestMethod = "PATCH";
+  restRequest.requestPath = QString("/api/v9/channels/%1/messages/%2")
+                                .arg(restRequest.channelId)
+                                .arg(restRequest.messageId);
+  restRequest.contentType = "application/json";
+  restRequest.type = EditMessageRequest;
+  enqueueRequest(restRequest);
 }
 
 void DiscordRestClient::deleteChannelMessage(const QString &token,
                                              const QString &channelId,
                                              const QString &messageId) {
-  cancel();
-
-  m_token = token.trimmed();
-  m_channelId = channelId.trimmed();
-  m_messageId = messageId.trimmed();
-  if (m_token.isEmpty() || m_channelId.isEmpty() || m_messageId.isEmpty()) {
-    emit chatRequestFailed("delete", m_channelId, QString(),
+  RestRequest request;
+  request.token = token.trimmed();
+  request.channelId = channelId.trimmed();
+  request.messageId = messageId.trimmed();
+  if (request.token.isEmpty() || request.channelId.isEmpty() ||
+      request.messageId.isEmpty()) {
+    emit chatRequestFailed("delete", request.channelId, QString(),
                            "Delete message request is empty");
     return;
   }
 
-  m_requestMethod = "DELETE";
-  m_requestPath = QString("/api/v9/channels/%1/messages/%2")
-                      .arg(m_channelId)
-                      .arg(m_messageId);
-  m_requestType = DeleteMessageRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordApiUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    QString safeChannelId = m_channelId;
-    finishRequest();
-    emit chatRequestFailed("delete", safeChannelId, QString(),
-                           "Could not create Discord delete connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.requestMethod = "DELETE";
+  request.requestPath = QString("/api/v9/channels/%1/messages/%2")
+                            .arg(request.channelId)
+                            .arg(request.messageId);
+  request.type = DeleteMessageRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::downloadAvatar(const QString &userId,
                                        const QString &avatarHash,
                                        const QString &outputPath) {
-  cancel();
-
-  m_avatarUserId = userId.trimmed();
-  m_avatarHash = avatarHash.trimmed();
-  m_outputPath = outputPath.trimmed();
-  if (m_avatarUserId.isEmpty() || m_avatarHash.isEmpty() ||
-      m_outputPath.isEmpty()) {
-    emit avatarDownloadFailed(m_avatarUserId, "Avatar request is empty");
+  RestRequest request;
+  request.avatarUserId = userId.trimmed();
+  request.avatarHash = avatarHash.trimmed();
+  request.outputPath = outputPath.trimmed();
+  if (request.avatarUserId.isEmpty() || request.avatarHash.isEmpty() ||
+      request.outputPath.isEmpty()) {
+    emit avatarDownloadFailed(request.avatarUserId, "Avatar request is empty");
     return;
   }
 
-  m_requestType = AvatarRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordCdnUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    finishRequest();
-    emit avatarDownloadFailed(m_avatarUserId,
-                              "Could not create Discord avatar connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = AvatarRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::downloadGuildIcon(const QString &guildId,
                                           const QString &iconHash,
                                           const QString &outputPath) {
-  cancel();
-
-  m_iconGuildId = guildId.trimmed();
-  m_iconHash = iconHash.trimmed();
-  m_outputPath = outputPath.trimmed();
-  if (m_iconGuildId.isEmpty() || m_iconHash.isEmpty() ||
-      m_outputPath.isEmpty()) {
-    emit guildIconDownloadFailed(m_iconGuildId, "Guild icon request is empty");
+  RestRequest request;
+  request.iconGuildId = guildId.trimmed();
+  request.iconHash = iconHash.trimmed();
+  request.outputPath = outputPath.trimmed();
+  if (request.iconGuildId.isEmpty() || request.iconHash.isEmpty() ||
+      request.outputPath.isEmpty()) {
+    emit guildIconDownloadFailed(request.iconGuildId,
+                                 "Guild icon request is empty");
     return;
   }
 
-  m_requestType = GuildIconRequest;
-  m_requestSent = false;
-  m_finished = false;
-  m_pollTicks = 0;
-  m_connection = mg_http_connect(m_mgr, kDiscordCdnUrl,
-                                 DiscordRestClient::eventHandler, this);
-
-  if (m_connection == NULL) {
-    QString safeGuildId = m_iconGuildId;
-    finishRequest();
-    emit guildIconDownloadFailed(safeGuildId,
-                                 "Could not create Discord icon connection");
-    return;
-  }
-
-  startTimerIfNeeded();
+  request.type = GuildIconRequest;
+  enqueueRequest(request);
 }
 
 void DiscordRestClient::cancel() {
+  m_requestQueue.clear();
   if (m_connection != NULL) {
     m_connection->fn_data = NULL;
     if (!m_connection->is_closing) {
@@ -529,6 +399,7 @@ void DiscordRestClient::cancel() {
   m_iconGuildId.clear();
   m_iconHash.clear();
   m_outputPath.clear();
+  m_isProcessing = false;
   stopTimerIfIdle();
 }
 
@@ -559,6 +430,99 @@ void DiscordRestClient::eventHandler(struct mg_connection *connection,
   if (client != NULL) {
     client->handleEvent(connection, event, eventData);
   }
+}
+
+void DiscordRestClient::enqueueRequest(const RestRequest &request) {
+  m_requestQueue.append(request);
+  processNextRequest();
+}
+
+void DiscordRestClient::processNextRequest() {
+  if (m_isProcessing || m_requestQueue.isEmpty()) {
+    return;
+  }
+
+  RestRequest request = m_requestQueue.takeFirst();
+  m_isProcessing = true;
+  m_requestType = request.type;
+  m_token = request.token;
+  m_requestPath = request.requestPath;
+  m_requestMethod = request.requestMethod;
+  m_requestBody = request.requestBody;
+  m_contentType = request.contentType;
+  m_guildId = request.guildId;
+  m_channelId = request.channelId;
+  m_messageId = request.messageId;
+  m_beforeMessageId = request.beforeMessageId;
+  m_nonce = request.nonce;
+  m_avatarUserId = request.avatarUserId;
+  m_avatarHash = request.avatarHash;
+  m_iconGuildId = request.iconGuildId;
+  m_iconHash = request.iconHash;
+  m_outputPath = request.outputPath;
+  m_requestSent = false;
+  m_finished = false;
+  m_pollTicks = 0;
+
+  const char *url =
+      (m_requestType == AvatarRequest || m_requestType == GuildIconRequest)
+          ? kDiscordCdnUrl
+          : kDiscordApiUrl;
+  m_connection =
+      mg_http_connect(m_mgr, url, DiscordRestClient::eventHandler, this);
+
+  if (m_connection == NULL) {
+    QString message;
+    if (m_requestType == LoginRequest) {
+      message = "Could not create Discord REST connection";
+    } else if (m_requestType == GuildsRequest) {
+      message = "Could not create Discord guilds connection";
+    } else if (m_requestType == DmChannelsRequest) {
+      message = "Could not create Discord DM connection";
+    } else if (m_requestType == GuildChannelsRequest) {
+      message = "Could not create Discord channel connection";
+    } else if (m_requestType == ChannelMessagesRequest) {
+      message = "Could not create Discord messages connection";
+    } else if (m_requestType == SendMessageRequest ||
+               m_requestType == UploadMessageRequest) {
+      message = "Could not create Discord send connection";
+    } else if (m_requestType == EditMessageRequest) {
+      message = "Could not create Discord edit connection";
+    } else if (m_requestType == DeleteMessageRequest) {
+      message = "Could not create Discord delete connection";
+    } else if (m_requestType == AvatarRequest) {
+      message = "Could not create Discord avatar connection";
+    } else if (m_requestType == GuildIconRequest) {
+      message = "Could not create Discord icon connection";
+    } else {
+      message = "Could not create Discord REST connection";
+    }
+
+    if (m_requestType == LoginRequest) {
+      failWithMessage(message);
+    } else if (m_requestType == ChannelMessagesRequest ||
+               m_requestType == SendMessageRequest ||
+               m_requestType == UploadMessageRequest ||
+               m_requestType == EditMessageRequest ||
+               m_requestType == DeleteMessageRequest) {
+      failChatRequest(message);
+    } else if (m_requestType == AvatarRequest) {
+      QString avatarUserId = m_avatarUserId;
+      finishRequest();
+      emit avatarDownloadFailed(avatarUserId, message);
+      processNextRequest();
+    } else if (m_requestType == GuildIconRequest) {
+      QString guildId = m_iconGuildId;
+      finishRequest();
+      emit guildIconDownloadFailed(guildId, message);
+      processNextRequest();
+    } else {
+      failDataRequest(message);
+    }
+    return;
+  }
+
+  startTimerIfNeeded();
 }
 
 void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
@@ -618,6 +582,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
                 avatarUserId,
                 QString("Could not save avatar: %1").arg(outputPath));
           }
+          processNextRequest();
           break;
         }
 
@@ -631,6 +596,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         } else {
           emit avatarDownloaded(avatarUserId, outputPath);
         }
+        processNextRequest();
         break;
       }
 
@@ -644,6 +610,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
       } else {
         emit avatarDownloadFailed(avatarUserId, errorMessage);
       }
+      processNextRequest();
       break;
     }
 
@@ -663,6 +630,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         QString beforeMessageId = m_beforeMessageId;
         finishRequest();
         emit channelMessagesLoaded(channelId, beforeMessageId, messages);
+        processNextRequest();
         break;
       }
 
@@ -696,6 +664,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         } else {
           emit channelMessageEdited(channelId, message);
         }
+        processNextRequest();
         break;
       }
 
@@ -711,6 +680,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         QString messageId = m_messageId;
         finishRequest();
         emit channelMessageDeleted(channelId, messageId);
+        processNextRequest();
         break;
       }
 
@@ -745,6 +715,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         } else {
           emit guildChannelsLoaded(guildId, items);
         }
+        processNextRequest();
         break;
       }
 
@@ -806,6 +777,7 @@ void DiscordRestClient::finishRequest() {
   m_requestType = NoRequest;
   m_requestSent = false;
   m_finished = true;
+  m_isProcessing = false;
   m_pollTicks = 0;
   m_requestPath.clear();
   m_requestMethod.clear();
@@ -836,6 +808,7 @@ void DiscordRestClient::failWithMessage(const QString &message) {
 
   finishRequest();
   emit loginFailed(safeMessage);
+  processNextRequest();
 }
 
 void DiscordRestClient::failDataRequest(const QString &message) {
@@ -850,6 +823,7 @@ void DiscordRestClient::failDataRequest(const QString &message) {
 
   finishRequest();
   emit requestFailed(safeMessage);
+  processNextRequest();
 }
 
 void DiscordRestClient::failChatRequest(const QString &message) {
@@ -878,12 +852,13 @@ void DiscordRestClient::failChatRequest(const QString &message) {
   QString nonce = m_nonce;
   finishRequest();
   emit chatRequestFailed(operation, channelId, nonce, safeMessage);
+  processNextRequest();
 }
 
 QByteArray DiscordRestClient::buildMultipartMessageBody(
-    const QString &content, const QString &nonce, const QString &replyMessageId,
-    const QString &attachmentPath, QString *contentType,
-    QString *errorMessage) const {
+    const QString &content, const QString &nonce, const QString &channelId,
+    const QString &replyMessageId, const QString &attachmentPath,
+    QString *contentType, QString *errorMessage) const {
   QFile file(attachmentPath);
   if (!file.open(QIODevice::ReadOnly)) {
     if (errorMessage != 0) {
@@ -910,7 +885,7 @@ QByteArray DiscordRestClient::buildMultipartMessageBody(
   QString safeReplyMessageId = replyMessageId.trimmed();
   if (!safeReplyMessageId.isEmpty()) {
     QVariantMap reference;
-    reference["channel_id"] = m_channelId;
+    reference["channel_id"] = channelId;
     reference["message_id"] = safeReplyMessageId;
     payload["message_reference"] = reference;
   }
@@ -963,4 +938,5 @@ void DiscordRestClient::succeedWithUser(const QVariantMap &user) {
 
   finishRequest();
   emit loginSucceeded(user);
+  processNextRequest();
 }
