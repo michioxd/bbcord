@@ -1369,16 +1369,18 @@ void DiscordClient::savePendingDmChannelsCache() {
   saveDmChannelsCache();
 }
 
-void DiscordClient::syncGatewayOrderingStateToWorker() {
+void DiscordClient::syncStateToNetworkWorker() {
   if (m_networkWorker == 0) {
     return;
   }
 
-  QMetaObject::invokeMethod(
-      m_networkWorker, "updateGatewayOrderingState", Qt::QueuedConnection,
-      Q_ARG(QVariantList, m_guilds), Q_ARG(QVariantList, m_allDmChannels),
-      Q_ARG(QVariantList, m_dmChannels), Q_ARG(QStringList, m_orderedGuildIds),
-      Q_ARG(QVariantMap, m_dmPresenceByUserId));
+  m_networkWorker->updateGatewayOrderingState(m_guilds, m_allDmChannels,
+                                              m_dmChannels, m_orderedGuildIds,
+                                              m_dmPresenceByUserId);
+}
+
+void DiscordClient::syncGatewayOrderingStateToWorker() {
+  syncStateToNetworkWorker();
 }
 
 bool DiscordClient::applyGuildOrderFromGatewayPayload(
@@ -1421,6 +1423,7 @@ void DiscordClient::updateGuildMentionCount(const QString &guildId,
     if (guild.value("id").toString() == safeGuildId) {
       guild["mentionCount"] = mentionCount < 0 ? 0 : mentionCount;
       m_guilds.replace(i, guild);
+      syncStateToNetworkWorker();
       return;
     }
   }
@@ -1437,6 +1440,7 @@ void DiscordClient::updateGuildUnread(const QString &guildId, bool unread) {
     if (guild.value("id").toString() == safeGuildId) {
       guild["unread"] = unread;
       m_guilds.replace(i, guild);
+      syncStateToNetworkWorker();
       return;
     }
   }

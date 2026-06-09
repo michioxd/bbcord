@@ -146,6 +146,7 @@ private:
   void initializeAvatarCacheWorker();
   void shutdownAvatarCacheWorker();
   void initializeManagers();
+  void syncStateToNetworkWorker();
   void syncGatewayOrderingStateToWorker();
 
   AppStore *m_store;
