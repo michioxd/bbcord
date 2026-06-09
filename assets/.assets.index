@@ -1,5 +1,6 @@
 1
-31
+33
+About.qml
 ChannelMemberList.qml
 ChatCard.qml
 DmList.qml
@@ -14,6 +15,7 @@ images/icons/first.png
 images/icons/hash.png
 images/icons/house.png
 images/icons/ic_edit.png
+images/icons/ic_info.png
 images/icons/ic_open.png
 images/icons/ic_reply.png
 images/icons/ic_sign_out.png

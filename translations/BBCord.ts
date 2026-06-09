@@ -2,6 +2,54 @@
 <!DOCTYPE TS>
 <TS version="2.0">
 <context>
+    <name>About</name>
+    <message>
+        <location filename="../assets/About.qml" line="9"/>
+        <source>About BBCord</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="55"/>
+        <source>Released under GPL v3.0</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="64"/>
+        <source>Created by</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="73"/>
+        <source>Thanks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="77"/>
+        <source>BlackBerry (RIM)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="78"/>
+        <source>For QNX and BlackBerry 10</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="103"/>
+        <source>Contributors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="107"/>
+        <source>You</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="108"/>
+        <source>Still love and using BB10 right now :3</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ChannelMemberList</name>
     <message>
         <location filename="../assets/ChannelMemberList.qml" line="15"/>

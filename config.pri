@@ -36,6 +36,7 @@ simulator {
 
 config_pri_assets {
     OTHER_FILES += \
+        $$quote($$BASEDIR/assets/About.qml) \
         $$quote($$BASEDIR/assets/ChannelMemberList.qml) \
         $$quote($$BASEDIR/assets/ChatCard.qml) \
         $$quote($$BASEDIR/assets/DmList.qml) \
@@ -55,6 +56,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/hash.png) \
         $$quote($$BASEDIR/assets/images/icons/house.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_edit.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_info.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_open.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_reply.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_sign_out.png) \

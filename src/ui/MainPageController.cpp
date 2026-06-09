@@ -56,7 +56,12 @@ void MainPageController::selectGuild(const QString &guildId) {
 }
 
 void MainPageController::onGuildsChanged() {
-  m_serverDataModel->clear();
+  if (!m_store) {
+    m_serverDataModel->clear();
+    return;
+  }
+
+  QVariantList guilds = m_store->guilds();
 
   QVariantMap home;
   home["type"] = "dm";
@@ -65,13 +70,43 @@ void MainPageController::onGuildsChanged() {
   home["icon"] = "asset:///images/icons/first.png";
   home["mentionCount"] = 0;
   home["unread"] = false;
-  m_serverDataModel->append(home);
 
-  if (!m_store) {
+  bool canUpdateInPlace = m_serverDataModel->size() == guilds.size() + 1;
+  if (canUpdateInPlace) {
+    QVariantMap currentHome = m_serverDataModel->value(0).toMap();
+    if (currentHome.value("id").toString() != "home") {
+      canUpdateInPlace = false;
+    }
+  }
+  if (canUpdateInPlace) {
+    for (int i = 0; i < guilds.size(); ++i) {
+      QVariantMap currentGuild = m_serverDataModel->value(i + 1).toMap();
+      QVariantMap newGuild = guilds.at(i).toMap();
+      if (currentGuild.value("id").toString() !=
+          newGuild.value("id").toString()) {
+        canUpdateInPlace = false;
+        break;
+      }
+    }
+  }
+
+  if (canUpdateInPlace) {
+    QVariantMap currentHome = m_serverDataModel->value(0).toMap();
+    if (currentHome != home) {
+      m_serverDataModel->replace(0, home);
+    }
+    for (int i = 0; i < guilds.size(); ++i) {
+      QVariantMap currentGuild = m_serverDataModel->value(i + 1).toMap();
+      QVariantMap newGuild = guilds.at(i).toMap();
+      if (currentGuild != newGuild) {
+        m_serverDataModel->replace(i + 1, newGuild);
+      }
+    }
     return;
   }
 
-  QVariantList guilds = m_store->guilds();
+  m_serverDataModel->clear();
+  m_serverDataModel->append(home);
   for (int i = 0; i < guilds.size(); ++i) {
     m_serverDataModel->append(guilds.at(i));
   }

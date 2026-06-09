@@ -23,9 +23,11 @@ NavigationPane {
     property variant currentLoginPage: null
     property variant currentMainPage: null
     property variant currentUserSheet: null
+    property variant aboutDialog: null
 
     onCreationCompleted: {
         currentUserSheet = userSheetDefinition.createObject()
+        aboutDialog = aboutDialogDefinition.createObject()
 
         var loginPage = loginPageDefinition.createObject()
         if (loginPage) {
@@ -102,6 +104,15 @@ NavigationPane {
                 onTriggered: {
                     console.log("settings")
                 }
+            },
+
+            ActionItem {
+                title: "About"
+                imageSource: "asset:///images/icons/ic_info.png"
+
+                onTriggered: {
+                    aboutDialog.open()
+                }
             }
         ]
     }
@@ -124,6 +135,11 @@ NavigationPane {
         ComponentDefinition {
             id: userSheetDefinition
             source: "asset:///UserSheet.qml"
+        },
+
+        ComponentDefinition {
+            id: aboutDialogDefinition
+            source: "asset:///About.qml"
         },
 
         SystemDialog {
