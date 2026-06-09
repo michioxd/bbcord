@@ -37,6 +37,7 @@ Container {
         id: dmListView
         dataModel: dmModel
         verticalAlignment: VerticalAlignment.Fill
+        scrollRole: ScrollRole.Main
 
         onTriggered: {
             var item = dmModel.data(indexPath);

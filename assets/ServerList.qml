@@ -37,6 +37,7 @@ Container {
         dataModel: channelModel
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
+        scrollRole: ScrollRole.Main
 
         onTriggered: {
             var item = channelModel.data(indexPath);

@@ -62,6 +62,7 @@ Page {
                 verticalAlignment: VerticalAlignment.Fill
                 dataModel: chatController.chatDataModel
                 stickToEdgePolicy: ListViewStickToEdgePolicy.End
+                scrollRole: ScrollRole.Main
 
                 listItemComponents: [
                     ListItemComponent {

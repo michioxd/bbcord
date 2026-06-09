@@ -12,42 +12,42 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="216"/>
+        <location filename="../assets/ChatCard.qml" line="217"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="273"/>
+        <location filename="../assets/ChatCard.qml" line="274"/>
         <source>Attachment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="319"/>
+        <location filename="../assets/ChatCard.qml" line="320"/>
         <source>Message #</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="346"/>
+        <location filename="../assets/ChatCard.qml" line="347"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="370"/>
+        <location filename="../assets/ChatCard.qml" line="371"/>
         <source>Attach file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="373"/>
+        <location filename="../assets/ChatCard.qml" line="374"/>
         <source>/accounts/1000/shared/...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="374"/>
+        <location filename="../assets/ChatCard.qml" line="375"/>
         <source>Attach</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="375"/>
+        <location filename="../assets/ChatCard.qml" line="376"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
