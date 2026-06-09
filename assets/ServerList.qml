@@ -34,13 +34,13 @@ Container {
     }
 
     ListView {
-        dataModel: channelModel
+        dataModel: serverListController.channelDataModel
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         scrollRole: ScrollRole.Main
 
         onTriggered: {
-            var item = channelModel.data(indexPath);
+            var item = serverListController.channelDataModel.data(indexPath);
 
             if (item.type == "channel") {
                 serverList.channelSelected(item.id, serverList.serverId, item.name);
@@ -134,84 +134,5 @@ Container {
             return data.type;
         }
 
-    }
-
-    attachedObjects: [
-        ArrayDataModel {
-            id: channelModel
-        }
-    ]
-
-    function refreshChannels() {
-        channelModel.clear();
-        for (var i = 0; i < appStore.guildChannels.length; ++i) {
-            channelModel.append(appStore.guildChannels[i]);
-        }
-        updateChannelLoading();
-    }
-
-    function appendChannels(channels) {
-        removeChannelLoading();
-        for (var i = 0; i < channels.length; ++i) {
-            channelModel.append(channels[i]);
-        }
-        updateChannelLoading();
-    }
-
-    function refreshChannelsIfNeeded() {
-        var end = channelModel.size() - loadingRowOffset();
-        if (end != appStore.guildChannels.length) {
-            refreshChannels();
-            return;
-        }
-
-        for (var i = 0; i < appStore.guildChannels.length; ++i) {
-            var item = channelModel.data([i]);
-            if (!item || item.id != appStore.guildChannels[i].id) {
-                refreshChannels();
-                return;
-            }
-
-            if (item.unread != appStore.guildChannels[i].unread) {
-                channelModel.replace([i], appStore.guildChannels[i]);
-            }
-        }
-    }
-
-    function loadingRowOffset() {
-        if (channelModel.size() == 0) {
-            return 0;
-        }
-
-        var last = channelModel.data([channelModel.size() - 1]);
-        return last.type == "loading" ? 1 : 0;
-    }
-
-    function removeChannelLoading() {
-        if (channelModel.size() == 0) {
-            return;
-        }
-
-        var lastIndex = channelModel.size() - 1;
-        var last = channelModel.data([lastIndex]);
-        if (last.type == "loading") {
-            channelModel.removeAt([lastIndex]);
-        }
-    }
-
-    function updateChannelLoading() {
-        removeChannelLoading();
-        if (appStore.dataLoading) {
-            channelModel.append({
-                "type": "loading"
-            });
-        }
-    }
-
-    onCreationCompleted: {
-        refreshChannels();
-        appStore.guildChannelsAppended.connect(appendChannels);
-        appStore.guildChannelsChanged.connect(refreshChannelsIfNeeded);
-        appStore.dataLoadingChanged.connect(updateChannelLoading);
     }
 }
