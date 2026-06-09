@@ -403,6 +403,18 @@ void DiscordNetworkWorker::disconnectGateway() {
   m_gateway.disconnectFromGateway();
 }
 
+void DiscordNetworkWorker::sendLazyRequest(const QString &guildId,
+                                           const QString &channelId) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(this, "sendLazyRequest", Qt::QueuedConnection,
+                              Q_ARG(QString, guildId),
+                              Q_ARG(QString, channelId));
+    return;
+  }
+
+  m_gateway.sendLazyRequest(guildId, channelId);
+}
+
 void DiscordNetworkWorker::updateGatewayOrderingState(
     const QVariantList &guilds, const QVariantList &allDmChannels,
     const QVariantList &visibleDmChannels, const QStringList &orderedGuildIds,

@@ -27,6 +27,9 @@ public:
                                  QString *errorMessage = 0);
   static QByteArray buildIdentifyPayload(const QString &token,
                                          QString *errorMessage = 0);
+  static QByteArray buildLazyRequestPayload(const QString &guildId,
+                                            const QString &channelId,
+                                            QString *errorMessage = 0);
   static int valueToInt(const QVariant &value, int fallback);
   static bool hasJsonToken(const QByteArray &bytes, const char *compactToken,
                            const char *spacedToken);

@@ -571,6 +571,11 @@ void DiscordClient::selectGuild(const QString &guildId) {
   if (m_store) {
     m_store->selectGuild(safeGuildId);
   }
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "sendLazyRequest",
+                              Qt::QueuedConnection, Q_ARG(QString, safeGuildId),
+                              Q_ARG(QString, QString()));
+  }
   scheduleDmChannelsCacheSave();
   if (!sameGuild || m_allGuildChannels.isEmpty()) {
     loadGuildChannels(safeGuildId);
@@ -587,6 +592,20 @@ void DiscordClient::selectChannel(const QString &channelId) {
   if (m_store) {
     m_store->selectChannel(safeChannelId);
   }
+
+  QString guildId = m_chatGuildByChannelId.value(safeChannelId).trimmed();
+  if (guildId.isEmpty()) {
+    guildId = m_selectedGuildId.trimmed();
+  }
+  if (!guildId.isEmpty()) {
+    m_chatGuildByChannelId.insert(safeChannelId, guildId);
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "sendLazyRequest",
+                                Qt::QueuedConnection, Q_ARG(QString, guildId),
+                                Q_ARG(QString, safeChannelId));
+    }
+  }
+
   saveGuildsCache();
   saveDmChannelsCache();
 }

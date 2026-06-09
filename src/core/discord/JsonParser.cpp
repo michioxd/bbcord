@@ -124,6 +124,50 @@ QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
   return payload;
 }
 
+QByteArray DiscordJsonParser::buildLazyRequestPayload(const QString &guildId,
+                                                      const QString &channelId,
+                                                      QString *errorMessage) {
+  QVariantMap data;
+  data["guild_id"] = guildId.trimmed();
+  data["typing"] = true;
+  data["activities"] = true;
+  data["threads"] = true;
+
+  QString safeChannelId = channelId.trimmed();
+  if (!safeChannelId.isEmpty()) {
+    QVariantList range;
+    range.append(0);
+    range.append(99);
+
+    QVariantList ranges;
+    ranges.append(range);
+
+    QVariantMap channels;
+    channels[safeChannelId] = ranges;
+    data["channels"] = channels;
+  }
+
+  QVariantMap root;
+  root["op"] = 14;
+  root["d"] = data;
+
+  bb::data::JsonDataAccess json;
+  QByteArray payload;
+  json.saveToBuffer(root, &payload);
+
+  if (json.hasError()) {
+    if (errorMessage != 0) {
+      *errorMessage = json.error().errorMessage();
+    }
+    return QByteArray();
+  }
+
+  if (errorMessage != 0) {
+    errorMessage->clear();
+  }
+  return payload;
+}
+
 int DiscordJsonParser::valueToInt(const QVariant &value, int fallback) {
   bool ok = false;
   int result = value.toInt(&ok);

@@ -23,6 +23,8 @@ public:
 
   Q_INVOKABLE void connectToGateway(const QString &token);
   Q_INVOKABLE void disconnectFromGateway();
+  Q_INVOKABLE void sendLazyRequest(const QString &guildId,
+                                   const QString &channelId);
 
   ConnectionState state() const;
 

@@ -97,6 +97,27 @@ DiscordGateway::ConnectionState DiscordGateway::state() const {
   return m_state;
 }
 
+void DiscordGateway::sendLazyRequest(const QString &guildId,
+                                     const QString &channelId) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  QString errorMessage;
+  QByteArray payload = DiscordJsonParser::buildLazyRequestPayload(
+      safeGuildId, channelId, &errorMessage);
+  if (!errorMessage.isEmpty()) {
+    emit error(
+        QString("Gateway lazy request JSON error: %1").arg(errorMessage));
+    return;
+  }
+
+  sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
+  qDebug() << "[discord] lazy request sent" << safeGuildId
+           << channelId.trimmed();
+}
+
 void DiscordGateway::timerEvent(QTimerEvent *event) {
   Q_UNUSED(event);
 
