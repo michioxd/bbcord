@@ -1,0 +1,209 @@
+#include "Guilds.hpp"
+
+#include "../AppStore.hpp"
+#include "../Client.hpp"
+#include "../client/AvatarManager.hpp"
+#include "../client/ItemMapper.hpp"
+#include "../client/SortUtils.hpp"
+#include "../discord/NetworkWorker.hpp"
+#include "FeatureConstants.hpp"
+
+#include <QDebug>
+#include <QMetaObject>
+
+void DiscordClient::loadMainData() {
+  if (!m_loggedIn || m_token.trimmed().isEmpty()) {
+    return;
+  }
+
+  if (m_guilds.isEmpty()) {
+    loadGuilds();
+  } else if (m_dmChannels.isEmpty()) {
+    loadMoreDmChannels();
+  }
+}
+
+void DiscordClient::loadGuilds() {
+  if (m_loadingGuilds || m_loadingDmChannels || m_loadingGuildChannels ||
+      !m_guildsHasMore || m_token.trimmed().isEmpty()) {
+    return;
+  }
+
+  m_loadingGuilds = true;
+  updateDataLoading();
+  setStatusText("Loading servers...");
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "fetchGuilds",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(int, kGuildPageSize),
+                              Q_ARG(QString, m_lastGuildId));
+  }
+}
+
+void DiscordClient::loadGuildIcon(const QString &guildId) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      m_avatarManager->queueGuildIcon(
+          safeGuildId, guild.value("iconHash").toString(), m_loadedGuildIconIds,
+          m_guildIconCacheRequests, m_queuedGuildIconIds, m_loadingGuildIconId,
+          m_loadingGuildIconId2, m_pendingGuildIcons);
+      m_avatarManager->loadNextGuildIcon(
+          m_loadingGuildIconId, m_loadingGuildIconId2, m_pendingGuildIcons,
+          m_queuedGuildIconIds);
+      return;
+    }
+  }
+}
+
+void DiscordClient::selectGuild(const QString &guildId) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  bool sameGuild = safeGuildId == m_selectedGuildId;
+
+  if (m_store) {
+    m_store->selectGuild(safeGuildId);
+  }
+  scheduleDmChannelsCacheSave();
+  if (!sameGuild || m_allGuildChannels.isEmpty()) {
+    loadGuildChannels(safeGuildId);
+  }
+}
+
+void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
+  QVariantMap existingIconsByGuildId;
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap existingGuild = m_guilds.at(i).toMap();
+    QString guildId = existingGuild.value("id").toString();
+    QString icon = existingGuild.value("icon").toString();
+    if (!guildId.isEmpty() && !icon.isEmpty()) {
+      existingIconsByGuildId.insert(guildId, icon);
+    }
+  }
+
+  if (m_bootstrapCacheLoaded) {
+    m_guilds.clear();
+    m_lastGuildId.clear();
+    m_guildsHasMore = true;
+    m_bootstrapCacheLoaded = false;
+  }
+
+  for (int i = 0; i < guilds.size(); ++i) {
+    QVariantMap guild = guilds.at(i).toMap();
+    QVariantMap item = m_itemMapper->guildToItem(guild);
+    if (!item.value("id").toString().isEmpty()) {
+      QString existingIcon =
+          existingIconsByGuildId.value(item.value("id").toString()).toString();
+      if (!existingIcon.isEmpty()) {
+        item["icon"] = existingIcon;
+      }
+      m_guilds.append(item);
+      m_lastGuildId = item.value("id").toString();
+    }
+  }
+
+  if (guilds.size() >= kGuildPageSize && !m_lastGuildId.isEmpty()) {
+    m_guildsHasMore = true;
+    setStatusText("Loading servers...");
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "fetchGuilds",
+                                Qt::QueuedConnection, Q_ARG(QString, m_token),
+                                Q_ARG(int, kGuildPageSize),
+                                Q_ARG(QString, m_lastGuildId));
+    }
+    return;
+  }
+
+  m_loadingGuilds = false;
+  m_guildsHasMore = false;
+  updateDataLoading();
+
+  sortGuilds();
+  syncGatewayOrderingStateToWorker();
+
+  if (m_store && !m_orderedGuildIds.isEmpty()) {
+    m_store->setGuilds(m_guilds);
+    saveGuildsCache();
+  } else {
+    qDebug() << "[discord-client] guild REST sync ready; waiting for gateway"
+             << "guild order before updating UI";
+  }
+  setStatusText("Connected");
+  if (!m_loadingDmChannels && m_token.trimmed().isEmpty() == false) {
+    m_lastDmChannelId.clear();
+    m_dmChannelsHasMore = true;
+    m_loadingDmChannels = true;
+    updateDataLoading();
+    setStatusText("Loading DMs...");
+    if (m_networkWorker != 0) {
+      QMetaObject::invokeMethod(m_networkWorker, "fetchDmChannels",
+                                Qt::QueuedConnection, Q_ARG(QString, m_token),
+                                Q_ARG(int, kPageSize),
+                                Q_ARG(QString, QString()));
+    }
+  }
+}
+
+bool DiscordClient::applyGuildOrderFromGatewayPayload(
+    const QVariantMap &payload) {
+  return m_sortUtils->applyGuildOrderFromGatewayPayload(
+      m_guilds, m_orderedGuildIds, payload);
+}
+
+void DiscordClient::sortGuilds() {
+  m_sortUtils->applyGuildOrder(m_guilds, m_orderedGuildIds);
+}
+
+int DiscordClient::guildMentionCount(const QString &guildId) const {
+  QString safeGuildId = guildId.trimmed();
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      return guild.value("mentionCount").toInt();
+    }
+  }
+  return 0;
+}
+
+void DiscordClient::updateGuildMentionCount(const QString &guildId,
+                                            int mentionCount) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      guild["mentionCount"] = mentionCount < 0 ? 0 : mentionCount;
+      m_guilds.replace(i, guild);
+      syncStateToNetworkWorker();
+      return;
+    }
+  }
+}
+
+void DiscordClient::updateGuildUnread(const QString &guildId, bool unread) {
+  QString safeGuildId = guildId.trimmed();
+  if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (guild.value("id").toString() == safeGuildId) {
+      guild["unread"] = unread;
+      m_guilds.replace(i, guild);
+      syncStateToNetworkWorker();
+      return;
+    }
+  }
+}

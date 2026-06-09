@@ -1,0 +1,141 @@
+#include "GuildChannels.hpp"
+
+#include "../AppStore.hpp"
+#include "../Client.hpp"
+#include "../client/ItemMapper.hpp"
+#include "../client/SortUtils.hpp"
+#include "../discord/NetworkWorker.hpp"
+#include "FeatureConstants.hpp"
+
+#include <QMetaObject>
+
+void DiscordClient::loadGuildChannels(const QString &guildId) {
+  if (m_loadingGuilds || m_loadingDmChannels || guildId.trimmed().isEmpty() ||
+      m_token.trimmed().isEmpty()) {
+    return;
+  }
+
+  if (guildId.trimmed() == m_selectedGuildId && !m_allGuildChannels.isEmpty()) {
+    return;
+  }
+
+  m_selectedGuildId = guildId.trimmed();
+  m_allGuildChannels.clear();
+  m_visibleGuildChannels.clear();
+  m_visibleGuildChannelCount = 0;
+  m_guildChannelsHasMore = false;
+  if (m_store) {
+    m_store->setGuildChannels(QVariantList());
+  }
+
+  m_loadingGuildChannels = true;
+  updateDataLoading();
+  setStatusText("Loading channels...");
+  if (m_networkWorker != 0) {
+    QMetaObject::invokeMethod(m_networkWorker, "fetchGuildChannels",
+                              Qt::QueuedConnection, Q_ARG(QString, m_token),
+                              Q_ARG(QString, m_selectedGuildId),
+                              Q_ARG(int, kPageSize), Q_ARG(QString, QString()));
+  }
+}
+
+void DiscordClient::loadMoreGuildChannels() {
+  if (!m_guildChannelsHasMore) {
+    return;
+  }
+
+  appendVisibleGuildChannels();
+}
+
+void DiscordClient::selectChannel(const QString &channelId) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  updateGuildChannelUnread(safeChannelId, false);
+  if (m_store) {
+    m_store->selectChannel(safeChannelId);
+  }
+
+  QString guildId = m_chatGuildByChannelId.value(safeChannelId).trimmed();
+  if (guildId.isEmpty()) {
+    guildId = m_selectedGuildId.trimmed();
+  }
+  if (!guildId.isEmpty()) {
+    m_chatGuildByChannelId.insert(safeChannelId, guildId);
+  }
+
+  saveGuildsCache();
+  saveDmChannelsCache();
+}
+
+void DiscordClient::onGuildChannelsLoaded(const QString &guildId,
+                                          const QVariantList &channels) {
+  if (guildId != m_selectedGuildId) {
+    return;
+  }
+
+  m_loadingGuildChannels = false;
+  updateDataLoading();
+  m_allGuildChannels.clear();
+  QVariantList rawChannels;
+  for (int i = 0; i < channels.size(); ++i) {
+    QVariantMap item = m_itemMapper->guildChannelToItem(channels.at(i).toMap());
+    if (!item.value("id").toString().isEmpty()) {
+      rawChannels.append(item);
+    }
+  }
+  m_allGuildChannels = m_sortUtils->sortedAccessibleGuildChannels(rawChannels);
+
+  appendVisibleGuildChannels();
+  setStatusText("Connected");
+}
+
+void DiscordClient::updateGuildChannelUnread(const QString &channelId,
+                                             bool unread) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return;
+  }
+
+  bool changed = false;
+  for (int i = 0; i < m_allGuildChannels.size(); ++i) {
+    QVariantMap channel = m_allGuildChannels.at(i).toMap();
+    if (channel.value("id").toString() == safeChannelId) {
+      channel["unread"] = unread;
+      m_allGuildChannels.replace(i, channel);
+      changed = true;
+      break;
+    }
+  }
+
+  for (int i = 0; i < m_visibleGuildChannels.size(); ++i) {
+    QVariantMap channel = m_visibleGuildChannels.at(i).toMap();
+    if (channel.value("id").toString() == safeChannelId) {
+      channel["unread"] = unread;
+      m_visibleGuildChannels.replace(i, channel);
+      changed = true;
+      break;
+    }
+  }
+
+  Q_UNUSED(changed);
+}
+
+void DiscordClient::appendVisibleGuildChannels() {
+  int nextCount = m_allGuildChannels.size();
+
+  QVariantList appendedChannels;
+  for (int i = m_visibleGuildChannelCount; i < nextCount; ++i) {
+    m_visibleGuildChannels.append(m_allGuildChannels.at(i));
+    appendedChannels.append(m_allGuildChannels.at(i));
+  }
+
+  m_visibleGuildChannelCount = nextCount;
+  m_guildChannelsHasMore =
+      m_visibleGuildChannelCount < m_allGuildChannels.size();
+  if (m_store) {
+    m_store->appendGuildChannels(appendedChannels);
+  }
+}

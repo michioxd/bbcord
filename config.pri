@@ -94,6 +94,12 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClientRequests.cpp) \
         $$quote($$BASEDIR/src/core/models/Models.cpp) \
+        $$quote($$BASEDIR/src/core/modules/Chat.cpp) \
+        $$quote($$BASEDIR/src/core/modules/DM.cpp) \
+        $$quote($$BASEDIR/src/core/modules/GuildChannels.cpp) \
+        $$quote($$BASEDIR/src/core/modules/Guilds.cpp) \
+        $$quote($$BASEDIR/src/core/modules/User.cpp) \
+        $$quote($$BASEDIR/src/core/modules/Worker.cpp) \
         $$quote($$BASEDIR/src/main.cpp) \
         $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
@@ -120,6 +126,13 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/NetworkWorker.hpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.hpp) \
         $$quote($$BASEDIR/src/core/models/Models.hpp) \
+        $$quote($$BASEDIR/src/core/modules/Chat.hpp) \
+        $$quote($$BASEDIR/src/core/modules/DM.hpp) \
+        $$quote($$BASEDIR/src/core/modules/FeatureConstants.hpp) \
+        $$quote($$BASEDIR/src/core/modules/GuildChannels.hpp) \
+        $$quote($$BASEDIR/src/core/modules/Guilds.hpp) \
+        $$quote($$BASEDIR/src/core/modules/User.hpp) \
+        $$quote($$BASEDIR/src/core/modules/Worker.hpp) \
         $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
@@ -157,6 +170,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/core/models/*.cc) \
         $$quote($$BASEDIR/../src/core/models/*.cpp) \
         $$quote($$BASEDIR/../src/core/models/*.cxx) \
+        $$quote($$BASEDIR/../src/core/modules/*.c) \
+        $$quote($$BASEDIR/../src/core/modules/*.c++) \
+        $$quote($$BASEDIR/../src/core/modules/*.cc) \
+        $$quote($$BASEDIR/../src/core/modules/*.cpp) \
+        $$quote($$BASEDIR/../src/core/modules/*.cxx) \
         $$quote($$BASEDIR/../src/ui/*.c) \
         $$quote($$BASEDIR/../src/ui/*.c++) \
         $$quote($$BASEDIR/../src/ui/*.cc) \

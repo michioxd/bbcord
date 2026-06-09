@@ -1,0 +1,4 @@
+#ifndef MODULES_GUILDS_HPP_
+#define MODULES_GUILDS_HPP_
+
+#endif /* MODULES_GUILDS_HPP_ */

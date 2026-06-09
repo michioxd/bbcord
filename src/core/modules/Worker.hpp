@@ -1,0 +1,4 @@
+#ifndef MODULES_WORKER_HPP_
+#define MODULES_WORKER_HPP_
+
+#endif /* MODULES_WORKER_HPP_ */
