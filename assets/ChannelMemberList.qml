@@ -163,11 +163,6 @@ Page {
 		addMember("michioxd", "M", "#5865F2", "", "#F2F3F5", "Online")
 
 		addRole("Bots", 1)
-		addMember("BerryBot", "B", "#43B581", "", "#43B581", "Playing music")
-
-		addRole("Members", 3)
-		addMember("Guest", "G", "#FAA61A", "", "#DCDDDE", "Idle")
-		addMember("Cascades Dev", "C", "#EB459E", "", "#DCDDDE", "Building BB10 app")
-		addMember("Demo User", "D", "#4F545C", "asset:///images/demo.png", "#DCDDDE", "Offline")
+		addMember("neko", "B", "#43B581", "", "#43B581", "abkasldkdjkdkfjfreifgore")
 	}
 }

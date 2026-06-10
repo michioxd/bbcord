@@ -13,6 +13,7 @@ Page {
     property string editingMessageId: ""
     property bool active: true
     property bool olderLoadRequested: false
+    property bool olderScrollReady: false
 
     signal backRequested
     signal memberListRequested
@@ -143,7 +144,9 @@ Page {
                 attachedObjects: [
                     ListScrollStateHandler {
                         onAtBeginningChanged: {
-                            if (atBeginning) {
+                            if (!atBeginning) {
+                                chatPage.olderScrollReady = true;
+                            } else if (chatPage.olderScrollReady) {
                                 chatPage.requestOlderFromScroll();
                             }
                         }
@@ -507,6 +510,7 @@ Page {
         replyMessage = "";
         editingMessageId = "";
         olderLoadRequested = false;
+        olderScrollReady = false;
     }
 
     function deactivatePage() {
