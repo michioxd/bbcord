@@ -163,6 +163,8 @@ Page {
 		addMember("michioxd", "M", "#5865F2", "", "#F2F3F5", "Online")
 
 		addRole("Bots", 1)
-		addMember("neko", "B", "#43B581", "", "#43B581", "abkasldkdjkdkfjfreifgore")
+		addMember("check", "C", "#43B581", "", "#43B581", "please check back soon :3")
+		addMember("back", "B", "#43B581", "", "#43B581", "please check back soon :3")
+		addMember("later", "L", "#43B581", "", "#43B581", "please check back soon :3")
 	}
 }

@@ -45,6 +45,7 @@ class ApplicationUI : public QObject {
 public:
   ApplicationUI();
   virtual ~ApplicationUI() {}
+  Q_INVOKABLE void openLink(const QString &url);
 private slots:
   void onSystemLanguageChanged();
 

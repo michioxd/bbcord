@@ -4,47 +4,47 @@
 <context>
     <name>About</name>
     <message>
-        <location filename="../assets/About.qml" line="9"/>
+        <location filename="../assets/About.qml" line="12"/>
         <source>About BBCord</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="55"/>
+        <location filename="../assets/About.qml" line="76"/>
         <source>Released under GPL v3.0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="64"/>
+        <location filename="../assets/About.qml" line="90"/>
         <source>Created by</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="73"/>
+        <location filename="../assets/About.qml" line="105"/>
         <source>Thanks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="77"/>
+        <location filename="../assets/About.qml" line="109"/>
         <source>BlackBerry (RIM)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="78"/>
+        <location filename="../assets/About.qml" line="110"/>
         <source>For QNX and BlackBerry 10</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="103"/>
+        <location filename="../assets/About.qml" line="165"/>
         <source>Contributors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="107"/>
+        <location filename="../assets/About.qml" line="169"/>
         <source>You</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="108"/>
+        <location filename="../assets/About.qml" line="170"/>
         <source>Still love and using BB10 right now :3</source>
         <translation type="unfinished"></translation>
     </message>

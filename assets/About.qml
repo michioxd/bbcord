@@ -1,8 +1,11 @@
 import bb.cascades 1.4
-import bb.system 1.2
 
 Sheet {
     id: aboutSheet
+
+    function openLink(url) {
+        applicationUI.openLink(url);
+    }
     
     Page {
         titleBar: TitleBar {
@@ -31,6 +34,12 @@ Sheet {
                     preferredHeight: ui.du(24.0)
                     horizontalAlignment: HorizontalAlignment.Center
                     scalingMethod: ScalingMethod.AspectFit
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/michioxd/bbcord")
+                        }
+                    ]
                 }
                 
                 Label {
@@ -40,15 +49,27 @@ Sheet {
                     textStyle.fontWeight: FontWeight.Bold
                     textStyle.fontSize: FontSize.XLarge
                     topMargin: ui.du(0)
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/michioxd/bbcord")
+                        }
+                    ]
                 }
                 
                 Label {
-                    text: "v0.x.x"
+                    text: "v" + applicationInfo.version
                     textStyle.textAlign: TextAlign.Center
                     horizontalAlignment: HorizontalAlignment.Center
                     opacity: 0.4
                     topMargin: ui.du(0)
                     textStyle.fontSize: FontSize.XSmall
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/michioxd/bbcord/releases/tag/" + applicationInfo.version)
+                        }
+                    ]
                 }
                 
                 Label {
@@ -57,7 +78,12 @@ Sheet {
                     horizontalAlignment: HorizontalAlignment.Center
                     opacity: 0.4
                     topMargin: ui.du(0)
-                    
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/michioxd/bbcord/blob/main/LICENSE")
+                        }
+                    ]
                 }
                 
                 Header {
@@ -67,6 +93,12 @@ Sheet {
                 StandardListItem {
                     title: "michioxd"
                     description: "made a whole app?"
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/michioxd")
+                        }
+                    ]
                 }
                 
                 Header {
@@ -76,26 +108,56 @@ Sheet {
                 StandardListItem {
                     title: qsTr("BlackBerry (RIM)")
                     description: qsTr("For QNX and BlackBerry 10")
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://www.blackberry.com/")
+                        }
+                    ]
                 }
                 
                 StandardListItem {
                     title: "Discord"
                     description: "is that a gud platform just to chat?"
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://discord.com/")
+                        }
+                    ]
                 }
 
                 StandardListItem {
                     title: "Oleksandr (cheravoche_02918)"
                     description: "Researched BB10 rooting. Respect his hard work."
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://bb10.root.sx")
+                        }
+                    ]
                 }
 
                 StandardListItem {
-                    title: "cesanta's mongoose"
+                    title: "Mongoose"
                     description: "WebSocket implementation for embedded systems."
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://github.com/cesanta/mongoose")
+                        }
+                    ]
                 }
 
                 StandardListItem {
                     title: "OpenSSL"
                     description: "everyone needs encryption."
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://www.openssl.org/")
+                        }
+                    ]
                 }
 
                 
@@ -106,6 +168,12 @@ Sheet {
                 StandardListItem {
                     title: qsTr("You")
                     description: qsTr("Still love and using BB10 right now :3")
+
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: aboutSheet.openLink("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+                        }
+                    ]
                 }
                 
                 Label {
@@ -135,6 +203,12 @@ Sheet {
                         horizontalAlignment: HorizontalAlignment.Center
                         opacity: 0.5
                         textStyle.fontSize: FontSize.XXSmall
+
+                        gestureHandlers: [
+                            TapHandler {
+                                onTapped: aboutSheet.openLink("https://en.wikipedia.org/wiki/Vietnam")
+                            }
+                        ]
                     }
                     
                     Label {
@@ -151,4 +225,5 @@ Sheet {
             }
         }
     }
+
 }

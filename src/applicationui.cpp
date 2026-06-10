@@ -24,10 +24,13 @@
 #include "ui/ServerListController.hpp"
 #include "ui/SettingsController.hpp"
 
+#include <bb/ApplicationInfo>
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
 #include <bb/cascades/LocaleHandler>
 #include <bb/cascades/QmlDocument>
+#include <bb/system/InvokeManager>
+#include <bb/system/InvokeRequest>
 
 using namespace bb::cascades;
 
@@ -67,12 +70,25 @@ ApplicationUI::ApplicationUI()
   qml->setContextProperty("mainPageController", m_mainPageController);
   qml->setContextProperty("serverListController", m_serverListController);
   qml->setContextProperty("settingsController", m_settingsController);
+  qml->setContextProperty("applicationInfo", new bb::ApplicationInfo(this));
+  qml->setContextProperty("applicationUI", this);
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();
 
   // Set created root object as the application scene
   Application::instance()->setScene(root);
+}
+
+void ApplicationUI::openLink(const QString &url) {
+  bb::system::InvokeRequest request;
+  request.setTarget("sys.browser");
+  request.setAction("bb.action.OPEN");
+  request.setMimeType("text/html");
+  request.setUri(url);
+
+  bb::system::InvokeManager invokeManager;
+  invokeManager.invoke(request);
 }
 
 void ApplicationUI::onSystemLanguageChanged() {
