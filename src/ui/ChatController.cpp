@@ -483,7 +483,53 @@ void ChatController::onChatMessagesBatched(const QString &channelId,
     return;
   }
 
-  syncChatDataModel(messages);
+  for (int i = 0; i < messages.size(); ++i) {
+    QVariantMap item = prepareMessageForModel(messages.at(i).toMap());
+    int index = chatDataModelIndexForMessage(item.value("id").toString());
+    if (index < 0) {
+      index = chatDataModelIndexForNonce(item.value("nonce").toString());
+    }
+    if (index >= 0) {
+      m_chatDataModel->replace(index, item);
+    } else {
+      m_chatDataModel->append(item);
+    }
+  }
+
+  QVariantList current = currentMessages();
+  if (m_chatDataModel->size() != current.size()) {
+    syncChatDataModel(current);
+    return;
+  }
+
+  for (int i = 0; i < messages.size(); ++i) {
+    QString messageId = messages.at(i).toMap().value("id").toString();
+    int modelIndex = chatDataModelIndexForMessage(messageId);
+    int currentIndex = -1;
+    for (int j = 0; j < current.size(); ++j) {
+      if (current.at(j).toMap().value("id").toString() == messageId) {
+        currentIndex = j;
+        break;
+      }
+    }
+
+    if (modelIndex < 0 || currentIndex < 0 || modelIndex != currentIndex) {
+      syncChatDataModel(current);
+      return;
+    }
+
+    for (int j = modelIndex - 1; j <= modelIndex + 1; ++j) {
+      if (j < 0 || j >= m_chatDataModel->size() || j >= current.size()) {
+        continue;
+      }
+
+      QVariantMap grouped = prepareMessageForModel(current.at(j).toMap());
+      if (grouped.value("id").toString() ==
+          m_chatDataModel->value(j).toMap().value("id").toString()) {
+        m_chatDataModel->replace(j, grouped);
+      }
+    }
+  }
 }
 
 void ChatController::onChatMessageAdded(const QString &channelId,

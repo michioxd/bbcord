@@ -7,6 +7,10 @@
 #include <QMetaObject>
 #include <QTimer>
 
+namespace {
+const int kMessageQueueFlushThreshold = 10;
+} // namespace
+
 GatewayHandler::GatewayHandler(DiscordClient *client, AppStore *store,
                                QObject *parent)
     : QObject(parent), m_client(client), m_store(store), m_batchTimer(0) {
@@ -30,7 +34,11 @@ void GatewayHandler::applyGatewayOrderingEvent(
       message.pending = false;
       message.failed = false;
       m_messageQueue.append(message);
-      m_batchTimer->start();
+      if (m_messageQueue.size() >= kMessageQueueFlushThreshold) {
+        flushMessageQueue();
+      } else if (!m_batchTimer->isActive()) {
+        m_batchTimer->start();
+      }
     }
     if (guildId.isEmpty() && !channelId.isEmpty()) {
       QMetaObject::invokeMethod(m_client, "moveDmToTop", Qt::DirectConnection,
@@ -108,6 +116,7 @@ void GatewayHandler::flushMessageQueue() {
     m_store->addOrReplaceChatMessages(m_messageQueue);
   }
   m_messageQueue.clear();
+  m_batchTimer->stop();
 }
 
 bool GatewayHandler::shouldApplyChatEvent(const QString &channelId) const {

@@ -507,28 +507,21 @@ void AppStore::addOrReplaceChatMessages(const QList<DiscordMessage> &messages) {
     return;
   }
 
-  QStringList changedChannelIds;
+  QVariantMap changedByChannel = m_messageCache.addOrReplaceMessages(messages);
   bool selectedChanged = false;
 
-  for (int i = 0; i < messages.size(); ++i) {
-    QVariantMap item = m_messageCache.addOrReplaceMessage(messages.at(i));
-    QString channelId = item.value("channelId").toString();
-    if (channelId.isEmpty()) {
+  QVariantMap::const_iterator it = changedByChannel.constBegin();
+  for (; it != changedByChannel.constEnd(); ++it) {
+    QString channelId = it.key();
+    QVariantList changedMessages = it.value().toList();
+    if (changedMessages.isEmpty()) {
       continue;
     }
 
-    if (!changedChannelIds.contains(channelId)) {
-      changedChannelIds.append(channelId);
-    }
+    emit chatMessagesBatched(channelId, changedMessages);
     if (channelId == m_selectedChannelId) {
       selectedChanged = true;
     }
-  }
-
-  for (int i = 0; i < changedChannelIds.size(); ++i) {
-    const QString &channelId = changedChannelIds.at(i);
-    emit chatMessagesBatched(channelId,
-                             m_messageCache.messagesForChannel(channelId));
   }
 
   if (selectedChanged) {

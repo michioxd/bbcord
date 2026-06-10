@@ -192,6 +192,77 @@ QVariantMap MessageCache::addOrReplaceMessage(const DiscordMessage &message) {
   return state.messagesById.value(message.id).toVariantMap();
 }
 
+QVariantMap
+MessageCache::addOrReplaceMessages(const QList<DiscordMessage> &messages) {
+  QVariantMap changedByChannel;
+  QHash<QString, QStringList> changedIdsByChannel;
+
+  for (int i = 0; i < messages.size(); ++i) {
+    const DiscordMessage &message = messages.at(i);
+    if (message.channelId.isEmpty() || message.id.isEmpty()) {
+      continue;
+    }
+
+    ChannelState &state = ensureChannel(message.channelId);
+    if (!message.guildId.isEmpty()) {
+      state.guildId = message.guildId;
+    }
+
+    QString idToRemove;
+    if (!message.nonce.isEmpty() &&
+        state.pendingNonces.contains(message.nonce)) {
+      idToRemove = message.nonce;
+    }
+
+    if (idToRemove.isEmpty() && !message.nonce.isEmpty()) {
+      for (int j = 0; j < state.orderedIds.size(); ++j) {
+        const QString &id = state.orderedIds.at(j);
+        DiscordMessage old = state.messagesById.value(id);
+        if (old.pending && old.id == message.nonce) {
+          idToRemove = id;
+          break;
+        }
+      }
+    }
+
+    if (!idToRemove.isEmpty()) {
+      state.messagesById.remove(idToRemove);
+      state.orderedIds.removeAll(idToRemove);
+      state.pendingNonces.remove(idToRemove);
+    }
+
+    insertSorted(state, message, false);
+    QStringList ids = changedIdsByChannel.value(message.channelId);
+    if (!ids.contains(message.id)) {
+      ids.append(message.id);
+    }
+    changedIdsByChannel.insert(message.channelId, ids);
+  }
+
+  QHash<QString, QStringList>::const_iterator it =
+      changedIdsByChannel.constBegin();
+  for (; it != changedIdsByChannel.constEnd(); ++it) {
+    ChannelState &state = ensureChannel(it.key());
+    trimChannel(state, false);
+    recalculateGrouping(state);
+    refreshBounds(state);
+
+    QVariantList changed;
+    const QStringList ids = it.value();
+    for (int i = 0; i < ids.size(); ++i) {
+      const QString &id = ids.at(i);
+      if (state.messagesById.contains(id)) {
+        changed.append(state.messagesById.value(id).toVariantMap());
+      }
+    }
+    if (!changed.isEmpty()) {
+      changedByChannel.insert(it.key(), changed);
+    }
+  }
+
+  return changedByChannel;
+}
+
 QVariantMap MessageCache::updateMessage(const DiscordMessage &message) {
   if (message.channelId.isEmpty() || message.id.isEmpty()) {
     return QVariantMap();
@@ -294,14 +365,17 @@ MessageCache::channel(const QString &channelId) const {
 }
 
 void MessageCache::insertSorted(ChannelState &state,
-                                const DiscordMessage &message) {
+                                const DiscordMessage &message,
+                                bool updateGrouping) {
   if (message.id.isEmpty()) {
     return;
   }
 
   if (state.messagesById.contains(message.id)) {
     state.messagesById.insert(message.id, message);
-    recalculateGrouping(state);
+    if (updateGrouping) {
+      recalculateGrouping(state);
+    }
     return;
   }
 
@@ -315,10 +389,12 @@ void MessageCache::insertSorted(ChannelState &state,
 
   state.orderedIds.insert(insertAt, message.id);
   state.messagesById.insert(message.id, message);
-  recalculateGrouping(state);
+  if (updateGrouping) {
+    recalculateGrouping(state);
+  }
 }
 
-void MessageCache::trimChannel(ChannelState &state) {
+void MessageCache::trimChannel(ChannelState &state, bool updateGrouping) {
   while (state.orderedIds.size() > m_maxMessagesPerChannel) {
     QString removeId = state.orderedIds.first();
     DiscordMessage message = state.messagesById.value(removeId);
@@ -329,10 +405,13 @@ void MessageCache::trimChannel(ChannelState &state) {
     state.messagesById.remove(removeId);
     state.pendingNonces.remove(removeId);
   }
-  recalculateGrouping(state);
+  if (updateGrouping) {
+    recalculateGrouping(state);
+  }
 }
 
-void MessageCache::trimChannelFromBack(ChannelState &state) {
+void MessageCache::trimChannelFromBack(ChannelState &state,
+                                       bool updateGrouping) {
   while (state.orderedIds.size() > m_maxMessagesPerChannel) {
     int removeIndex = -1;
     for (int i = state.orderedIds.size() - 1; i >= 0; --i) {
@@ -352,7 +431,9 @@ void MessageCache::trimChannelFromBack(ChannelState &state) {
     state.messagesById.remove(removeId);
     state.pendingNonces.remove(removeId);
   }
-  recalculateGrouping(state);
+  if (updateGrouping) {
+    recalculateGrouping(state);
+  }
 }
 
 void MessageCache::recalculateGrouping(ChannelState &state) {

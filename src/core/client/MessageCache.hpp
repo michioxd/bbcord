@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
+#include <QVariantMap>
 
 #include "../models/Models.hpp"
 
@@ -54,6 +55,7 @@ public:
                                     const QList<DiscordMessage> &messages,
                                     bool hasMoreBefore);
   QVariantMap addOrReplaceMessage(const DiscordMessage &message);
+  QVariantMap addOrReplaceMessages(const QList<DiscordMessage> &messages);
   QVariantMap updateMessage(const DiscordMessage &message);
   bool deleteMessage(const QString &channelId, const QString &messageId);
   QString addPendingMessage(const DiscordMessage &message);
@@ -63,9 +65,10 @@ public:
 private:
   ChannelState &ensureChannel(const QString &channelId);
   const ChannelState *channel(const QString &channelId) const;
-  void insertSorted(ChannelState &state, const DiscordMessage &message);
-  void trimChannel(ChannelState &state);
-  void trimChannelFromBack(ChannelState &state);
+  void insertSorted(ChannelState &state, const DiscordMessage &message,
+                    bool updateGrouping = true);
+  void trimChannel(ChannelState &state, bool updateGrouping = true);
+  void trimChannelFromBack(ChannelState &state, bool updateGrouping = true);
   void recalculateGrouping(ChannelState &state);
   int compareMessageIds(const QString &left, const QString &right) const;
   void refreshBounds(ChannelState &state);
