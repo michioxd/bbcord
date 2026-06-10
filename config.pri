@@ -93,6 +93,11 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/NetworkWorker.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClientRequests.cpp) \
+        $$quote($$BASEDIR/src/core/discord/rest/Avatar.cpp) \
+        $$quote($$BASEDIR/src/core/discord/rest/Channel.cpp) \
+        $$quote($$BASEDIR/src/core/discord/rest/Guild.cpp) \
+        $$quote($$BASEDIR/src/core/discord/rest/Login.cpp) \
+        $$quote($$BASEDIR/src/core/discord/rest/Message.cpp) \
         $$quote($$BASEDIR/src/core/models/Models.cpp) \
         $$quote($$BASEDIR/src/core/modules/Chat.cpp) \
         $$quote($$BASEDIR/src/core/modules/DM.cpp) \
@@ -165,6 +170,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/core/discord/*.cc) \
         $$quote($$BASEDIR/../src/core/discord/*.cpp) \
         $$quote($$BASEDIR/../src/core/discord/*.cxx) \
+        $$quote($$BASEDIR/../src/core/discord/rest/*.c) \
+        $$quote($$BASEDIR/../src/core/discord/rest/*.c++) \
+        $$quote($$BASEDIR/../src/core/discord/rest/*.cc) \
+        $$quote($$BASEDIR/../src/core/discord/rest/*.cpp) \
+        $$quote($$BASEDIR/../src/core/discord/rest/*.cxx) \
         $$quote($$BASEDIR/../src/core/models/*.c) \
         $$quote($$BASEDIR/../src/core/models/*.c++) \
         $$quote($$BASEDIR/../src/core/models/*.cc) \
