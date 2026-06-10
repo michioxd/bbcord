@@ -1,5 +1,7 @@
 #include "Models.hpp"
 
+#include "../../utils/MarkdownParser.hpp"
+
 #include <QDateTime>
 
 namespace {
@@ -154,6 +156,7 @@ QVariantMap DiscordMessage::toVariantMap() const {
   data["initials"] = authorInitials();
   data["nonce"] = nonce;
   data["message"] = content;
+  data["messageHtml"] = MarkdownParser::toHtml(content);
   data["content"] = content;
   data["timestamp"] = timestamp;
   data["timestampMs"] = timestampMs();
@@ -163,6 +166,7 @@ QVariantMap DiscordMessage::toVariantMap() const {
   data["replyMessageId"] = replyMessageId;
   data["replyAuthor"] = replyAuthor;
   data["replyMessage"] = replyContent;
+  data["replyMessageHtml"] = MarkdownParser::toHtml(replyContent);
   data["pending"] = pending;
   data["failed"] = failed;
   data["isGroupStart"] = isGroupStart;

@@ -79,8 +79,10 @@ Page {
                             time: ListItemData.time
                             timestampMs: ListItemData.timestampMs
                             message: ListItemData.message
+                            messageHtml: ListItemData.messageHtml
                             replyAuthor: ListItemData.replyAuthor
                             replyMessage: ListItemData.replyMessage
+                            replyMessageHtml: ListItemData.replyMessageHtml
                             image: ListItemData.image
                             imageLoading: ListItemData.imageLoading
                             imageLoadFailed: ListItemData.imageLoadFailed

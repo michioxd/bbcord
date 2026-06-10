@@ -12,8 +12,10 @@ Container {
     property string time: ""
     property real timestampMs: 0
     property string message: ""
+    property string messageHtml: ""
     property string replyAuthor: ""
     property string replyMessage: ""
+    property string replyMessageHtml: ""
     property string image: ""
     property int imageWidth: 0
     property int imageHeight: 0
@@ -211,9 +213,10 @@ Container {
                 }
 
                 Label {
-                    text: root.replyMessage
+                    text: root.replyMessageHtml
                     topMargin: ui.du(-0.3)
                     multiline: true
+                    textFormat: TextFormat.Html
                     opacity: 0.85
                     textStyle.fontSize: FontSize.XXSmall
                     textStyle.color: Color.create("#B5BAC1")
@@ -222,9 +225,10 @@ Container {
         }
 
         Label {
-            text: root.message
+            text: root.messageHtml
             topMargin: root.isGroupStart ? ui.du(-0.6) : ui.du(-0.2)
             multiline: true
+            textFormat: TextFormat.Html
             textStyle.fontSize: FontSize.XSmall
             textStyle.color: Color.create("#DCDDDE")
         }

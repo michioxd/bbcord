@@ -60,32 +60,32 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="212"/>
+        <location filename="../assets/ChatCard.qml" line="214"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="243"/>
+        <location filename="../assets/ChatCard.qml" line="245"/>
         <source>Attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="306"/>
+        <location filename="../assets/ChatCard.qml" line="308"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="377"/>
+        <location filename="../assets/ChatCard.qml" line="379"/>
         <source>Message #</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="404"/>
+        <location filename="../assets/ChatCard.qml" line="406"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="428"/>
+        <location filename="../assets/ChatCard.qml" line="430"/>
         <source>Attach files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -150,47 +150,47 @@
 <context>
     <name>MessageBubble</name>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="61"/>
+        <location filename="../assets/MessageBubble.qml" line="63"/>
         <source>Reply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="69"/>
+        <location filename="../assets/MessageBubble.qml" line="71"/>
         <source>Open attachment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="78"/>
+        <location filename="../assets/MessageBubble.qml" line="80"/>
         <source>Edit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="87"/>
+        <location filename="../assets/MessageBubble.qml" line="89"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="169"/>
+        <location filename="../assets/MessageBubble.qml" line="171"/>
         <source>failed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="169"/>
+        <location filename="../assets/MessageBubble.qml" line="171"/>
         <source>sending</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="169"/>
+        <location filename="../assets/MessageBubble.qml" line="171"/>
         <source>edited</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="260"/>
+        <location filename="../assets/MessageBubble.qml" line="264"/>
         <source>Open attachment: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="260"/>
+        <location filename="../assets/MessageBubble.qml" line="264"/>
         <source>Open image: </source>
         <translation type="unfinished"></translation>
     </message>

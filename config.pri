@@ -116,7 +116,8 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.cpp) \
-        $$quote($$BASEDIR/src/ui/SettingsController.cpp)
+        $$quote($$BASEDIR/src/ui/SettingsController.cpp) \
+        $$quote($$BASEDIR/src/utils/MarkdownParser.cpp)
 
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \
@@ -150,7 +151,8 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.hpp) \
-        $$quote($$BASEDIR/src/ui/SettingsController.hpp)
+        $$quote($$BASEDIR/src/ui/SettingsController.hpp) \
+        $$quote($$BASEDIR/src/utils/MarkdownParser.hpp)
 }
 
 CONFIG += precompile_header
@@ -199,6 +201,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/ui/*.cc) \
         $$quote($$BASEDIR/../src/ui/*.cpp) \
         $$quote($$BASEDIR/../src/ui/*.cxx) \
+        $$quote($$BASEDIR/../src/utils/*.c) \
+        $$quote($$BASEDIR/../src/utils/*.c++) \
+        $$quote($$BASEDIR/../src/utils/*.cc) \
+        $$quote($$BASEDIR/../src/utils/*.cpp) \
+        $$quote($$BASEDIR/../src/utils/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \
