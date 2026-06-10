@@ -134,6 +134,9 @@ private:
   void replaceGroupedMessage(const QVariantMap &message);
   QVariantMap prepareMessageForModel(const QVariantMap &message);
   int chatDataModelIndexForMessage(const QString &messageId) const;
+  bool sameMessageIdentity(const QVariantMap &left,
+                           const QVariantMap &right) const;
+  void refreshModelGroupingAround(int index);
   void updateAttachmentImageInModel(const QString &url, const QString &image,
                                     bool loading, bool failed);
 

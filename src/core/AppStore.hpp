@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -78,6 +79,7 @@ public:
   Q_INVOKABLE bool isChatLoadingInitial(const QString &channelId) const;
   Q_INVOKABLE bool isChatLoadingBefore(const QString &channelId) const;
   Q_INVOKABLE bool hasMoreChatBefore(const QString &channelId) const;
+  QStringList loadedChatChannelIds() const;
   Q_INVOKABLE QString oldestChatMessageId(const QString &channelId) const;
   Q_INVOKABLE QString newestChatMessageId(const QString &channelId) const;
   Q_INVOKABLE void clearSession();

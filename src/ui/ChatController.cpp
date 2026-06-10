@@ -474,7 +474,26 @@ void ChatController::onChatMessagesPrepended(const QString &channelId,
     return;
   }
 
-  syncChatDataModel(currentMessages());
+  QVariantList current = currentMessages();
+  if (current.size() < messages.size()) {
+    syncChatDataModel(current);
+    return;
+  }
+
+  for (int i = 0; i < messages.size(); ++i) {
+    m_chatDataModel->insert(i, prepareMessageForModel(messages.at(i).toMap()));
+  }
+
+  int refreshEnd = messages.size();
+  if (refreshEnd >= current.size()) {
+    refreshEnd = current.size() - 1;
+  }
+  for (int i = 0; i <= refreshEnd; ++i) {
+    if (i >= 0 && i < m_chatDataModel->size() && i < current.size()) {
+      m_chatDataModel->replace(i,
+                               prepareMessageForModel(current.at(i).toMap()));
+    }
+  }
 }
 
 void ChatController::onChatMessagesBatched(const QString &channelId,
@@ -483,8 +502,13 @@ void ChatController::onChatMessagesBatched(const QString &channelId,
     return;
   }
 
+  QVariantList current = currentMessages();
+  int minTouchedIndex = m_chatDataModel->size();
+  int maxTouchedIndex = -1;
+
   for (int i = 0; i < messages.size(); ++i) {
-    QVariantMap item = prepareMessageForModel(messages.at(i).toMap());
+    QVariantMap rawMessage = messages.at(i).toMap();
+    QVariantMap item = prepareMessageForModel(rawMessage);
     int index = chatDataModelIndexForMessage(item.value("id").toString());
     if (index < 0) {
       index = chatDataModelIndexForNonce(item.value("nonce").toString());
@@ -492,43 +516,39 @@ void ChatController::onChatMessagesBatched(const QString &channelId,
     if (index >= 0) {
       m_chatDataModel->replace(index, item);
     } else {
+      if (!current.isEmpty() &&
+          !sameMessageIdentity(rawMessage, current.last().toMap())) {
+        syncChatDataModel(current);
+        return;
+      }
       m_chatDataModel->append(item);
+      index = m_chatDataModel->size() - 1;
+    }
+
+    if (index < minTouchedIndex) {
+      minTouchedIndex = index;
+    }
+    if (index > maxTouchedIndex) {
+      maxTouchedIndex = index;
     }
   }
 
-  QVariantList current = currentMessages();
   if (m_chatDataModel->size() != current.size()) {
     syncChatDataModel(current);
     return;
   }
 
-  for (int i = 0; i < messages.size(); ++i) {
-    QString messageId = messages.at(i).toMap().value("id").toString();
-    int modelIndex = chatDataModelIndexForMessage(messageId);
-    int currentIndex = -1;
-    for (int j = 0; j < current.size(); ++j) {
-      if (current.at(j).toMap().value("id").toString() == messageId) {
-        currentIndex = j;
-        break;
-      }
+  for (int i = minTouchedIndex - 1; i <= maxTouchedIndex + 1; ++i) {
+    if (i < 0 || i >= m_chatDataModel->size() || i >= current.size()) {
+      continue;
     }
 
-    if (modelIndex < 0 || currentIndex < 0 || modelIndex != currentIndex) {
+    QVariantMap grouped = prepareMessageForModel(current.at(i).toMap());
+    if (!sameMessageIdentity(grouped, m_chatDataModel->value(i).toMap())) {
       syncChatDataModel(current);
       return;
     }
-
-    for (int j = modelIndex - 1; j <= modelIndex + 1; ++j) {
-      if (j < 0 || j >= m_chatDataModel->size() || j >= current.size()) {
-        continue;
-      }
-
-      QVariantMap grouped = prepareMessageForModel(current.at(j).toMap());
-      if (grouped.value("id").toString() ==
-          m_chatDataModel->value(j).toMap().value("id").toString()) {
-        m_chatDataModel->replace(j, grouped);
-      }
-    }
+    m_chatDataModel->replace(i, grouped);
   }
 }
 
@@ -542,10 +562,12 @@ void ChatController::onChatMessageAdded(const QString &channelId,
   int index = chatDataModelIndexForMessage(item.value("id").toString());
   if (index >= 0) {
     m_chatDataModel->replace(index, item);
+    refreshModelGroupingAround(index);
     return;
   }
 
   m_chatDataModel->append(item);
+  refreshModelGroupingAround(m_chatDataModel->size() - 1);
 }
 
 void ChatController::onChatMessageUpdated(const QString &channelId,
@@ -637,6 +659,37 @@ void ChatController::replaceChatDataModel(const QVariantList &messages) {
 }
 
 void ChatController::syncChatDataModel(const QVariantList &messages) {
+  int modelSize = m_chatDataModel->size();
+  if (messages.size() >= modelSize && modelSize > 0) {
+    int appendedCount = messages.size() - modelSize;
+    bool prefixMatches = true;
+    for (int i = 0; i < modelSize; ++i) {
+      if (!sameMessageIdentity(messages.at(i).toMap(),
+                               m_chatDataModel->value(i).toMap())) {
+        prefixMatches = false;
+        break;
+      }
+    }
+
+    if (prefixMatches) {
+      int firstAppendIndex = modelSize;
+      for (int i = modelSize; i < messages.size(); ++i) {
+        m_chatDataModel->append(prepareMessageForModel(messages.at(i).toMap()));
+      }
+      int refreshStart = firstAppendIndex - 1;
+      if (refreshStart < 0) {
+        refreshStart = 0;
+      }
+      for (int i = refreshStart; i < messages.size(); ++i) {
+        m_chatDataModel->replace(
+            i, prepareMessageForModel(messages.at(i).toMap()));
+      }
+      if (appendedCount > 0) {
+        return;
+      }
+    }
+  }
+
   int i = 0;
   while (i < messages.size() && i < m_chatDataModel->size()) {
     QVariantMap item = prepareMessageForModel(messages.at(i).toMap());
@@ -800,7 +853,22 @@ void ChatController::replaceGroupedMessage(const QVariantMap &message) {
   }
 
   m_chatDataModel->replace(index, item);
+  refreshModelGroupingAround(index);
+}
 
+bool ChatController::sameMessageIdentity(const QVariantMap &left,
+                                         const QVariantMap &right) const {
+  QString leftId = left.value("id").toString();
+  QString rightId = right.value("id").toString();
+  QString leftNonce = left.value("nonce").toString();
+  QString rightNonce = right.value("nonce").toString();
+
+  return leftId == rightId || (!leftNonce.isEmpty() && leftNonce == rightId) ||
+         (!rightNonce.isEmpty() && rightNonce == leftId) ||
+         (!leftNonce.isEmpty() && leftNonce == rightNonce);
+}
+
+void ChatController::refreshModelGroupingAround(int index) {
   QVariantList messages = currentMessages();
   for (int i = index - 1; i <= index + 1; ++i) {
     if (i < 0 || i >= m_chatDataModel->size() || i >= messages.size()) {
@@ -808,8 +876,7 @@ void ChatController::replaceGroupedMessage(const QVariantMap &message) {
     }
 
     QVariantMap grouped = prepareMessageForModel(messages.at(i).toMap());
-    if (grouped.value("id").toString() ==
-        m_chatDataModel->value(i).toMap().value("id").toString()) {
+    if (sameMessageIdentity(grouped, m_chatDataModel->value(i).toMap())) {
       m_chatDataModel->replace(i, grouped);
     }
   }

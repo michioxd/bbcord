@@ -231,6 +231,91 @@ QString DiscordJsonParser::extractStringField(const QByteArray &bytes,
   return QString::fromUtf8(value.constData(), value.size());
 }
 
+bool DiscordJsonParser::extractBoolField(const QByteArray &bytes,
+                                         const char *fieldName, bool fallback) {
+  QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");
+  int pos = bytes.indexOf(marker);
+  if (pos < 0) {
+    return fallback;
+  }
+
+  pos = bytes.indexOf(':', pos + marker.size());
+  if (pos < 0) {
+    return fallback;
+  }
+
+  ++pos;
+  while (pos < bytes.size() &&
+         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+    ++pos;
+  }
+
+  if (bytes.mid(pos, 4) == "true") {
+    return true;
+  }
+  if (bytes.mid(pos, 5) == "false") {
+    return false;
+  }
+  return fallback;
+}
+
+QByteArray DiscordJsonParser::extractObjectField(const QByteArray &bytes,
+                                                 const char *fieldName) {
+  QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");
+  int pos = bytes.indexOf(marker);
+  if (pos < 0) {
+    return QByteArray();
+  }
+
+  pos = bytes.indexOf(':', pos + marker.size());
+  if (pos < 0) {
+    return QByteArray();
+  }
+
+  ++pos;
+  while (pos < bytes.size() &&
+         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+    ++pos;
+  }
+
+  if (pos >= bytes.size() || bytes.at(pos) != '{') {
+    return QByteArray();
+  }
+
+  int start = pos;
+  int depth = 0;
+  bool inString = false;
+  bool escaped = false;
+  for (; pos < bytes.size(); ++pos) {
+    char ch = bytes.at(pos);
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch == '"') {
+      inString = true;
+    } else if (ch == '{') {
+      ++depth;
+    } else if (ch == '}') {
+      --depth;
+      if (depth == 0) {
+        return bytes.mid(start, pos - start + 1);
+      }
+    }
+  }
+
+  return QByteArray();
+}
+
 QVariantList DiscordJsonParser::extractArrayField(const QByteArray &bytes,
                                                   const char *fieldName) {
   QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");

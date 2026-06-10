@@ -1,5 +1,6 @@
 #include "Worker.hpp"
 
+#include "../AppStore.hpp"
 #include "../AvatarCacheWorker.hpp"
 #include "../Client.hpp"
 #include "../client/AvatarManager.hpp"
@@ -221,4 +222,18 @@ void DiscordClient::syncGatewayOrderingStateToWorker() {
   m_gatewayWorker->updateGatewayOrderingState(m_guilds, m_allDmChannels,
                                               m_dmChannels, m_orderedGuildIds,
                                               m_dmPresenceByUserId);
+}
+
+void DiscordClient::syncGatewayMessageFilterStateToWorker() {
+  if (m_gatewayWorker == 0) {
+    return;
+  }
+
+  QString selectedChannelId =
+      m_store ? m_store->selectedChannelId() : QString();
+  QStringList loadedChannelIds =
+      m_store ? m_store->loadedChatChannelIds() : QStringList();
+  QString currentUserId = m_store ? m_store->currentUserId() : QString();
+  m_gatewayWorker->updateGatewayMessageFilterState(
+      selectedChannelId, loadedChannelIds, currentUserId);
 }

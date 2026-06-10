@@ -226,6 +226,30 @@ void DiscordGatewayWorker::updateGatewayOrderingState(
   m_gatewayDmPresenceByUserId = dmPresenceByUserId;
 }
 
+void DiscordGatewayWorker::updateGatewayMessageFilterState(
+    const QString &selectedChannelId, const QStringList &loadedChannelIds,
+    const QString &currentUserId) {
+  if (!isInObjectThread(this)) {
+    QMetaObject::invokeMethod(
+        this, "updateGatewayMessageFilterState", Qt::QueuedConnection,
+        Q_ARG(QString, selectedChannelId), Q_ARG(QStringList, loadedChannelIds),
+        Q_ARG(QString, currentUserId));
+    return;
+  }
+
+  m_selectedChannelId = selectedChannelId.trimmed();
+  m_loadedChannelIds.clear();
+  for (int i = 0; i < loadedChannelIds.size(); ++i) {
+    QString channelId = loadedChannelIds.at(i).trimmed();
+    if (!channelId.isEmpty() && !m_loadedChannelIds.contains(channelId)) {
+      m_loadedChannelIds.append(channelId);
+    }
+  }
+  m_currentUserId = currentUserId.trimmed();
+  m_gateway.updateMessageFilterState(m_selectedChannelId, m_loadedChannelIds,
+                                     m_currentUserId);
+}
+
 void DiscordGatewayWorker::onGatewayDispatchReceived(
     const QString &eventName, const QVariantMap &payload) {
   if (!isInObjectThread(this)) {

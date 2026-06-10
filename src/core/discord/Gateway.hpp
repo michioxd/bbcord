@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QSet>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 #include <stdint.h>
@@ -26,6 +27,9 @@ public:
   Q_INVOKABLE void disconnectFromGateway();
   Q_INVOKABLE void sendLazyRequest(const QString &guildId,
                                    const QString &channelId);
+  Q_INVOKABLE void updateMessageFilterState(const QString &selectedChannelId,
+                                            const QStringList &loadedChannelIds,
+                                            const QString &currentUserId);
 
   ConnectionState state() const;
 
@@ -73,6 +77,9 @@ private:
   uint64_t m_nextHeartbeatMs;
   ConnectionState m_state;
   QSet<QString> m_sentLazyRequests;
+  QString m_selectedChannelId;
+  QStringList m_loadedChannelIds;
+  QString m_currentUserId;
 };
 
 #endif /* Gateway_HPP_ */

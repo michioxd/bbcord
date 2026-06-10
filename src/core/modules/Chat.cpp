@@ -155,6 +155,7 @@ void DiscordClient::onChannelMessagesLoaded(const QString &channelId,
     m_store->setInitialChatMessages(safeChannelId,
                                     m_chatGuildByChannelId.value(safeChannelId),
                                     parsedMessages, hasMoreBefore);
+    syncGatewayMessageFilterStateToWorker();
   } else {
     m_store->prependOlderChatMessages(safeChannelId, parsedMessages,
                                       hasMoreBefore);

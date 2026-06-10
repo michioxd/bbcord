@@ -57,6 +57,7 @@ DiscordClient::DiscordClient(QObject *parent)
       m_guildChannelsHasMore(m_state.guildChannelsHasMore), m_loggedIn(false),
       m_busy(false), m_gatewayUiUpdateQueued(m_state.gatewayUiUpdateQueued),
       m_pendingDmUiUpdate(m_state.pendingDmUiUpdate),
+      m_guildsCacheSaveQueued(m_state.guildsCacheSaveQueued),
       m_dmCacheSaveQueued(m_state.dmCacheSaveQueued),
       m_bootstrapCacheLoaded(m_state.bootstrapCacheLoaded),
       m_statusText("Disconnected") {
@@ -113,6 +114,7 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
       m_guildChannelsHasMore(m_state.guildChannelsHasMore), m_loggedIn(false),
       m_busy(false), m_gatewayUiUpdateQueued(m_state.gatewayUiUpdateQueued),
       m_pendingDmUiUpdate(m_state.pendingDmUiUpdate),
+      m_guildsCacheSaveQueued(m_state.guildsCacheSaveQueued),
       m_dmCacheSaveQueued(m_state.dmCacheSaveQueued),
       m_bootstrapCacheLoaded(m_state.bootstrapCacheLoaded),
       m_statusText("Disconnected") {
@@ -201,6 +203,7 @@ void DiscordClient::logout() {
   m_pendingUnreadChannelIds.clear();
   m_gatewayUiUpdateQueued = false;
   m_pendingDmUiUpdate = false;
+  m_guildsCacheSaveQueued = false;
   m_dmCacheSaveQueued = false;
   m_bootstrapCacheLoaded = false;
   m_lastGuildId.clear();
@@ -244,6 +247,7 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
     m_avatarManager->loadCurrentUserAvatar(
         currentUser, m_avatarCacheRequests, m_loadingAvatarUserId,
         m_loadingAvatarUserId2, m_pendingAvatars, m_queuedAvatarUserIds);
+    syncGatewayMessageFilterStateToWorker();
   }
 
   m_cacheManager->loadBootstrapCache(
@@ -263,6 +267,7 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
   setStatusText("Connecting gateway...");
   if (m_gatewayWorker != 0) {
     syncGatewayOrderingStateToWorker();
+    syncGatewayMessageFilterStateToWorker();
     QMetaObject::invokeMethod(m_gatewayWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
@@ -388,7 +393,7 @@ void DiscordClient::onGuildIconDownloaded(const QString &guildId,
   if (m_loadingGuildIconId2 == guildId) {
     m_loadingGuildIconId2.clear();
   }
-  saveGuildsCache();
+  scheduleGuildsCacheSave();
   m_avatarManager->loadNextGuildIcon(m_loadingGuildIconId,
                                      m_loadingGuildIconId2, m_pendingGuildIcons,
                                      m_queuedGuildIconIds);
@@ -575,6 +580,7 @@ void DiscordClient::onGatewayClosed() {
   if (m_loggedIn && !m_token.trimmed().isEmpty() && m_gatewayWorker != 0) {
     setStatusText("Reconnecting gateway...");
     syncGatewayOrderingStateToWorker();
+    syncGatewayMessageFilterStateToWorker();
     QMetaObject::invokeMethod(m_gatewayWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
@@ -619,8 +625,8 @@ void DiscordClient::onGatewayGuildsAndDmsReady(
   rebuildDmRecipientIndex();
   rebuildDmChannelIndexes();
   updateStoreWithGuildsAndDms();
-  saveGuildsCache();
-  saveDmChannelsCache();
+  scheduleGuildsCacheSave();
+  scheduleDmChannelsCacheSave();
 }
 
 void DiscordClient::setLoggedIn(bool loggedIn) {
@@ -684,17 +690,37 @@ void DiscordClient::saveDmChannelsCache() const {
   m_cacheManager->saveDmChannelsCache(m_allDmChannels);
 }
 
+void DiscordClient::scheduleGuildsCacheSave() {
+  if (m_guildsCacheSaveQueued) {
+    return;
+  }
+
+  m_guildsCacheSaveQueued = true;
+  QTimer::singleShot(3000, this, SLOT(savePendingGuildsCache()));
+}
+
 void DiscordClient::scheduleDmChannelsCacheSave() {
   if (m_dmCacheSaveQueued) {
     return;
   }
 
   m_dmCacheSaveQueued = true;
-  QTimer::singleShot(1000, this, SLOT(savePendingDmChannelsCache()));
+  QTimer::singleShot(3000, this, SLOT(savePendingDmChannelsCache()));
+}
+
+void DiscordClient::savePendingGuildsCache() {
+  m_guildsCacheSaveQueued = false;
+  if (!m_loggedIn) {
+    return;
+  }
+  saveGuildsCache();
 }
 
 void DiscordClient::savePendingDmChannelsCache() {
   m_dmCacheSaveQueued = false;
+  if (!m_loggedIn) {
+    return;
+  }
   saveDmChannelsCache();
 }
 
@@ -749,10 +775,10 @@ void DiscordClient::flushGatewayUiUpdates() {
   }
 
   if (!guildIds.isEmpty()) {
-    saveGuildsCache();
+    scheduleGuildsCacheSave();
   }
   if (dmChanged) {
-    saveDmChannelsCache();
+    scheduleDmChannelsCacheSave();
     syncGatewayOrderingStateToWorker();
   }
 }

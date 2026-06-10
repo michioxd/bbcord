@@ -34,6 +34,7 @@ public:
   bool isLoadingInitial(const QString &channelId) const;
   bool isLoadingBefore(const QString &channelId) const;
   bool hasMoreBefore(const QString &channelId) const;
+  QStringList initialLoadedChannelIds() const;
   QString oldestMessageId(const QString &channelId) const;
   QString newestMessageId(const QString &channelId) const;
 

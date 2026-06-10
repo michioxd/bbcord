@@ -116,6 +116,7 @@ private Q_SLOTS:
                                   const QStringList &orderedGuildIds,
                                   const QVariantMap &dmPresenceByUserId);
   void flushGatewayUiUpdates();
+  void savePendingGuildsCache();
   void savePendingDmChannelsCache();
 
   void moveDmToTop(const QString &channelId, const QString &lastMessageId);
@@ -143,6 +144,7 @@ private:
   void updateGuildUnread(const QString &guildId, bool unread);
   void updateGuildChannelUnread(const QString &channelId, bool unread);
   void appendVisibleGuildChannels();
+  void scheduleGuildsCacheSave();
   void scheduleDmChannelsCacheSave();
   void updateDataLoading();
   void initializeNetworkWorker();
@@ -154,6 +156,7 @@ private:
   void initializeManagers();
   void syncStateToNetworkWorker();
   void syncGatewayOrderingStateToWorker();
+  void syncGatewayMessageFilterStateToWorker();
 
   AppStore *m_store;
   QThread *m_networkThread;
@@ -217,6 +220,7 @@ private:
   bool m_busy;
   bool &m_gatewayUiUpdateQueued;
   bool &m_pendingDmUiUpdate;
+  bool &m_guildsCacheSaveQueued;
   bool &m_dmCacheSaveQueued;
   bool &m_bootstrapCacheLoaded;
   QString m_statusText;

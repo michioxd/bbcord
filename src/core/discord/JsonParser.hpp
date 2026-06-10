@@ -36,6 +36,10 @@ public:
   static bool isLargeReadyPayload(const QByteArray &bytes);
   static QString extractStringField(const QByteArray &bytes,
                                     const char *fieldName);
+  static bool extractBoolField(const QByteArray &bytes, const char *fieldName,
+                               bool fallback = false);
+  static QByteArray extractObjectField(const QByteArray &bytes,
+                                       const char *fieldName);
   static QVariantList extractArrayField(const QByteArray &bytes,
                                         const char *fieldName);
 };

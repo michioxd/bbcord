@@ -71,6 +71,7 @@ void DiscordClient::selectGuild(const QString &guildId) {
 
   if (m_store) {
     m_store->selectGuild(safeGuildId);
+    syncGatewayMessageFilterStateToWorker();
   }
   scheduleDmChannelsCacheSave();
   if (!sameGuild || m_allGuildChannels.isEmpty()) {
@@ -148,7 +149,7 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
 
   if (m_store && !m_orderedGuildIds.isEmpty()) {
     m_store->setGuilds(m_guilds);
-    saveGuildsCache();
+    scheduleGuildsCacheSave();
   } else {
     qDebug() << "[discord-client] guild REST sync ready; waiting for gateway"
              << "guild order before updating UI";

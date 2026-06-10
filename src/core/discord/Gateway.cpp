@@ -128,6 +128,20 @@ void DiscordGateway::sendLazyRequest(const QString &guildId,
   m_sentLazyRequests.insert(key);
 }
 
+void DiscordGateway::updateMessageFilterState(
+    const QString &selectedChannelId, const QStringList &loadedChannelIds,
+    const QString &currentUserId) {
+  m_selectedChannelId = selectedChannelId.trimmed();
+  m_loadedChannelIds.clear();
+  for (int i = 0; i < loadedChannelIds.size(); ++i) {
+    QString channelId = loadedChannelIds.at(i).trimmed();
+    if (!channelId.isEmpty() && !m_loadedChannelIds.contains(channelId)) {
+      m_loadedChannelIds.append(channelId);
+    }
+  }
+  m_currentUserId = currentUserId.trimmed();
+}
+
 void DiscordGateway::timerEvent(QTimerEvent *event) {
   Q_UNUSED(event);
 

@@ -43,6 +43,7 @@ public:
   bool guildChannelsHasMore;
   bool gatewayUiUpdateQueued;
   bool pendingDmUiUpdate;
+  bool guildsCacheSaveQueued;
   bool dmCacheSaveQueued;
   bool bootstrapCacheLoaded;
 };

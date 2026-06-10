@@ -85,6 +85,7 @@ void DiscordClient::loadDmAvatar(const QString &channelId) {
 void DiscordClient::selectHome() {
   if (m_store) {
     m_store->selectHome();
+    syncGatewayMessageFilterStateToWorker();
   }
   scheduleDmChannelsCacheSave();
   if (m_dmChannels.isEmpty()) {
@@ -172,7 +173,7 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
   if (m_dmChannelsHasMore) {
     loadMoreDmChannels();
   }
-  saveDmChannelsCache();
+  scheduleDmChannelsCacheSave();
   setStatusText("Connected");
 }
 

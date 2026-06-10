@@ -40,6 +40,17 @@ bool MessageCache::hasMoreBefore(const QString &channelId) const {
   return state == 0 || state->hasMoreBefore;
 }
 
+QStringList MessageCache::initialLoadedChannelIds() const {
+  QStringList ids;
+  QHash<QString, ChannelState>::const_iterator it = m_channels.constBegin();
+  for (; it != m_channels.constEnd(); ++it) {
+    if (it.value().initialLoaded) {
+      ids.append(it.key());
+    }
+  }
+  return ids;
+}
+
 QString MessageCache::oldestMessageId(const QString &channelId) const {
   const ChannelState *state = channel(channelId);
   return state == 0 ? QString() : state->oldestMessageId;

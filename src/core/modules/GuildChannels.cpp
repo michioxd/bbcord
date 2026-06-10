@@ -56,6 +56,7 @@ void DiscordClient::selectChannel(const QString &channelId) {
   updateGuildChannelUnread(safeChannelId, false);
   if (m_store) {
     m_store->selectChannel(safeChannelId);
+    syncGatewayMessageFilterStateToWorker();
   }
 
   QString guildId = m_chatGuildByChannelId.value(safeChannelId).trimmed();
@@ -66,8 +67,8 @@ void DiscordClient::selectChannel(const QString &channelId) {
     m_chatGuildByChannelId.insert(safeChannelId, guildId);
   }
 
-  saveGuildsCache();
-  saveDmChannelsCache();
+  scheduleGuildsCacheSave();
+  scheduleDmChannelsCacheSave();
 }
 
 void DiscordClient::onGuildChannelsLoaded(const QString &guildId,

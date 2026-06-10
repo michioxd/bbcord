@@ -25,6 +25,9 @@ public Q_SLOTS:
                                   const QVariantList &visibleDmChannels,
                                   const QStringList &orderedGuildIds,
                                   const QVariantMap &dmPresenceByUserId);
+  void updateGatewayMessageFilterState(const QString &selectedChannelId,
+                                       const QStringList &loadedChannelIds,
+                                       const QString &currentUserId);
   void onGatewayDispatchReceived(const QString &eventName,
                                  const QVariantMap &payload);
   void cancelAll();
@@ -49,6 +52,9 @@ private:
   QVariantList m_gatewayVisibleDmChannels;
   QStringList m_gatewayOrderedGuildIds;
   QVariantMap m_gatewayDmPresenceByUserId;
+  QString m_selectedChannelId;
+  QStringList m_loadedChannelIds;
+  QString m_currentUserId;
 };
 
 #endif /* GatewayWorker_HPP_ */

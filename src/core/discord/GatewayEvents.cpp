@@ -59,6 +59,103 @@ bool shouldParseDispatch(const QString &eventName) {
          eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
          eventName == "USER_SETTINGS_PROTO_UPDATE";
 }
+
+QByteArray extractArrayBytes(const QByteArray &bytes, const char *fieldName) {
+  QByteArray marker = QByteArray("\"") + fieldName + QByteArray("\"");
+  int pos = bytes.indexOf(marker);
+  if (pos < 0) {
+    return QByteArray();
+  }
+
+  pos = bytes.indexOf(':', pos + marker.size());
+  if (pos < 0) {
+    return QByteArray();
+  }
+
+  ++pos;
+  while (pos < bytes.size() &&
+         (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+          bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+    ++pos;
+  }
+
+  if (pos >= bytes.size() || bytes.at(pos) != '[') {
+    return QByteArray();
+  }
+
+  int start = pos;
+  int depth = 0;
+  bool inString = false;
+  bool escaped = false;
+  for (; pos < bytes.size(); ++pos) {
+    char ch = bytes.at(pos);
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch == '"') {
+      inString = true;
+    } else if (ch == '[') {
+      ++depth;
+    } else if (ch == ']') {
+      --depth;
+      if (depth == 0) {
+        return bytes.mid(start, pos - start + 1);
+      }
+    }
+  }
+
+  return QByteArray();
+}
+
+bool mentionsArrayContainsUserId(const QByteArray &bytes,
+                                 const QString &userId) {
+  if (userId.isEmpty()) {
+    return false;
+  }
+
+  QByteArray mentionsBytes = extractArrayBytes(bytes, "mentions");
+  if (mentionsBytes.isEmpty()) {
+    return false;
+  }
+
+  QByteArray compact = QByteArray("\"id\":\"") + userId.toUtf8() + "\"";
+  QByteArray spaced = QByteArray("\"id\": \"") + userId.toUtf8() + "\"";
+  return mentionsBytes.indexOf(compact) >= 0 ||
+         mentionsBytes.indexOf(spaced) >= 0;
+}
+
+QVariantMap buildLightMessageCreatePayload(const QByteArray &bytes,
+                                           const QString &currentUserId) {
+  QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
+  QVariantMap payload;
+  payload["id"] = DiscordJsonParser::extractStringField(dataBytes, "id");
+  payload["channel_id"] =
+      DiscordJsonParser::extractStringField(dataBytes, "channel_id");
+  payload["guild_id"] =
+      DiscordJsonParser::extractStringField(dataBytes, "guild_id");
+  payload["mention_everyone"] =
+      DiscordJsonParser::extractBoolField(dataBytes, "mention_everyone", false);
+
+  QByteArray authorBytes =
+      DiscordJsonParser::extractObjectField(dataBytes, "author");
+  QVariantMap author;
+  author["id"] = DiscordJsonParser::extractStringField(authorBytes, "id");
+  payload["author"] = author;
+
+  if (!payload.value("mention_everyone").toBool() &&
+      mentionsArrayContainsUserId(dataBytes, currentUserId)) {
+    payload["mention_count"] = 1;
+  }
+  return payload;
+}
 } // namespace
 
 void DiscordGateway::eventHandler(struct mg_connection *connection, int event,
@@ -222,6 +319,68 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     if (sequence >= 0) {
       m_sequence = sequence;
     }
+    return;
+  }
+
+  if (fastEventName == "MESSAGE_CREATE") {
+    int sequence = extractSequence(bytes);
+    if (sequence >= 0) {
+      m_sequence = sequence;
+    }
+
+    QString channelId =
+        DiscordJsonParser::extractStringField(bytes, "channel_id").trimmed();
+    bool shouldBuildFullMessage =
+        !channelId.isEmpty() && (channelId == m_selectedChannelId ||
+                                 m_loadedChannelIds.contains(channelId));
+
+    if (!shouldBuildFullMessage) {
+      emit dispatchReceived("MESSAGE_CREATE", buildLightMessageCreatePayload(
+                                                  bytes, m_currentUserId));
+      return;
+    }
+
+    QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
+    QString errorMessage;
+    QVariantMap messagePayload =
+        DiscordJsonParser::parseObject(dataBytes, &errorMessage);
+    if (!errorMessage.isEmpty()) {
+      emit error(QString("Gateway MESSAGE_CREATE JSON parse error: %1")
+                     .arg(errorMessage));
+      return;
+    }
+
+    handleDispatch("MESSAGE_CREATE", messagePayload, sequence);
+    return;
+  }
+
+  if (fastEventName == "MESSAGE_UPDATE" || fastEventName == "MESSAGE_DELETE") {
+    int sequence = extractSequence(bytes);
+    if (sequence >= 0) {
+      m_sequence = sequence;
+    }
+
+    QString channelId =
+        DiscordJsonParser::extractStringField(bytes, "channel_id").trimmed();
+    bool shouldParseMessageEvent =
+        !channelId.isEmpty() && (channelId == m_selectedChannelId ||
+                                 m_loadedChannelIds.contains(channelId));
+    if (!shouldParseMessageEvent) {
+      return;
+    }
+
+    QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
+    QString errorMessage;
+    QVariantMap messagePayload =
+        DiscordJsonParser::parseObject(dataBytes, &errorMessage);
+    if (!errorMessage.isEmpty()) {
+      emit error(QString("Gateway %1 JSON parse error: %2")
+                     .arg(fastEventName)
+                     .arg(errorMessage));
+      return;
+    }
+
+    handleDispatch(fastEventName, messagePayload, sequence);
     return;
   }
 

@@ -47,5 +47,6 @@ void ClientState::resetGatewayPendingUpdates() {
   pendingUnreadChannelIds.clear();
   gatewayUiUpdateQueued = false;
   pendingDmUiUpdate = false;
+  guildsCacheSaveQueued = false;
   dmCacheSaveQueued = false;
 }

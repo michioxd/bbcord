@@ -111,6 +111,10 @@ bool AppStore::hasMoreChatBefore(const QString &channelId) const {
   return m_messageCache.hasMoreBefore(channelId.trimmed());
 }
 
+QStringList AppStore::loadedChatChannelIds() const {
+  return m_messageCache.initialLoadedChannelIds();
+}
+
 QString AppStore::oldestChatMessageId(const QString &channelId) const {
   return m_messageCache.oldestMessageId(channelId.trimmed());
 }
