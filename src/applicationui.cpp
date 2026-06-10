@@ -22,6 +22,7 @@
 #include "ui/DmListController.hpp"
 #include "ui/MainPageController.hpp"
 #include "ui/ServerListController.hpp"
+#include "ui/SettingsController.hpp"
 
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
@@ -39,7 +40,8 @@ ApplicationUI::ApplicationUI()
       m_mainPageController(
           new MainPageController(m_discordClient, m_appStore, this)),
       m_serverListController(
-          new ServerListController(m_discordClient, m_appStore, this)) {
+          new ServerListController(m_discordClient, m_appStore, this)),
+      m_settingsController(new SettingsController(this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);
   m_pLocaleHandler = new LocaleHandler(this);
@@ -64,6 +66,7 @@ ApplicationUI::ApplicationUI()
   qml->setContextProperty("dmListController", m_dmListController);
   qml->setContextProperty("mainPageController", m_mainPageController);
   qml->setContextProperty("serverListController", m_serverListController);
+  qml->setContextProperty("settingsController", m_settingsController);
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();

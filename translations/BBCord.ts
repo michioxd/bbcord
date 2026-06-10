@@ -116,32 +116,32 @@
 <context>
     <name>LoginPage</name>
     <message>
-        <location filename="../assets/LoginPage.qml" line="8"/>
+        <location filename="../assets/LoginPage.qml" line="11"/>
         <source>Login failed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="34"/>
+        <location filename="../assets/LoginPage.qml" line="53"/>
         <source>Welcome to BBCord</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="40"/>
+        <location filename="../assets/LoginPage.qml" line="59"/>
         <source>Enter your Discord token...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="51"/>
+        <location filename="../assets/LoginPage.qml" line="70"/>
         <source>Login</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="64"/>
+        <location filename="../assets/LoginPage.qml" line="83"/>
         <source>Continue</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/LoginPage.qml" line="91"/>
+        <location filename="../assets/LoginPage.qml" line="118"/>
         <source>How to get token</source>
         <translation type="unfinished"></translation>
     </message>
@@ -191,6 +191,29 @@
     <message>
         <location filename="../assets/MessageBubble.qml" line="260"/>
         <source>Open image: </source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>Settings</name>
+    <message>
+        <location filename="../assets/Settings.qml" line="5"/>
+        <source>Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="20"/>
+        <source>Miscellaneous</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="43"/>
+        <source>Sound effects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="50"/>
+        <source>Play login, connecting, and error sounds. #MSNTV2</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

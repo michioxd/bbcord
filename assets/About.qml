@@ -109,17 +109,44 @@ Sheet {
                 }
                 
                 Label {
-                    text: "made in Vietnam 🇻🇳 with love :3"
+                    text: "BBCord is an unofficial Discord client for BlackBerry 10\nIn memory of BlackBerry Mobile (1999–2016)"
                     textStyle.textAlign: TextAlign.Center
                     horizontalAlignment: HorizontalAlignment.Center
                     opacity: 0.5
                     topMargin: ui.du(2.0)
-                    textStyle.fontSize: FontSize.XXSmall
+                    textStyle.fontSize: FontSize.XSmall
                     bottomMargin: ui.du(4.0)
+                    multiline: true
                 }
                 
-                Label {
-                    text: ""
+                Container {
+                    layoutProperties: StackLayoutProperties {
+
+                    }
+
+                    leftPadding: ui.du(5.0)
+                    rightPadding: ui.du(5.0)
+                    bottomPadding: ui.du(5.0)
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    
+                    Label {
+                        text: "made in Vietnam 🇻🇳 with love :3"
+                        textStyle.textAlign: TextAlign.Center
+                        horizontalAlignment: HorizontalAlignment.Center
+                        opacity: 0.5
+                        textStyle.fontSize: FontSize.XXSmall
+                    }
+                    
+                    Label {
+                        text: "Discord®, the Discord logo, and related marks are trademarks or registered trademarks of Discord Inc.\nBBCord is not affiliated with or endorsed by Discord Inc."
+                        textStyle.textAlign: TextAlign.Center
+                        horizontalAlignment: HorizontalAlignment.Center
+                        opacity: 0.4
+                        topMargin: ui.du(1.0)
+                        textStyle.fontSize: FontSize.XXSmall
+                        bottomMargin: ui.du(4.0)
+                        multiline: true
+                    }
                 }
             }
         }

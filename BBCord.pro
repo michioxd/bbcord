@@ -2,7 +2,7 @@ APP_NAME = BBCord
 
 CONFIG += qt warn_on cascades10
 
-QT += network
+QT += network sql
 
 LIBS += -lbb
 LIBS += -lbbdata

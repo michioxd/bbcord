@@ -32,6 +32,7 @@ class DiscordClient;
 class DmListController;
 class MainPageController;
 class ServerListController;
+class SettingsController;
 
 /*!
  * @brief Application UI object
@@ -56,6 +57,7 @@ private:
   DmListController *m_dmListController;
   MainPageController *m_mainPageController;
   ServerListController *m_serverListController;
+  SettingsController *m_settingsController;
 };
 
 #endif /* ApplicationUI_HPP_ */

@@ -44,7 +44,11 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/MainPage.qml) \
         $$quote($$BASEDIR/assets/MessageBubble.qml) \
         $$quote($$BASEDIR/assets/ServerList.qml) \
+        $$quote($$BASEDIR/assets/Settings.qml) \
         $$quote($$BASEDIR/assets/UserSheet.qml) \
+        $$quote($$BASEDIR/assets/audio/connected.ogg) \
+        $$quote($$BASEDIR/assets/audio/connecting.ogg) \
+        $$quote($$BASEDIR/assets/audio/error.ogg) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/default-avt.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
@@ -110,7 +114,8 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
-        $$quote($$BASEDIR/src/ui/ServerListController.cpp)
+        $$quote($$BASEDIR/src/ui/ServerListController.cpp) \
+        $$quote($$BASEDIR/src/ui/SettingsController.cpp)
 
     HEADERS += \
         $$quote($$BASEDIR/src/applicationui.hpp) \
@@ -143,7 +148,8 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
-        $$quote($$BASEDIR/src/ui/ServerListController.hpp)
+        $$quote($$BASEDIR/src/ui/ServerListController.hpp) \
+        $$quote($$BASEDIR/src/ui/SettingsController.hpp)
 }
 
 CONFIG += precompile_header
@@ -195,6 +201,9 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \
+        $$quote($$BASEDIR/../assets/audio/*.qml) \
+        $$quote($$BASEDIR/../assets/audio/*.js) \
+        $$quote($$BASEDIR/../assets/audio/*.qs) \
         $$quote($$BASEDIR/../assets/images/*.qml) \
         $$quote($$BASEDIR/../assets/images/*.js) \
         $$quote($$BASEDIR/../assets/images/*.qs) \

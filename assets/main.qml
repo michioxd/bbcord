@@ -16,6 +16,7 @@
 
 import bb.cascades 1.4
 import bb.system 1.2
+import bb.multimedia 1.0
 
 NavigationPane {
     id: nav
@@ -24,6 +25,41 @@ NavigationPane {
     property variant currentMainPage: null
     property variant currentUserSheet: null
     property variant aboutDialog: null
+    property variant currentSettingsPage: null
+
+    function playSfx(player) {
+        if (!settingsController.sfxEnabled) {
+            return
+        }
+
+        player.stop()
+        player.play()
+    }
+
+    function updateConnectingSfx() {
+        if (!settingsController.sfxEnabled) {
+            connectingPlayer.stop()
+            connectedPlayer.stop()
+            errorPlayer.stop()
+            return
+        }
+
+        if (appStore.busy) {
+            connectingPlayer.play()
+        } else {
+            connectingPlayer.stop()
+        }
+    }
+
+    function playConnectedSfx() {
+        connectingPlayer.stop()
+        playSfx(connectedPlayer)
+    }
+
+    function playErrorSfx() {
+        connectingPlayer.stop()
+        playSfx(errorPlayer)
+    }
 
     onCreationCompleted: {
         currentUserSheet = userSheetDefinition.createObject()
@@ -36,6 +72,10 @@ NavigationPane {
             nav.push(loginPage)
         }
         discordClient.loginSucceeded.connect(openMainPage)
+        discordClient.loginSucceeded.connect(playConnectedSfx)
+        discordClient.loginFailed.connect(playErrorSfx)
+        settingsController.sfxEnabledChanged.connect(updateConnectingSfx)
+        appStore.busyChanged.connect(updateConnectingSfx)
         discordClient.autoLogin()
     }
 
@@ -102,7 +142,15 @@ NavigationPane {
                 enabled: appStore.loggedIn
 
                 onTriggered: {
-                    console.log("settings")
+                    if (currentSettingsPage) {
+                        return
+                    }
+                    if (!currentSettingsPage) {
+                        currentSettingsPage = settingsPageDefinition.createObject()
+                    }
+                    if (currentSettingsPage) {
+                        nav.push(currentSettingsPage)
+                    }
                 }
             },
 
@@ -119,6 +167,9 @@ NavigationPane {
 
     onPopTransitionEnded: {
         if (page != currentMainPage) {
+            if (page == currentSettingsPage) {
+                currentSettingsPage = null
+            }
             page.destroy()
         }
     }
@@ -136,10 +187,30 @@ NavigationPane {
             id: userSheetDefinition
             source: "asset:///UserSheet.qml"
         },
+        ComponentDefinition {
+            id: settingsPageDefinition
+            source: "asset:///Settings.qml"
+        },
 
         ComponentDefinition {
             id: aboutDialogDefinition
             source: "asset:///About.qml"
+        },
+
+        MediaPlayer {
+            id: connectingPlayer
+            sourceUrl: "asset:///audio/connecting.ogg"
+            repeatMode: RepeatMode.Track
+        },
+        MediaPlayer {
+            id: connectedPlayer
+            sourceUrl: "asset:///audio/connected.ogg"
+            repeatMode: RepeatMode.None
+        },
+        MediaPlayer {
+            id: errorPlayer
+            sourceUrl: "asset:///audio/error.ogg"
+            repeatMode: RepeatMode.None
         },
 
         SystemDialog {

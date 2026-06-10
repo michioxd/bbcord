@@ -1,12 +1,31 @@
 import bb.cascades 1.4
 import bb.system 1.2
+import QtQuick 1.0
 
 Page {
     signal loginSucceeded()
+    property double loginProgress: 0.0
+    property int loginProgressTicks: 0
 
     function showLoginFailed(message) {
         loginFailToast.body = message.length > 0 ? message : qsTr("Login failed")
         loginFailToast.show()
+    }
+
+    function updateLoginProgress() {
+        if (appStore.busy) {
+            if (loginProgress < 1.0) {
+                loginProgressTicks = loginProgressTicks + 1
+                if (loginProgressTicks < 34) {
+                    loginProgress = Math.min(0.9, loginProgress + 0.026)
+                } else {
+                    loginProgress = Math.min(1.0, loginProgress + Math.max(0.001, (1.0 - loginProgress) * 0.035))
+                }
+            }
+        } else {
+            loginProgress = 0.0
+            loginProgressTicks = 0
+        }
     }
 
     Container {
@@ -71,12 +90,20 @@ Page {
                 }
             }
 
-            ActivityIndicator {
-                running: appStore.busy
+            ProgressIndicator {
+                id: loginProgressIndicator
                 visible: appStore.busy
                 horizontalAlignment: HorizontalAlignment.Center
                 topMargin: ui.du(4.0)
-                preferredWidth: ui.du(8.0)
+                preferredWidth: ui.du(32.0)
+                fromValue: 0.0
+                toValue: 1.0
+                value: appStore.busy ? loginProgress : 0.0
+
+                onVisibleChanged: {
+                    loginProgress = visible ? 0.05 : 0.0
+                    loginProgressTicks = 0
+                }
             }
 
             Label {
@@ -108,6 +135,15 @@ Page {
     attachedObjects: [
         SystemToast {
             id: loginFailToast
+        },
+        Timer {
+            id: loginProgressTimer
+            interval: 120
+            repeat: true
+            running: appStore.busy
+            onTriggered: {
+                updateLoginProgress()
+            }
         }
     ]
 

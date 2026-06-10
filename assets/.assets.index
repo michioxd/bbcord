@@ -1,6 +1,9 @@
 1
-33
+37
 About.qml
+audio/connected.ogg
+audio/connecting.ogg
+audio/error.ogg
 ChannelMemberList.qml
 ChatCard.qml
 DmList.qml
@@ -32,4 +35,5 @@ main.qml
 MainPage.qml
 MessageBubble.qml
 ServerList.qml
+Settings.qml
 UserSheet.qml
