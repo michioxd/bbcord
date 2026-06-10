@@ -91,7 +91,8 @@ Q_SIGNALS:
 private:
   DiscordRestClient m_loginClient;
   DiscordRestClient m_dataClient;
-  DiscordRestClient m_chatClient;
+  DiscordRestClient m_chatReadClient;
+  DiscordRestClient m_chatWriteClient;
   DiscordRestClient m_avatarClient;
   DiscordRestClient m_avatarClient2;
   DiscordRestClient m_guildIconClient;

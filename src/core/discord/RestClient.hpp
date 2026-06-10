@@ -73,6 +73,7 @@ public:
                       const QString &outputPath);
   void downloadGuildIcon(const QString &guildId, const QString &iconHash,
                          const QString &outputPath);
+  void removeQueuedChannelMessageRequestsExcept(const QString &channelId);
   void cancel();
 
 Q_SIGNALS:
@@ -109,9 +110,10 @@ private:
                    void *eventData);
   void enqueueRequest(const RestRequest &request);
   void processNextRequest();
+  void sendCurrentRequest(struct mg_connection *connection);
   void startTimerIfNeeded();
   void stopTimerIfIdle();
-  void finishRequest();
+  void finishRequest(bool keepConnectionAlive = false);
   void failWithMessage(const QString &message);
   void failDataRequest(const QString &message);
   void failChatRequest(const QString &message);
@@ -129,6 +131,7 @@ private:
   mg_connection *m_connection;
   int m_timerId;
   int m_pollTicks;
+  int m_idleTicks;
   RequestType m_requestType;
   QString m_token;
   QString m_requestPath;

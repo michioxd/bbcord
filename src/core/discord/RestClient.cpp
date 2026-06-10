@@ -21,12 +21,19 @@ const char *kDiscordApiHost = "discord.com";
 const char *kDiscordApiUrl = "https://discord.com";
 const char *kDiscordCdnHost = "cdn.discordapp.com";
 const char *kDiscordCdnUrl = "https://cdn.discordapp.com";
-const int kPollIntervalMs = 50;
+const int kPollIntervalMs = 10;
 const int kRequestTimeoutTicks = 600;
+const int kKeepAliveIdleTimeoutTicks = 300;
 const qint64 kMaxAttachmentBytes = 8 * 1024 * 1024;
 
 QByteArray httpBodyToBytes(const struct mg_http_message *message) {
   return QByteArray(message->body.buf, static_cast<int>(message->body.len));
+}
+
+bool responseAllowsKeepAlive(struct mg_http_message *message) {
+  struct mg_str closeValue = mg_str("close");
+  struct mg_str *connection = mg_http_get_header(message, "Connection");
+  return connection == NULL || mg_strcasecmp(*connection, closeValue) != 0;
 }
 
 QString restErrorMessage(int status) {
@@ -83,8 +90,8 @@ QByteArray buildJsonBody(const QVariantMap &data, QString *errorMessage) {
 
 DiscordRestClient::DiscordRestClient(QObject *parent)
     : QObject(parent), m_connection(NULL), m_timerId(0), m_pollTicks(0),
-      m_requestType(NoRequest), m_isProcessing(false), m_requestSent(false),
-      m_finished(true) {
+      m_idleTicks(0), m_requestType(NoRequest), m_isProcessing(false),
+      m_requestSent(false), m_finished(true) {
   m_mgr = new mg_mgr;
   mg_mgr_init(m_mgr);
   mg_log_set(MG_LL_NONE);
@@ -373,6 +380,22 @@ void DiscordRestClient::downloadGuildIcon(const QString &guildId,
   enqueueRequest(request);
 }
 
+void DiscordRestClient::removeQueuedChannelMessageRequestsExcept(
+    const QString &channelId) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty() || m_requestQueue.isEmpty()) {
+    return;
+  }
+
+  for (int i = m_requestQueue.size() - 1; i >= 0; --i) {
+    const RestRequest &request = m_requestQueue.at(i);
+    if (request.type == ChannelMessagesRequest &&
+        request.channelId != safeChannelId) {
+      m_requestQueue.removeAt(i);
+    }
+  }
+}
+
 void DiscordRestClient::cancel() {
   m_requestQueue.clear();
   if (m_connection != NULL) {
@@ -386,6 +409,7 @@ void DiscordRestClient::cancel() {
   m_requestSent = false;
   m_finished = true;
   m_pollTicks = 0;
+  m_idleTicks = 0;
   m_requestPath.clear();
   m_requestMethod.clear();
   m_requestBody.clear();
@@ -406,14 +430,24 @@ void DiscordRestClient::cancel() {
 void DiscordRestClient::timerEvent(QTimerEvent *event) {
   Q_UNUSED(event);
 
-  if (m_connection == NULL || m_finished) {
+  if (m_connection == NULL) {
     stopTimerIfIdle();
     return;
   }
 
   mg_mgr_poll(m_mgr, 0);
 
-  if (m_connection != NULL && !m_finished) {
+  if (m_connection != NULL && m_finished) {
+    ++m_idleTicks;
+    if (m_idleTicks > kKeepAliveIdleTimeoutTicks) {
+      m_connection->fn_data = NULL;
+      if (!m_connection->is_closing) {
+        m_connection->is_closing = 1;
+      }
+      m_connection = NULL;
+      stopTimerIfIdle();
+    }
+  } else if (m_connection != NULL && !m_finished) {
     ++m_pollTicks;
     if (m_pollTicks > kRequestTimeoutTicks) {
       failWithMessage("Discord REST timeout");
@@ -442,6 +476,7 @@ void DiscordRestClient::processNextRequest() {
     return;
   }
 
+  bool reuseConnection = m_connection != NULL && !m_connection->is_closing;
   RestRequest request = m_requestQueue.takeFirst();
   m_isProcessing = true;
   m_requestType = request.type;
@@ -463,6 +498,13 @@ void DiscordRestClient::processNextRequest() {
   m_requestSent = false;
   m_finished = false;
   m_pollTicks = 0;
+  m_idleTicks = 0;
+
+  if (reuseConnection) {
+    sendCurrentRequest(m_connection);
+    startTimerIfNeeded();
+    return;
+  }
 
   const char *url =
       (m_requestType == AvatarRequest || m_requestType == GuildIconRequest)
@@ -525,6 +567,18 @@ void DiscordRestClient::processNextRequest() {
   startTimerIfNeeded();
 }
 
+void DiscordRestClient::sendCurrentRequest(struct mg_connection *connection) {
+  if (m_requestType == AvatarRequest) {
+    sendAvatarRequest(connection);
+  } else if (m_requestType == GuildIconRequest) {
+    sendGuildIconRequest(connection);
+  } else if (m_requestType == LoginRequest) {
+    sendGetMeRequest(connection);
+  } else {
+    sendApiRequest(connection);
+  }
+}
+
 void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
                                     void *eventData) {
   switch (event) {
@@ -545,15 +599,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
     break;
 
   case MG_EV_TLS_HS:
-    if (m_requestType == AvatarRequest) {
-      sendAvatarRequest(connection);
-    } else if (m_requestType == GuildIconRequest) {
-      sendGuildIconRequest(connection);
-    } else if (m_requestType == LoginRequest) {
-      sendGetMeRequest(connection);
-    } else {
-      sendApiRequest(connection);
-    }
+    sendCurrentRequest(connection);
     break;
 
   case MG_EV_HTTP_MSG: {
@@ -561,6 +607,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         static_cast<struct mg_http_message *>(eventData);
     int status = mg_http_status(message);
     QByteArray body = httpBodyToBytes(message);
+    bool keepConnectionAlive = responseAllowsKeepAlive(message);
 
     if (m_requestType == AvatarRequest || m_requestType == GuildIconRequest) {
       qDebug() << "[discord-rest] avatar status" << status;
@@ -573,7 +620,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
           QString avatarUserId = m_avatarUserId;
           QString guildId = m_iconGuildId;
           bool isGuildIcon = m_requestType == GuildIconRequest;
-          finishRequest();
+          finishRequest(keepConnectionAlive);
           if (isGuildIcon) {
             emit guildIconDownloadFailed(
                 guildId, QString("Could not save icon: %1").arg(outputPath));
@@ -590,7 +637,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         QString avatarUserId = m_avatarUserId;
         QString guildId = m_iconGuildId;
         bool isGuildIcon = m_requestType == GuildIconRequest;
-        finishRequest();
+        finishRequest(keepConnectionAlive);
         if (isGuildIcon) {
           emit guildIconDownloaded(guildId, outputPath);
         } else {
@@ -604,7 +651,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
       QString avatarUserId = m_avatarUserId;
       QString guildId = m_iconGuildId;
       bool isGuildIcon = m_requestType == GuildIconRequest;
-      finishRequest();
+      finishRequest(keepConnectionAlive);
       if (isGuildIcon) {
         emit guildIconDownloadFailed(guildId, errorMessage);
       } else {
@@ -628,7 +675,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
 
         QString channelId = m_channelId;
         QString beforeMessageId = m_beforeMessageId;
-        finishRequest();
+        finishRequest(keepConnectionAlive);
         emit channelMessagesLoaded(channelId, beforeMessageId, messages);
         processNextRequest();
         break;
@@ -657,7 +704,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
         QString channelId = m_channelId;
         QString nonce = m_nonce;
         RequestType finishedType = m_requestType;
-        finishRequest();
+        finishRequest(keepConnectionAlive);
         if (finishedType == SendMessageRequest ||
             finishedType == UploadMessageRequest) {
           emit channelMessageSent(channelId, nonce, message);
@@ -678,7 +725,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
       if (status == 204 || status == 200) {
         QString channelId = m_channelId;
         QString messageId = m_messageId;
-        finishRequest();
+        finishRequest(keepConnectionAlive);
         emit channelMessageDeleted(channelId, messageId);
         processNextRequest();
         break;
@@ -707,7 +754,7 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
 
         QString guildId = m_guildId;
         RequestType finishedType = m_requestType;
-        finishRequest();
+        finishRequest(keepConnectionAlive);
         if (finishedType == GuildsRequest) {
           emit guildsLoaded(items);
         } else if (finishedType == DmChannelsRequest) {
@@ -750,7 +797,12 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
 
   case MG_EV_CLOSE:
     if (m_connection == connection) {
-      failWithMessage("Discord REST connection closed");
+      m_connection = NULL;
+      if (!m_finished) {
+        failWithMessage("Discord REST connection closed");
+      } else {
+        stopTimerIfIdle();
+      }
     }
     break;
   }
@@ -763,17 +815,24 @@ void DiscordRestClient::startTimerIfNeeded() {
 }
 
 void DiscordRestClient::stopTimerIfIdle() {
-  if (m_timerId != 0 && (m_connection == NULL || m_finished)) {
+  if (m_timerId != 0 && m_connection == NULL) {
     killTimer(m_timerId);
     m_timerId = 0;
   }
 }
 
-void DiscordRestClient::finishRequest() {
+void DiscordRestClient::finishRequest(bool keepConnectionAlive) {
   if (m_connection != NULL) {
-    m_connection->is_closing = 1;
+    if (keepConnectionAlive && !m_connection->is_closing) {
+      m_idleTicks = 0;
+    } else {
+      m_connection->fn_data = NULL;
+      if (!m_connection->is_closing) {
+        m_connection->is_closing = 1;
+      }
+      m_connection = NULL;
+    }
   }
-  m_connection = NULL;
   m_requestType = NoRequest;
   m_requestSent = false;
   m_finished = true;
@@ -793,6 +852,9 @@ void DiscordRestClient::finishRequest() {
   m_iconGuildId.clear();
   m_iconHash.clear();
   m_outputPath.clear();
+  if (keepConnectionAlive && m_connection != NULL) {
+    startTimerIfNeeded();
+  }
   stopTimerIfIdle();
 }
 

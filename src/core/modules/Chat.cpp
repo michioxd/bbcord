@@ -139,6 +139,15 @@ void DiscordClient::onChannelMessagesLoaded(const QString &channelId,
     return;
   }
 
+  if (safeChannelId != m_store->selectedChannelId()) {
+    if (beforeMessageId.trimmed().isEmpty()) {
+      m_store->setChatLoadingInitial(safeChannelId, false);
+    } else {
+      m_store->setChatLoadingBefore(safeChannelId, false);
+    }
+    return;
+  }
+
   QList<DiscordMessage> parsedMessages =
       variantMessagesToDiscordMessages(messages);
   bool hasMoreBefore = messages.size() >= kChatPageSize;
@@ -191,6 +200,11 @@ void DiscordClient::onChatRequestFailed(const QString &operation,
   }
 
   if (operation == "messages") {
+    if (channelId.trimmed() != m_store->selectedChannelId()) {
+      m_store->setChatLoadingInitial(channelId, false);
+      m_store->setChatLoadingBefore(channelId, false);
+      return;
+    }
     m_store->setChatLoadingInitial(channelId, false);
     m_store->setChatLoadingBefore(channelId, false);
   } else if (operation == "send") {

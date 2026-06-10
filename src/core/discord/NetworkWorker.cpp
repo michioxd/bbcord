@@ -163,8 +163,9 @@ void moveDmToTop(QVariantList *channels, const QString &channelId,
 
 DiscordNetworkWorker::DiscordNetworkWorker(QObject *parent)
     : QObject(parent), m_loginClient(this), m_dataClient(this),
-      m_chatClient(this), m_avatarClient(this), m_avatarClient2(this),
-      m_guildIconClient(this), m_guildIconClient2(this), m_gateway(this) {
+      m_chatReadClient(this), m_chatWriteClient(this), m_avatarClient(this),
+      m_avatarClient2(this), m_guildIconClient(this), m_guildIconClient2(this),
+      m_gateway(this) {
   connect(&m_loginClient, SIGNAL(loginSucceeded(QVariantMap)), this,
           SIGNAL(loginSucceeded(QVariantMap)));
   connect(&m_loginClient, SIGNAL(loginFailed(QString)), this,
@@ -179,17 +180,22 @@ DiscordNetworkWorker::DiscordNetworkWorker(QObject *parent)
   connect(&m_dataClient, SIGNAL(requestFailed(QString)), this,
           SIGNAL(requestFailed(QString)));
 
-  connect(&m_chatClient,
+  connect(&m_chatReadClient,
           SIGNAL(channelMessagesLoaded(QString, QString, QVariantList)), this,
           SIGNAL(channelMessagesLoaded(QString, QString, QVariantList)));
-  connect(&m_chatClient,
+  connect(&m_chatReadClient,
+          SIGNAL(chatRequestFailed(QString, QString, QString, QString)), this,
+          SIGNAL(chatRequestFailed(QString, QString, QString, QString)));
+
+  connect(&m_chatWriteClient,
           SIGNAL(channelMessageSent(QString, QString, QVariantMap)), this,
           SIGNAL(channelMessageSent(QString, QString, QVariantMap)));
-  connect(&m_chatClient, SIGNAL(channelMessageEdited(QString, QVariantMap)),
-          this, SIGNAL(channelMessageEdited(QString, QVariantMap)));
-  connect(&m_chatClient, SIGNAL(channelMessageDeleted(QString, QString)), this,
-          SIGNAL(channelMessageDeleted(QString, QString)));
-  connect(&m_chatClient,
+  connect(&m_chatWriteClient,
+          SIGNAL(channelMessageEdited(QString, QVariantMap)), this,
+          SIGNAL(channelMessageEdited(QString, QVariantMap)));
+  connect(&m_chatWriteClient, SIGNAL(channelMessageDeleted(QString, QString)),
+          this, SIGNAL(channelMessageDeleted(QString, QString)));
+  connect(&m_chatWriteClient,
           SIGNAL(chatRequestFailed(QString, QString, QString, QString)), this,
           SIGNAL(chatRequestFailed(QString, QString, QString, QString)));
 
@@ -281,7 +287,9 @@ void DiscordNetworkWorker::fetchChannelMessages(
     return;
   }
 
-  m_chatClient.fetchChannelMessages(token, channelId, limit, beforeMessageId);
+  m_chatReadClient.removeQueuedChannelMessageRequestsExcept(channelId);
+  m_chatReadClient.fetchChannelMessages(token, channelId, limit,
+                                        beforeMessageId);
 }
 
 void DiscordNetworkWorker::sendChannelMessage(const QString &token,
@@ -299,8 +307,8 @@ void DiscordNetworkWorker::sendChannelMessage(const QString &token,
     return;
   }
 
-  m_chatClient.sendChannelMessage(token, channelId, content, nonce,
-                                  replyMessageId, attachmentPath);
+  m_chatWriteClient.sendChannelMessage(token, channelId, content, nonce,
+                                       replyMessageId, attachmentPath);
 }
 
 void DiscordNetworkWorker::editChannelMessage(const QString &token,
@@ -315,7 +323,7 @@ void DiscordNetworkWorker::editChannelMessage(const QString &token,
     return;
   }
 
-  m_chatClient.editChannelMessage(token, channelId, messageId, content);
+  m_chatWriteClient.editChannelMessage(token, channelId, messageId, content);
 }
 
 void DiscordNetworkWorker::deleteChannelMessage(const QString &token,
@@ -329,7 +337,7 @@ void DiscordNetworkWorker::deleteChannelMessage(const QString &token,
     return;
   }
 
-  m_chatClient.deleteChannelMessage(token, channelId, messageId);
+  m_chatWriteClient.deleteChannelMessage(token, channelId, messageId);
 }
 
 void DiscordNetworkWorker::downloadAvatar(const QString &userId,
@@ -514,7 +522,8 @@ void DiscordNetworkWorker::cancelAll() {
 
   m_loginClient.cancel();
   m_dataClient.cancel();
-  m_chatClient.cancel();
+  m_chatReadClient.cancel();
+  m_chatWriteClient.cancel();
   m_avatarClient.cancel();
   m_avatarClient2.cancel();
   m_guildIconClient.cancel();
