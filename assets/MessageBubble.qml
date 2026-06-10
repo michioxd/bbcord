@@ -74,6 +74,7 @@ Container {
                 },
                 ActionItem {
                     title: qsTr("Copy message")
+                    imageSource: "asset:///images/icons/ic_copy.png"
                     enabled: root.message !== ""
 
                     onTriggered: {
