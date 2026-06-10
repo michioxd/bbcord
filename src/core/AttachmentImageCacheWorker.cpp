@@ -15,8 +15,6 @@ extern "C" {
 #include <string.h>
 
 namespace {
-const int kPreviewWidth = 240;
-const int kPreviewQuality = 55;
 const int kPollIntervalMs = 50;
 const int kRequestTimeoutTicks = 300;
 
@@ -76,7 +74,7 @@ void AttachmentImageCacheWorker::requestImage(const QString &url,
 
   m_cancelledUrls.remove(safeUrl);
 
-  QUrl parsed(previewUrl(safeUrl));
+  QUrl parsed(safeUrl);
   QString host = parsed.host().trimmed();
   QString requestPath = parsed.encodedPath();
   QString query = parsed.encodedQuery();
@@ -161,17 +159,6 @@ void AttachmentImageCacheWorker::cancelAll() {
 void AttachmentImageCacheWorker::onReadyRead() {}
 
 void AttachmentImageCacheWorker::onFinished() {}
-
-QString AttachmentImageCacheWorker::previewUrl(const QString &url) const {
-  QUrl parsed(url);
-  if (!parsed.isValid()) {
-    return url;
-  }
-
-  parsed.addQueryItem("width", QString::number(kPreviewWidth));
-  parsed.addQueryItem("quality", QString::number(kPreviewQuality));
-  return parsed.toString();
-}
 
 void AttachmentImageCacheWorker::timerEvent(QTimerEvent *event) {
   if (event != 0 && event->timerId() != m_timerId) {

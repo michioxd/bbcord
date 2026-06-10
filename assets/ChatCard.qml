@@ -70,6 +70,8 @@ Page {
                         type: ""
 
                         MessageBubble {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            preferredWidth: ListItem.view.width
                             messageId: ListItemData.id
                             authorId: ListItemData.authorId
                             author: ListItemData.author
@@ -91,6 +93,7 @@ Page {
                             attachmentUrl: ListItemData.attachmentUrl
                             attachmentName: ListItemData.attachmentName
                             attachmentIsImage: ListItemData.attachmentIsImage
+                            attachments: ListItemData.attachments
                             isGroupStart: ListItemData.isGroupStart
                             isGroupEnd: ListItemData.isGroupEnd
                             showAvatar: ListItemData.showAvatar
@@ -105,15 +108,19 @@ Page {
                             }
 
                             onDeleteRequested: {
-                                chatController.deleteMessage(messageId);
+                                ListItem.view.deleteMessage(messageId);
                             }
 
                             onReplyRequested: {
                                 ListItem.view.setReply(messageId, author, message);
                             }
 
+                            onCopyRequested: {
+                                ListItem.view.copyMessage(text);
+                            }
+
                             onAttachmentOpenRequested: {
-                                chatController.openAttachment(url);
+                                ListItem.view.openAttachment(url);
                             }
 
                             onAttachmentImageLoadRequested: {
@@ -137,6 +144,18 @@ Page {
 
                 function loadAttachmentImage(url) {
                     chatController.requestCachedImage(url);
+                }
+
+                function deleteMessage(messageId) {
+                    chatController.deleteMessage(messageId);
+                }
+
+                function copyMessage(text) {
+                    chatController.copyText(text);
+                }
+
+                function openAttachment(url) {
+                    chatController.openAttachment(url);
                 }
 
                 onDataModelChanged: {

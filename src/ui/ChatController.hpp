@@ -82,6 +82,7 @@ public:
                                const QString &content);
   Q_INVOKABLE void deleteMessage(const QString &messageId);
   Q_INVOKABLE void markPendingFailed(const QString &messageId);
+  Q_INVOKABLE void copyText(const QString &text);
   Q_INVOKABLE void openAttachment(const QString &url);
   Q_INVOKABLE QString avatarSource(const QString &userId,
                                    const QString &avatarHash);

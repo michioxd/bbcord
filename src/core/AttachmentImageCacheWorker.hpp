@@ -49,7 +49,6 @@ Q_SIGNALS:
 
 private:
   void timerEvent(QTimerEvent *event);
-  QString previewUrl(const QString &url) const;
   void startTimerIfNeeded();
   void stopTimerIfIdle();
   void finishDownload(struct mg_connection *connection, bool success);

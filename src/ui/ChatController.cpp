@@ -5,6 +5,7 @@
 #include "../core/Client.hpp"
 #include "../core/models/Models.hpp"
 
+#include <bb/system/Clipboard>
 #include <bb/system/InvokeManager>
 #include <bb/system/InvokeRequest>
 
@@ -18,16 +19,30 @@
 
 namespace {
 const qint64 kMaxPendingAttachmentBytes = 8 * 1024 * 1024;
-const qint64 kMaxCachedAttachmentImageBytes = 2 * 1024 * 1024;
 const int kMaxPendingAttachments = 10;
+const int kAttachmentPreviewWidthPx = 512;
+const int kAttachmentPreviewHeightPx = 512;
+
+QString discordPreviewUrl(const QString &url) {
+  QUrl parsed(url.trimmed());
+  if (!parsed.isValid()) {
+    return url.trimmed();
+  }
+
+  parsed.removeAllQueryItems("width");
+  parsed.removeAllQueryItems("height");
+  parsed.addQueryItem("width", QString::number(kAttachmentPreviewWidthPx));
+  parsed.addQueryItem("height", QString::number(kAttachmentPreviewHeightPx));
+  return parsed.toString();
+}
 } // namespace
 
 ChatController::ChatController(DiscordClient *client, AppStore *store,
                                QObject *parent)
     : QObject(parent), m_client(client), m_store(store),
-      m_chatDataModel(new bb::cascades::ArrayDataModel(this)), m_imageThread(0),
+      m_chatDataModel(new bb::cascades::ArrayDataModel(this)),
       m_pendingAttachmentsModel(new bb::cascades::ArrayDataModel(this)),
-      m_imageWorker(0), m_pendingAttachmentIsImage(false) {
+      m_imageThread(0), m_imageWorker(0), m_pendingAttachmentIsImage(false) {
   if (m_client) {
     connect(this, SIGNAL(initialMessagesRequested(QString, QString)), m_client,
             SLOT(loadInitialChatMessages(QString, QString)));
@@ -380,6 +395,17 @@ void ChatController::markPendingFailed(const QString &messageId) {
   m_store->markPendingChatMessageFailed(channelId, safeMessageId);
 }
 
+void ChatController::copyText(const QString &text) {
+  QString safeText = text;
+  if (safeText.isEmpty()) {
+    return;
+  }
+
+  bb::system::Clipboard clipboard;
+  clipboard.remove("text/plain");
+  clipboard.insert("text/plain", safeText.toUtf8());
+}
+
 void ChatController::openAttachment(const QString &url) {
   QString safeUrl = url.trimmed();
   if (safeUrl.isEmpty()) {
@@ -390,7 +416,8 @@ void ChatController::openAttachment(const QString &url) {
   bb::system::InvokeRequest request;
   request.setTarget("sys.browser");
   request.setAction("bb.action.OPEN");
-  request.setUri(QUrl(safeUrl));
+  request.setMimeType("text/html");
+  request.setUri(safeUrl);
   manager.invoke(request);
 }
 
@@ -459,7 +486,7 @@ void ChatController::requestCachedImage(const QString &url) {
   m_loadingAttachmentImages.insert(safeUrl);
   QMetaObject::invokeMethod(m_imageWorker, "requestImage", Qt::QueuedConnection,
                             Q_ARG(QString, safeUrl), Q_ARG(QString, path),
-                            Q_ARG(qint64, kMaxCachedAttachmentImageBytes));
+                            Q_ARG(qint64, 0));
 }
 
 void ChatController::cancelCachedImage(const QString &url) {
@@ -749,18 +776,99 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
   QString avatarHash = item.value("avatarHash").toString();
   QString attachmentUrl = item.value("attachmentUrl").toString();
   bool attachmentIsImage = item.value("attachmentIsImage").toBool();
+  QVariantList attachments = item.value("attachments").toList();
   QString imageSource = item.value("image").toString();
   bool imageFailed = attachmentIsImage && !attachmentUrl.isEmpty() &&
                      item.value("imageLoadFailed").toBool();
   bool imageLoading = attachmentIsImage && !attachmentUrl.isEmpty() &&
                       item.value("imageLoading").toBool();
 
-  if (isRemoteImageUrl(imageSource)) {
-    if (attachmentUrl.isEmpty()) {
-      attachmentUrl = imageSource;
-      item["attachmentUrl"] = attachmentUrl;
+  if (attachments.isEmpty() && !attachmentUrl.isEmpty()) {
+    QVariantMap attachment;
+    attachment["url"] = attachmentUrl;
+    attachment["filename"] = item.value("attachmentName").toString();
+    attachment["isImage"] = attachmentIsImage;
+    attachment["width"] = item.value("imageWidth", 0).toInt();
+    attachment["height"] = item.value("imageHeight", 0).toInt();
+    attachments.append(attachment);
+  }
+
+  QVariantList displayAttachments;
+  for (int i = 0; i < attachments.size(); ++i) {
+    QVariantMap attachment = attachments.at(i).toMap();
+    QString url = attachment.value("url").toString();
+    bool isImage = attachment.value("isImage").toBool();
+    QString previewUrl = isImage ? discordPreviewUrl(url) : url;
+    QString image = attachment.value("image").toString();
+    bool failed = isImage && !url.isEmpty() &&
+                  attachment.value("imageLoadFailed").toBool();
+    bool loading =
+        isImage && !url.isEmpty() && attachment.value("imageLoading").toBool();
+
+    if (isImage && !url.isEmpty()) {
+      if (!isRemoteImageUrl(previewUrl)) {
+        image = previewUrl;
+        loading = false;
+        failed = false;
+      } else {
+        QString cached = cachedImageSource(previewUrl);
+        if (!cached.isEmpty()) {
+          image = cached;
+          loading = false;
+          failed = false;
+        } else if (!failed) {
+          image.clear();
+          loading = true;
+          requestCachedImage(previewUrl);
+        }
+      }
     }
-    imageSource.clear();
+
+    attachment["url"] = url;
+    attachment["previewUrl"] = previewUrl;
+    attachment["name"] = attachment.value("filename").toString();
+    attachment["image"] = image;
+    attachment["imageLoading"] = loading;
+    attachment["imageLoadFailed"] = failed;
+    attachment["isImage"] = isImage;
+    attachment["width"] = attachment.value("width", 0).toInt();
+    attachment["height"] = attachment.value("height", 0).toInt();
+    double ratio = 16.0 / 9.0;
+    int width = attachment.value("width", 0).toInt();
+    int height = attachment.value("height", 0).toInt();
+    if (width > 0 && height > 0) {
+      ratio = static_cast<double>(width) / static_cast<double>(height);
+    }
+    double displayWidth = static_cast<double>(width) / 10.0;
+    if (displayWidth <= 0.0) {
+      displayWidth = 50.4;
+    }
+    double displayHeight = displayWidth / ratio;
+    if (displayHeight > 43.2) {
+      displayHeight = 43.2;
+      displayWidth = displayHeight * ratio;
+    }
+    if (displayWidth < 16.8) {
+      displayWidth = 16.8;
+      displayHeight = displayWidth / ratio;
+      if (displayHeight > 43.2) {
+        displayHeight = 43.2;
+      }
+    }
+    attachment["displayWidthDu"] = displayWidth;
+    attachment["displayHeightDu"] = displayHeight;
+    displayAttachments.append(attachment);
+
+    if (i == 0) {
+      attachmentUrl = url;
+      attachmentIsImage = isImage;
+      imageSource = image;
+      imageLoading = loading;
+      imageFailed = failed;
+      item["attachmentName"] = attachment.value("name").toString();
+      item["imageWidth"] = attachment.value("width", 0).toInt();
+      item["imageHeight"] = attachment.value("height", 0).toInt();
+    }
   }
 
   if (!authorId.isEmpty()) {
@@ -779,7 +887,8 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
     }
   }
 
-  if (attachmentIsImage && !attachmentUrl.isEmpty()) {
+  if (displayAttachments.isEmpty() && attachmentIsImage &&
+      !attachmentUrl.isEmpty()) {
     if (!isRemoteImageUrl(attachmentUrl)) {
       imageSource = attachmentUrl;
       imageLoading = false;
@@ -811,8 +920,10 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
   item["time"] = item.value("time", "Now").toString();
   item["timestampMs"] = item.value("timestampMs");
   item["message"] = item.value("message").toString();
+  item["messageHtml"] = item.value("messageHtml").toString();
   item["replyAuthor"] = item.value("replyAuthor").toString();
   item["replyMessage"] = item.value("replyMessage").toString();
+  item["replyMessageHtml"] = item.value("replyMessageHtml").toString();
   item["image"] = imageSource;
   item["imageLoading"] = imageLoading;
   item["imageLoadFailed"] = imageFailed;
@@ -821,6 +932,7 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
   item["attachmentUrl"] = attachmentUrl;
   item["attachmentName"] = item.value("attachmentName").toString();
   item["attachmentIsImage"] = attachmentIsImage;
+  item["attachments"] = displayAttachments;
   item["pending"] = item.value("pending").toBool();
   item["failed"] = item.value("failed").toBool();
   item["edited"] = item.value("edited").toBool();
@@ -912,10 +1024,36 @@ void ChatController::updateAttachmentImageInModel(const QString &url,
 
   for (int i = 0; i < m_chatDataModel->size(); ++i) {
     QVariantMap message = m_chatDataModel->value(i).toMap();
-    if (message.value("attachmentUrl").toString() == url) {
+    bool topLevelChanged = message.value("attachmentUrl").toString() == url;
+    if (topLevelChanged) {
       message["image"] = image;
       message["imageLoading"] = loading;
       message["imageLoadFailed"] = failed;
+    }
+
+    QVariantList attachments = message.value("attachments").toList();
+    bool changed = false;
+    for (int j = 0; j < attachments.size(); ++j) {
+      QVariantMap attachment = attachments.at(j).toMap();
+      bool matches = attachment.value("url").toString() == url ||
+                     attachment.value("previewUrl").toString() == url;
+      if (matches) {
+        attachment["image"] = image;
+        attachment["imageLoading"] = loading;
+        attachment["imageLoadFailed"] = failed;
+        attachments[j] = attachment;
+        changed = true;
+        if (j == 0 && message.value("attachmentUrl").toString() ==
+                          attachment.value("url").toString()) {
+          message["image"] = image;
+          message["imageLoading"] = loading;
+          message["imageLoadFailed"] = failed;
+          topLevelChanged = true;
+        }
+      }
+    }
+    if (changed || topLevelChanged) {
+      message["attachments"] = attachments;
       m_chatDataModel->replace(i, message);
     }
   }
