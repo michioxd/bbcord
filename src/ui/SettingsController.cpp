@@ -12,9 +12,9 @@ const char *kSfxEnabledKey = "sfx_enabled";
 }
 
 SettingsController::SettingsController(QObject *parent)
-    : QObject(parent), m_connectionName("BBCordSettings"), m_sfxEnabled(true) {
+    : QObject(parent), m_connectionName("BBCordSettings"), m_sfxEnabled(false) {
   ensureDatabase();
-  m_sfxEnabled = readBool(kSfxEnabledKey, true);
+  m_sfxEnabled = readBool(kSfxEnabledKey, false);
 }
 
 bool SettingsController::sfxEnabled() const { return m_sfxEnabled; }
