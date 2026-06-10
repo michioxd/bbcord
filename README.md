@@ -10,7 +10,7 @@ This project still in early stages of development, and many features are not yet
 
 ## Installation
 
-- Because this app is unsigned, you will need to root your BB10 device first.
+- Because this app is unsigned, you will need to [root your BB10 device (thanks Oleksandr)](https://bb10.root.sx) first.
 - Download the latest `BBCord-<version>.bar` file from the [releases page](https://github.com/michioxd/bbcord/releases/latest)
 - Install the .bar file using [Sachesi](https://github.com/xsacha/sachesi) or DBBT.
 - Launch the app and log in with your Discord token.
