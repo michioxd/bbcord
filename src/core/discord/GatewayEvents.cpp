@@ -244,7 +244,6 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     handleHello(payload.data);
     break;
   case 11:
-    qDebug() << "[discord] heartbeat ACK";
     break;
   case 7:
     emit error("Discord gateway requested reconnect");

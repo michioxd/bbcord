@@ -7,6 +7,7 @@
 #include "../client/GatewayHandler.hpp"
 #include "../client/ItemMapper.hpp"
 #include "../client/SortUtils.hpp"
+#include "../discord/GatewayWorker.hpp"
 #include "../discord/NetworkWorker.hpp"
 
 #include <QMetaObject>
@@ -77,27 +78,48 @@ void DiscordClient::initializeNetworkWorker() {
   connect(m_networkWorker, SIGNAL(guildIconDownloadFailed(QString, QString)),
           this, SLOT(onGuildIconDownloadFailed(QString, QString)),
           Qt::QueuedConnection);
-  connect(m_networkWorker,
+  connect(m_networkWorker, SIGNAL(cancelAllFinished()), m_networkThread,
+          SLOT(quit()), Qt::DirectConnection);
+
+  m_networkThread->start();
+}
+
+void DiscordClient::initializeGatewayWorker() {
+  qRegisterMetaType<QVariantMap>("QVariantMap");
+  qRegisterMetaType<QVariantList>("QVariantList");
+  qRegisterMetaType<QStringList>("QStringList");
+
+  if (m_gatewayThread != 0 || m_gatewayWorker != 0) {
+    return;
+  }
+
+  m_gatewayThread = new QThread(this);
+  m_gatewayWorker = new DiscordGatewayWorker();
+  m_gatewayWorker->moveToThread(m_gatewayThread);
+
+  connect(m_gatewayThread, SIGNAL(finished()), m_gatewayWorker,
+          SLOT(deleteLater()));
+  connect(m_gatewayWorker,
           SIGNAL(gatewayDispatchReceived(QString, QVariantMap)), this,
           SLOT(onGatewayDispatch(QString, QVariantMap)), Qt::QueuedConnection);
-  connect(m_networkWorker, SIGNAL(gatewayReady(QString)), this,
+  connect(m_gatewayWorker, SIGNAL(gatewayReady(QString)), this,
           SLOT(onGatewayReady(QString)), Qt::QueuedConnection);
-  connect(m_networkWorker, SIGNAL(gatewayError(QString)), this,
+  connect(m_gatewayWorker, SIGNAL(gatewayError(QString)), this,
           SLOT(onGatewayError(QString)), Qt::QueuedConnection);
-  connect(m_networkWorker, SIGNAL(gatewayClosed()), this,
+  connect(m_gatewayWorker, SIGNAL(gatewayClosed()), this,
           SLOT(onGatewayClosed()), Qt::QueuedConnection);
   connect(
-      m_networkWorker,
+      m_gatewayWorker,
       SIGNAL(guildsAndDmsReady(QVariantList, QVariantList, QVariantList,
                                QStringList, QVariantMap)),
       this,
       SLOT(onGatewayGuildsAndDmsReady(QVariantList, QVariantList, QVariantList,
                                       QStringList, QVariantMap)),
       Qt::QueuedConnection);
-  connect(m_networkWorker, SIGNAL(cancelAllFinished()), m_networkThread,
+  connect(m_gatewayWorker, SIGNAL(cancelAllFinished()), m_gatewayThread,
           SLOT(quit()), Qt::DirectConnection);
 
-  m_networkThread->start();
+  m_gatewayThread->start();
 }
 
 void DiscordClient::initializeAvatarCacheWorker() {
@@ -143,6 +165,28 @@ void DiscordClient::shutdownAvatarCacheWorker() {
   m_avatarCacheWorker = 0;
 }
 
+void DiscordClient::shutdownGatewayWorker() {
+  if (m_gatewayWorker != 0 && m_gatewayThread != 0 &&
+      m_gatewayThread->isRunning()) {
+    QMetaObject::invokeMethod(m_gatewayWorker, "cancelAll",
+                              Qt::QueuedConnection);
+    m_gatewayThread->wait();
+  } else if (m_gatewayWorker != 0) {
+    delete m_gatewayWorker;
+  }
+
+  m_gatewayWorker = 0;
+
+  if (m_gatewayThread != 0) {
+    if (!m_gatewayThread->isFinished()) {
+      m_gatewayThread->quit();
+      m_gatewayThread->wait();
+    }
+    delete m_gatewayThread;
+    m_gatewayThread = 0;
+  }
+}
+
 void DiscordClient::shutdownNetworkWorker() {
   if (m_networkWorker != 0 && m_networkThread != 0 &&
       m_networkThread->isRunning()) {
@@ -166,15 +210,15 @@ void DiscordClient::shutdownNetworkWorker() {
 }
 
 void DiscordClient::syncStateToNetworkWorker() {
-  if (m_networkWorker == 0) {
-    return;
-  }
-
-  m_networkWorker->updateGatewayOrderingState(m_guilds, m_allDmChannels,
-                                              m_dmChannels, m_orderedGuildIds,
-                                              m_dmPresenceByUserId);
+  syncGatewayOrderingStateToWorker();
 }
 
 void DiscordClient::syncGatewayOrderingStateToWorker() {
-  syncStateToNetworkWorker();
+  if (m_gatewayWorker == 0) {
+    return;
+  }
+
+  m_gatewayWorker->updateGatewayOrderingState(m_guilds, m_allDmChannels,
+                                              m_dmChannels, m_orderedGuildIds,
+                                              m_dmPresenceByUserId);
 }

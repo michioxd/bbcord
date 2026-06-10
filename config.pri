@@ -89,6 +89,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.cpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.cpp) \
         $$quote($$BASEDIR/src/core/discord/GatewayEvents.cpp) \
+        $$quote($$BASEDIR/src/core/discord/GatewayWorker.cpp) \
         $$quote($$BASEDIR/src/core/discord/JsonParser.cpp) \
         $$quote($$BASEDIR/src/core/discord/NetworkWorker.cpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.cpp) \
@@ -127,6 +128,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/client/SortUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/DiscordUtils.hpp) \
         $$quote($$BASEDIR/src/core/discord/Gateway.hpp) \
+        $$quote($$BASEDIR/src/core/discord/GatewayWorker.hpp) \
         $$quote($$BASEDIR/src/core/discord/JsonParser.hpp) \
         $$quote($$BASEDIR/src/core/discord/NetworkWorker.hpp) \
         $$quote($$BASEDIR/src/core/discord/RestClient.hpp) \

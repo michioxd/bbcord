@@ -1,6 +1,7 @@
 #include "Client.hpp"
 
 #include "AppStore.hpp"
+#include "discord/GatewayWorker.hpp"
 #include "discord/NetworkWorker.hpp"
 
 #include "client/AvatarManager.hpp"
@@ -14,8 +15,9 @@
 
 DiscordClient::DiscordClient(QObject *parent)
     : QObject(parent), m_store(0), m_networkThread(0), m_networkWorker(0),
-      m_avatarCacheThread(0), m_avatarCacheWorker(0), m_cacheManager(0),
-      m_avatarManager(0), m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
+      m_gatewayThread(0), m_gatewayWorker(0), m_avatarCacheThread(0),
+      m_avatarCacheWorker(0), m_cacheManager(0), m_avatarManager(0),
+      m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
       m_pendingAvatars(m_avatarState.pendingAvatars),
       m_pendingGuildIcons(m_avatarState.pendingGuildIcons),
       m_avatarCacheRequests(m_avatarState.avatarCacheRequests),
@@ -59,6 +61,7 @@ DiscordClient::DiscordClient(QObject *parent)
       m_bootstrapCacheLoaded(m_state.bootstrapCacheLoaded),
       m_statusText("Disconnected") {
   initializeNetworkWorker();
+  initializeGatewayWorker();
   initializeAvatarCacheWorker();
   initializeManagers();
 
@@ -68,8 +71,9 @@ DiscordClient::DiscordClient(QObject *parent)
 
 DiscordClient::DiscordClient(AppStore *store, QObject *parent)
     : QObject(parent), m_store(store), m_networkThread(0), m_networkWorker(0),
-      m_avatarCacheThread(0), m_avatarCacheWorker(0), m_cacheManager(0),
-      m_avatarManager(0), m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
+      m_gatewayThread(0), m_gatewayWorker(0), m_avatarCacheThread(0),
+      m_avatarCacheWorker(0), m_cacheManager(0), m_avatarManager(0),
+      m_gatewayHandler(0), m_itemMapper(0), m_sortUtils(0),
       m_pendingAvatars(m_avatarState.pendingAvatars),
       m_pendingGuildIcons(m_avatarState.pendingGuildIcons),
       m_avatarCacheRequests(m_avatarState.avatarCacheRequests),
@@ -113,6 +117,7 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
       m_bootstrapCacheLoaded(m_state.bootstrapCacheLoaded),
       m_statusText("Disconnected") {
   initializeNetworkWorker();
+  initializeGatewayWorker();
   initializeAvatarCacheWorker();
   initializeManagers();
 
@@ -122,6 +127,7 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
 
 DiscordClient::~DiscordClient() {
   shutdownAvatarCacheWorker();
+  shutdownGatewayWorker();
   shutdownNetworkWorker();
 }
 
@@ -140,6 +146,9 @@ void DiscordClient::login(const QString &token) {
   m_token = trimmedToken;
   if (m_networkWorker == 0 || m_networkThread == 0) {
     initializeNetworkWorker();
+  }
+  if (m_gatewayWorker == 0 || m_gatewayThread == 0) {
+    initializeGatewayWorker();
   }
   if (m_networkWorker != 0) {
     QMetaObject::invokeMethod(m_networkWorker, "loginWithToken",
@@ -160,6 +169,7 @@ void DiscordClient::autoLogin() {
 void DiscordClient::logout() {
   clearSavedToken();
   m_cacheManager->clearBootstrapCache();
+  shutdownGatewayWorker();
   shutdownNetworkWorker();
   m_avatarCacheRequests.clear();
   m_guildIconCacheRequests.clear();
@@ -251,9 +261,9 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
   }
 
   setStatusText("Connecting gateway...");
-  if (m_networkWorker != 0) {
+  if (m_gatewayWorker != 0) {
     syncGatewayOrderingStateToWorker();
-    QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
+    QMetaObject::invokeMethod(m_gatewayWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
 }
@@ -262,8 +272,8 @@ void DiscordClient::onRestLoginFailed(const QString &message) {
   qDebug() << "[discord-client] REST login failed" << message;
   setBusy(false);
   setLoggedIn(false);
-  if (m_networkWorker != 0) {
-    QMetaObject::invokeMethod(m_networkWorker, "disconnectGateway",
+  if (m_gatewayWorker != 0) {
+    QMetaObject::invokeMethod(m_gatewayWorker, "disconnectGateway",
                               Qt::QueuedConnection);
   }
   setStatusText(message);
@@ -562,10 +572,10 @@ void DiscordClient::onGatewayClosed() {
     return;
   }
 
-  if (m_loggedIn && !m_token.trimmed().isEmpty() && m_networkWorker != 0) {
+  if (m_loggedIn && !m_token.trimmed().isEmpty() && m_gatewayWorker != 0) {
     setStatusText("Reconnecting gateway...");
     syncGatewayOrderingStateToWorker();
-    QMetaObject::invokeMethod(m_networkWorker, "connectGateway",
+    QMetaObject::invokeMethod(m_gatewayWorker, "connectGateway",
                               Qt::QueuedConnection, Q_ARG(QString, m_token));
   }
 }

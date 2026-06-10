@@ -15,6 +15,7 @@
 
 class AppStore;
 class AvatarCacheWorker;
+class DiscordGatewayWorker;
 class DiscordNetworkWorker;
 class QThread;
 
@@ -146,6 +147,8 @@ private:
   void updateDataLoading();
   void initializeNetworkWorker();
   void shutdownNetworkWorker();
+  void initializeGatewayWorker();
+  void shutdownGatewayWorker();
   void initializeAvatarCacheWorker();
   void shutdownAvatarCacheWorker();
   void initializeManagers();
@@ -155,6 +158,8 @@ private:
   AppStore *m_store;
   QThread *m_networkThread;
   DiscordNetworkWorker *m_networkWorker;
+  QThread *m_gatewayThread;
+  DiscordGatewayWorker *m_gatewayWorker;
   QThread *m_avatarCacheThread;
   AvatarCacheWorker *m_avatarCacheWorker;
 

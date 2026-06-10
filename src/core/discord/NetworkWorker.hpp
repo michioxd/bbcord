@@ -7,7 +7,6 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "Gateway.hpp"
 #include "RestClient.hpp"
 
 class DiscordNetworkWorker : public QObject {
@@ -41,16 +40,6 @@ public Q_SLOTS:
                          const QString &outputPath);
   void downloadGuildIcon2(const QString &guildId, const QString &iconHash,
                           const QString &outputPath);
-  void connectGateway(const QString &token);
-  void disconnectGateway();
-  void sendLazyRequest(const QString &guildId, const QString &channelId);
-  void updateGatewayOrderingState(const QVariantList &guilds,
-                                  const QVariantList &allDmChannels,
-                                  const QVariantList &visibleDmChannels,
-                                  const QStringList &orderedGuildIds,
-                                  const QVariantMap &dmPresenceByUserId);
-  void onGatewayDispatchReceived(const QString &eventName,
-                                 const QVariantMap &payload);
   void cancelAll();
 
 Q_SIGNALS:
@@ -76,16 +65,6 @@ Q_SIGNALS:
   void avatarDownloadFailed(const QString &userId, const QString &message);
   void guildIconDownloaded(const QString &guildId, const QString &localPath);
   void guildIconDownloadFailed(const QString &guildId, const QString &message);
-  void gatewayDispatchReceived(const QString &eventName,
-                               const QVariantMap &payload);
-  void guildsAndDmsReady(const QVariantList &guilds,
-                         const QVariantList &allDmChannels,
-                         const QVariantList &visibleDmChannels,
-                         const QStringList &orderedGuildIds,
-                         const QVariantMap &dmPresenceByUserId);
-  void gatewayError(const QString &message);
-  void gatewayClosed();
-  void gatewayReady(const QString &sessionId);
   void cancelAllFinished();
 
 private:
@@ -97,12 +76,6 @@ private:
   DiscordRestClient m_avatarClient2;
   DiscordRestClient m_guildIconClient;
   DiscordRestClient m_guildIconClient2;
-  DiscordGateway m_gateway;
-  QVariantList m_gatewayGuilds;
-  QVariantList m_gatewayAllDmChannels;
-  QVariantList m_gatewayVisibleDmChannels;
-  QStringList m_gatewayOrderedGuildIds;
-  QVariantMap m_gatewayDmPresenceByUserId;
 };
 
 #endif /* NetworkWorker_HPP_ */

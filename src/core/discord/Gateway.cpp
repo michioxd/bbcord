@@ -16,6 +16,7 @@ namespace {
 const char *kGatewayUrl =
     "wss://gateway.discord.gg/?v=10&encoding=json&compress=zlib-stream";
 const char *kGatewayHost = "gateway.discord.gg";
+const int kGatewayPollIntervalMs = 10;
 } // namespace
 
 DiscordGateway::DiscordGateway(QObject *parent)
@@ -64,7 +65,7 @@ void DiscordGateway::connectToGateway(const QString &token) {
   }
 
   if (m_timerId == 0) {
-    m_timerId = startTimer(50);
+    m_timerId = startTimer(kGatewayPollIntervalMs);
   }
 }
 
@@ -106,15 +107,11 @@ void DiscordGateway::sendLazyRequest(const QString &guildId,
 
   if (m_state != Ready || m_connection == NULL || !m_connection->is_websocket ||
       m_connection->is_closing) {
-    qDebug() << "[discord] lazy request skipped; gateway not ready"
-             << safeGuildId << channelId.trimmed();
     return;
   }
 
   QString key = lazyRequestKey(safeGuildId, channelId);
   if (m_sentLazyRequests.contains(key)) {
-    qDebug() << "[discord] lazy request skipped; duplicate" << safeGuildId
-             << channelId.trimmed();
     return;
   }
 
@@ -129,8 +126,6 @@ void DiscordGateway::sendLazyRequest(const QString &guildId,
 
   sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
   m_sentLazyRequests.insert(key);
-  qDebug() << "[discord] lazy request sent" << safeGuildId
-           << channelId.trimmed();
 }
 
 void DiscordGateway::timerEvent(QTimerEvent *event) {
@@ -156,7 +151,6 @@ void DiscordGateway::sendHeartbeat() {
   QString sequence = m_sequence >= 0 ? QString::number(m_sequence) : "null";
   sendJsonText(QString("{\"op\":1,\"d\":%1}").arg(sequence));
   m_nextHeartbeatMs = mg_millis() + m_heartbeatIntervalMs;
-  qDebug() << "[discord] heartbeat sent" << sequence;
 }
 
 void DiscordGateway::sendIdentify() {
