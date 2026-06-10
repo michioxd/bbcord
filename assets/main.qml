@@ -139,7 +139,6 @@ NavigationPane {
 
             ActionItem {
                 title: "Settings"
-                enabled: appStore.loggedIn
 
                 onTriggered: {
                     if (currentSettingsPage) {
