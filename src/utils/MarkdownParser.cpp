@@ -101,22 +101,24 @@ QString MarkdownParser::parseInline(const QString &text) {
     }
 
     if (text.at(index) == '[') {
-      int labelEnd = text.indexOf("](http", index + 1);
+      int labelEnd = text.indexOf("](", index + 1);
       if (labelEnd >= 0) {
         int urlStart = labelEnd + 2;
-        int urlEnd = text.indexOf(')', urlStart);
-        if (urlEnd >= 0) {
-          QString url = text.mid(urlStart, urlEnd - urlStart);
-          if (isSafeLink(url)) {
-            html += "<a href=\"";
-            html += escapeHtml(url);
-            html += "\">";
-            html += highlightedLink(
-                parseInline(text.mid(index + 1, labelEnd - index - 1)));
-            html += "</a>";
-            index = urlEnd + 1;
-            continue;
-          }
+        int urlEnd = markdownLinkEndIndex(text, urlStart);
+        QString url =
+            urlEnd >= 0 ? text.mid(urlStart, urlEnd - urlStart) : QString();
+        if (url.length() >= 2 && url.startsWith('<') && url.endsWith('>')) {
+          url = url.mid(1, url.length() - 2);
+        }
+        if (urlEnd >= 0 && isSafeLink(url)) {
+          html += "<a href=\"";
+          html += escapeHtml(url);
+          html += "\">";
+          html += highlightedLink(
+              parseInline(text.mid(index + 1, labelEnd - index - 1)));
+          html += "</a>";
+          index = urlEnd + 1;
+          continue;
         }
       }
     }
@@ -183,6 +185,38 @@ QString MarkdownParser::parseInline(const QString &text) {
 bool MarkdownParser::isSafeLink(const QString &url) {
   QString lowerUrl = url.toLower();
   return lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://");
+}
+
+int MarkdownParser::markdownLinkEndIndex(const QString &text, int urlStart) {
+  int index = urlStart;
+  bool angledUrl = urlStart < text.length() && text.at(urlStart) == '<';
+
+  while (index < text.length()) {
+    QChar character = text.at(index);
+    if (angledUrl) {
+      if (character == '>') {
+        return index + 1 < text.length() && text.at(index + 1) == ')'
+                   ? index + 1
+                   : -1;
+      }
+      if (character == '"') {
+        return -1;
+      }
+      ++index;
+      continue;
+    }
+
+    if (character == ')') {
+      return index;
+    }
+    if (character.isSpace() || character == '<' || character == '>' ||
+        character == '"') {
+      return -1;
+    }
+    ++index;
+  }
+
+  return -1;
 }
 
 int MarkdownParser::linkEndIndex(const QString &text, int start) {

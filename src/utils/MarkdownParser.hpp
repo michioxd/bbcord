@@ -11,6 +11,7 @@ private:
   static QString escapeHtml(const QString &text);
   static QString parseInline(const QString &text);
   static bool isSafeLink(const QString &url);
+  static int markdownLinkEndIndex(const QString &text, int urlStart);
   static int linkEndIndex(const QString &text, int start);
   static bool isWordChar(const QChar &character);
   static int closingDelimiterIndex(const QString &text,

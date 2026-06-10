@@ -160,46 +160,46 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="84"/>
+        <location filename="../assets/MessageBubble.qml" line="85"/>
         <source>Open attachment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="93"/>
+        <location filename="../assets/MessageBubble.qml" line="94"/>
         <source>Edit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="102"/>
+        <location filename="../assets/MessageBubble.qml" line="103"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="202"/>
+        <location filename="../assets/MessageBubble.qml" line="203"/>
         <source>failed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="202"/>
+        <location filename="../assets/MessageBubble.qml" line="203"/>
         <source>sending</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="202"/>
+        <location filename="../assets/MessageBubble.qml" line="203"/>
         <source>edited</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="296"/>
-        <location filename="../assets/MessageBubble.qml" line="356"/>
-        <location filename="../assets/MessageBubble.qml" line="707"/>
+        <location filename="../assets/MessageBubble.qml" line="297"/>
+        <location filename="../assets/MessageBubble.qml" line="357"/>
+        <location filename="../assets/MessageBubble.qml" line="708"/>
         <source>Open attachment: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="296"/>
-        <location filename="../assets/MessageBubble.qml" line="356"/>
-        <location filename="../assets/MessageBubble.qml" line="707"/>
+        <location filename="../assets/MessageBubble.qml" line="297"/>
+        <location filename="../assets/MessageBubble.qml" line="357"/>
+        <location filename="../assets/MessageBubble.qml" line="708"/>
         <source>Open image: </source>
         <translation type="unfinished"></translation>
     </message>
