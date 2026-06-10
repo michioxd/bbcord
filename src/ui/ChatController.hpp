@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QSet>
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -34,6 +35,8 @@ class ChatController : public QObject {
                  pendingAttachmentChanged)
   Q_PROPERTY(QString pendingAttachmentError READ pendingAttachmentError NOTIFY
                  pendingAttachmentChanged)
+  Q_PROPERTY(bb::cascades::DataModel *pendingAttachmentsModel READ
+                 pendingAttachmentsModel NOTIFY pendingAttachmentChanged)
   Q_PROPERTY(bb::cascades::DataModel *chatDataModel READ chatDataModel NOTIFY
                  chatDataModelChanged)
 
@@ -50,6 +53,7 @@ public:
   QString pendingAttachmentPreview() const;
   bool pendingAttachmentIsImage() const;
   QString pendingAttachmentError() const;
+  bb::cascades::DataModel *pendingAttachmentsModel() const;
   bb::cascades::DataModel *chatDataModel() const;
 
   Q_INVOKABLE void openChannel(const QString &channelId, const QString &guildId,
@@ -67,6 +71,8 @@ public:
   Q_INVOKABLE void requestInitialMessages();
   Q_INVOKABLE void requestOlderMessages();
   Q_INVOKABLE bool setPendingAttachment(const QString &filePath);
+  Q_INVOKABLE int addPendingAttachments(const QVariantList &filePaths);
+  Q_INVOKABLE void removePendingAttachment(int index);
   Q_INVOKABLE void clearPendingAttachment();
   Q_INVOKABLE QString sendMessage(const QString &content,
                                   const QString &replyMessageId,
@@ -95,7 +101,7 @@ Q_SIGNALS:
                               const QString &beforeMessageId);
   void sendMessageRequested(const QString &channelId, const QString &content,
                             const QString &nonce, const QString &replyMessageId,
-                            const QString &attachmentPath);
+                            const QStringList &attachmentPaths);
   void editMessageRequested(const QString &channelId, const QString &messageId,
                             const QString &content);
   void deleteMessageRequested(const QString &channelId,
@@ -124,6 +130,10 @@ private:
   QString filePreviewSource(const QString &filePath) const;
   QString fileContentType(const QString &filePath) const;
   bool isImageFile(const QString &filePath) const;
+  QVariantMap pendingAttachmentMap(const QString &filePath) const;
+  bool appendPendingAttachment(const QString &filePath);
+  void rebuildPendingAttachmentsModel();
+  void syncPrimaryPendingAttachment();
   bool isRemoteImageUrl(const QString &url) const;
   QString attachmentImageCachePath(const QString &url) const;
   void ensureAttachmentImageWorker();
@@ -143,6 +153,7 @@ private:
   DiscordClient *m_client;
   AppStore *m_store;
   bb::cascades::ArrayDataModel *m_chatDataModel;
+  bb::cascades::ArrayDataModel *m_pendingAttachmentsModel;
   QThread *m_imageThread;
   AttachmentImageCacheWorker *m_imageWorker;
   QHash<QString, QString> m_cachedAttachmentImages;
@@ -150,6 +161,7 @@ private:
   QString m_currentChannelId;
   QString m_currentGuildId;
   QString m_currentChannelName;
+  QStringList m_pendingAttachmentPaths;
   QString m_pendingAttachmentPath;
   QString m_pendingAttachmentName;
   QString m_pendingAttachmentPreview;

@@ -103,7 +103,7 @@ void DiscordClient::sendChatMessage(const QString &channelId,
                                     const QString &content,
                                     const QString &nonce,
                                     const QString &replyMessageId,
-                                    const QString &attachmentPath) {
+                                    const QStringList &attachmentPaths) {
   QString safeChannelId = channelId.trimmed();
   QString safeNonce = nonce.trimmed();
   if (safeChannelId.isEmpty() || safeNonce.isEmpty() ||
@@ -119,7 +119,7 @@ void DiscordClient::sendChatMessage(const QString &channelId,
         m_networkWorker, "sendChannelMessage", Qt::QueuedConnection,
         Q_ARG(QString, m_token), Q_ARG(QString, safeChannelId),
         Q_ARG(QString, content), Q_ARG(QString, safeNonce),
-        Q_ARG(QString, replyMessageId), Q_ARG(QString, attachmentPath));
+        Q_ARG(QString, replyMessageId), Q_ARG(QStringList, attachmentPaths));
   }
 }
 

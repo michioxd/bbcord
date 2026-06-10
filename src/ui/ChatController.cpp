@@ -19,23 +19,26 @@
 namespace {
 const qint64 kMaxPendingAttachmentBytes = 8 * 1024 * 1024;
 const qint64 kMaxCachedAttachmentImageBytes = 2 * 1024 * 1024;
+const int kMaxPendingAttachments = 10;
 } // namespace
 
 ChatController::ChatController(DiscordClient *client, AppStore *store,
                                QObject *parent)
     : QObject(parent), m_client(client), m_store(store),
       m_chatDataModel(new bb::cascades::ArrayDataModel(this)), m_imageThread(0),
+      m_pendingAttachmentsModel(new bb::cascades::ArrayDataModel(this)),
       m_imageWorker(0), m_pendingAttachmentIsImage(false) {
   if (m_client) {
     connect(this, SIGNAL(initialMessagesRequested(QString, QString)), m_client,
             SLOT(loadInitialChatMessages(QString, QString)));
     connect(this, SIGNAL(olderMessagesRequested(QString, QString)), m_client,
             SLOT(loadOlderChatMessages(QString, QString)));
-    connect(this,
-            SIGNAL(sendMessageRequested(QString, QString, QString, QString,
-                                        QString)),
-            m_client,
-            SLOT(sendChatMessage(QString, QString, QString, QString, QString)));
+    connect(
+        this,
+        SIGNAL(sendMessageRequested(QString, QString, QString, QString,
+                                    QStringList)),
+        m_client,
+        SLOT(sendChatMessage(QString, QString, QString, QString, QStringList)));
     connect(this, SIGNAL(editMessageRequested(QString, QString, QString)),
             m_client, SLOT(editChatMessage(QString, QString, QString)));
     connect(this, SIGNAL(deleteMessageRequested(QString, QString)), m_client,
@@ -83,7 +86,7 @@ QString ChatController::currentChannelName() const {
 }
 
 bool ChatController::hasPendingAttachment() const {
-  return !m_pendingAttachmentPath.isEmpty();
+  return !m_pendingAttachmentPaths.isEmpty();
 }
 
 QString ChatController::pendingAttachmentName() const {
@@ -100,6 +103,10 @@ bool ChatController::pendingAttachmentIsImage() const {
 
 QString ChatController::pendingAttachmentError() const {
   return m_pendingAttachmentError;
+}
+
+bb::cascades::DataModel *ChatController::pendingAttachmentsModel() const {
+  return m_pendingAttachmentsModel;
 }
 
 bb::cascades::DataModel *ChatController::chatDataModel() const {
@@ -224,46 +231,59 @@ void ChatController::requestOlderMessages() {
 }
 
 bool ChatController::setPendingAttachment(const QString &filePath) {
-  QString safePath = filePath.trimmed();
-  if (safePath.startsWith("file://")) {
-    safePath = QUrl(safePath).toLocalFile();
-  }
-
-  QFileInfo fileInfo(safePath);
-  if (safePath.isEmpty() || !fileInfo.exists() || !fileInfo.isFile()) {
-    m_pendingAttachmentError = tr("Attachment file not found");
-    emit pendingAttachmentChanged();
-    return false;
-  }
-
-  if (fileInfo.size() > kMaxPendingAttachmentBytes) {
-    m_pendingAttachmentError = tr("Attachment is too large");
-    emit pendingAttachmentChanged();
-    return false;
-  }
-
-  m_pendingAttachmentPath = fileInfo.absoluteFilePath();
-  m_pendingAttachmentName = fileInfo.fileName();
-  m_pendingAttachmentIsImage = isImageFile(m_pendingAttachmentPath);
-  m_pendingAttachmentPreview = m_pendingAttachmentIsImage
-                                   ? filePreviewSource(m_pendingAttachmentPath)
-                                   : QString();
-  m_pendingAttachmentError.clear();
+  m_pendingAttachmentPaths.clear();
+  bool added = appendPendingAttachment(filePath);
+  syncPrimaryPendingAttachment();
+  rebuildPendingAttachmentsModel();
   emit pendingAttachmentChanged();
-  return true;
+  return added;
 }
 
-void ChatController::clearPendingAttachment() {
-  if (m_pendingAttachmentPath.isEmpty() && m_pendingAttachmentName.isEmpty() &&
-      m_pendingAttachmentPreview.isEmpty() && !m_pendingAttachmentIsImage) {
+int ChatController::addPendingAttachments(const QVariantList &filePaths) {
+  int added = 0;
+  for (int i = 0; i < filePaths.size(); ++i) {
+    if (m_pendingAttachmentPaths.size() >= kMaxPendingAttachments) {
+      m_pendingAttachmentError = tr("Maximum 10 attachments");
+      break;
+    }
+    if (appendPendingAttachment(filePaths.at(i).toString())) {
+      ++added;
+    }
+  }
+
+  syncPrimaryPendingAttachment();
+  rebuildPendingAttachmentsModel();
+  emit pendingAttachmentChanged();
+  return added;
+}
+
+void ChatController::removePendingAttachment(int index) {
+  if (index < 0 || index >= m_pendingAttachmentPaths.size()) {
     return;
   }
 
+  m_pendingAttachmentPaths.removeAt(index);
+  m_pendingAttachmentError.clear();
+  syncPrimaryPendingAttachment();
+  rebuildPendingAttachmentsModel();
+  emit pendingAttachmentChanged();
+}
+
+void ChatController::clearPendingAttachment() {
+  if (m_pendingAttachmentPaths.isEmpty() && m_pendingAttachmentPath.isEmpty() &&
+      m_pendingAttachmentName.isEmpty() &&
+      m_pendingAttachmentPreview.isEmpty() &&
+      m_pendingAttachmentError.isEmpty() && !m_pendingAttachmentIsImage) {
+    return;
+  }
+
+  m_pendingAttachmentPaths.clear();
   m_pendingAttachmentPath.clear();
   m_pendingAttachmentName.clear();
   m_pendingAttachmentPreview.clear();
   m_pendingAttachmentError.clear();
   m_pendingAttachmentIsImage = false;
+  rebuildPendingAttachmentsModel();
   emit pendingAttachmentChanged();
 }
 
@@ -273,8 +293,8 @@ QString ChatController::sendMessage(const QString &content,
                                     const QString &replyMessage) {
   QString channelId = safeCurrentChannelId();
   QString trimmedContent = content.trimmed();
-  QString attachmentPath = m_pendingAttachmentPath;
-  bool hasAttachment = !attachmentPath.isEmpty();
+  QStringList attachmentPaths = m_pendingAttachmentPaths;
+  bool hasAttachment = !attachmentPaths.isEmpty();
   if (channelId.isEmpty() || (!hasAttachment && trimmedContent.isEmpty()) ||
       !m_store) {
     return QString();
@@ -295,14 +315,14 @@ QString ChatController::sendMessage(const QString &content,
   message.author.username = m_store->currentUserName();
   message.author.globalName = m_store->currentUserName();
 
-  if (hasAttachment) {
+  for (int i = 0; i < attachmentPaths.size(); ++i) {
     DiscordAttachment attachment;
-    QFileInfo fileInfo(attachmentPath);
-    attachment.id = pendingId;
+    QFileInfo fileInfo(attachmentPaths.at(i));
+    attachment.id = QString::number(i);
     attachment.filename = fileInfo.fileName();
-    attachment.url = filePreviewSource(attachmentPath);
+    attachment.url = filePreviewSource(attachmentPaths.at(i));
     attachment.proxyUrl = attachment.url;
-    attachment.contentType = fileContentType(attachmentPath);
+    attachment.contentType = fileContentType(attachmentPaths.at(i));
     attachment.size = static_cast<int>(fileInfo.size());
     if (attachment.isImage()) {
       attachment.width = 24;
@@ -313,7 +333,7 @@ QString ChatController::sendMessage(const QString &content,
 
   m_store->addPendingChatMessage(message);
   emit sendMessageRequested(channelId, trimmedContent, pendingId,
-                            message.replyMessageId, attachmentPath);
+                            message.replyMessageId, attachmentPaths);
   clearPendingAttachment();
   return pendingId;
 }
@@ -927,6 +947,84 @@ QString ChatController::fileContentType(const QString &filePath) const {
 
 bool ChatController::isImageFile(const QString &filePath) const {
   return fileContentType(filePath).startsWith("image/");
+}
+
+QVariantMap
+ChatController::pendingAttachmentMap(const QString &filePath) const {
+  QFileInfo fileInfo(filePath);
+  bool image = isImageFile(filePath);
+  QVariantMap attachment;
+  attachment["path"] = filePath;
+  attachment["name"] = fileInfo.fileName();
+  attachment["preview"] = image ? filePreviewSource(filePath) : QString();
+  attachment["isImage"] = image;
+  attachment["size"] = static_cast<int>(fileInfo.size());
+  return attachment;
+}
+
+bool ChatController::appendPendingAttachment(const QString &filePath) {
+  QString safePath = filePath.trimmed();
+  if (safePath.startsWith("file://")) {
+    safePath = QUrl(safePath).toLocalFile();
+  }
+
+  QFileInfo fileInfo(safePath);
+  if (safePath.isEmpty() || !fileInfo.exists() || !fileInfo.isFile()) {
+    m_pendingAttachmentError = tr("Attachment file not found");
+    return false;
+  }
+
+  QString absolutePath = fileInfo.absoluteFilePath();
+  if (m_pendingAttachmentPaths.contains(absolutePath)) {
+    return false;
+  }
+
+  if (fileInfo.size() > kMaxPendingAttachmentBytes) {
+    m_pendingAttachmentError = tr("Attachment is too large");
+    return false;
+  }
+
+  if (m_pendingAttachmentPaths.size() >= kMaxPendingAttachments) {
+    m_pendingAttachmentError = tr("Maximum 10 attachments");
+    return false;
+  }
+
+  m_pendingAttachmentPaths.append(absolutePath);
+  m_pendingAttachmentError.clear();
+  return true;
+}
+
+void ChatController::rebuildPendingAttachmentsModel() {
+  m_pendingAttachmentsModel->clear();
+  for (int i = 0; i < m_pendingAttachmentPaths.size(); ++i) {
+    QVariantMap attachment =
+        pendingAttachmentMap(m_pendingAttachmentPaths.at(i));
+    attachment["index"] = i;
+    m_pendingAttachmentsModel->append(attachment);
+  }
+}
+
+void ChatController::syncPrimaryPendingAttachment() {
+  if (m_pendingAttachmentPaths.isEmpty()) {
+    m_pendingAttachmentPath.clear();
+    m_pendingAttachmentName.clear();
+    m_pendingAttachmentPreview.clear();
+    m_pendingAttachmentIsImage = false;
+    return;
+  }
+
+  m_pendingAttachmentPath = m_pendingAttachmentPaths.first();
+  QFileInfo fileInfo(m_pendingAttachmentPath);
+  if (m_pendingAttachmentPaths.size() == 1) {
+    m_pendingAttachmentName = fileInfo.fileName();
+  } else {
+    m_pendingAttachmentName =
+        tr("%1 files").arg(m_pendingAttachmentPaths.size());
+  }
+  m_pendingAttachmentIsImage = isImageFile(m_pendingAttachmentPath);
+  m_pendingAttachmentPreview = m_pendingAttachmentIsImage
+                                   ? filePreviewSource(m_pendingAttachmentPath)
+                                   : QString();
 }
 
 bool ChatController::isRemoteImageUrl(const QString &url) const {

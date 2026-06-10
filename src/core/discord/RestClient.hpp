@@ -5,6 +5,7 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -64,7 +65,7 @@ public:
   void sendChannelMessage(const QString &token, const QString &channelId,
                           const QString &content, const QString &nonce,
                           const QString &replyMessageId,
-                          const QString &attachmentPath);
+                          const QStringList &attachmentPaths);
   void editChannelMessage(const QString &token, const QString &channelId,
                           const QString &messageId, const QString &content);
   void deleteChannelMessage(const QString &token, const QString &channelId,
@@ -124,7 +125,7 @@ private:
   void sendGuildIconRequest(struct mg_connection *connection);
   QByteArray buildMultipartMessageBody(
       const QString &content, const QString &nonce, const QString &channelId,
-      const QString &replyMessageId, const QString &attachmentPath,
+      const QString &replyMessageId, const QStringList &attachmentPaths,
       QString *contentType, QString *errorMessage) const;
 
   mg_mgr *m_mgr;

@@ -70,7 +70,7 @@ public Q_SLOTS:
   Q_INVOKABLE void sendChatMessage(const QString &channelId,
                                    const QString &content, const QString &nonce,
                                    const QString &replyMessageId,
-                                   const QString &attachmentPath);
+                                   const QStringList &attachmentPaths);
   Q_INVOKABLE QString avatarSourceForUser(const QString &userId) const;
   Q_INVOKABLE void loadUserAvatar(const QString &userId,
                                   const QString &avatarHash);

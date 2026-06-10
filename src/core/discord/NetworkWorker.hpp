@@ -27,7 +27,7 @@ public Q_SLOTS:
   void sendChannelMessage(const QString &token, const QString &channelId,
                           const QString &content, const QString &nonce,
                           const QString &replyMessageId,
-                          const QString &attachmentPath);
+                          const QStringList &attachmentPaths);
   void editChannelMessage(const QString &token, const QString &channelId,
                           const QString &messageId, const QString &content);
   void deleteChannelMessage(const QString &token, const QString &channelId,

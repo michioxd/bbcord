@@ -131,23 +131,21 @@ void DiscordNetworkWorker::fetchChannelMessages(
                                         beforeMessageId);
 }
 
-void DiscordNetworkWorker::sendChannelMessage(const QString &token,
-                                              const QString &channelId,
-                                              const QString &content,
-                                              const QString &nonce,
-                                              const QString &replyMessageId,
-                                              const QString &attachmentPath) {
+void DiscordNetworkWorker::sendChannelMessage(
+    const QString &token, const QString &channelId, const QString &content,
+    const QString &nonce, const QString &replyMessageId,
+    const QStringList &attachmentPaths) {
   if (!isInObjectThread(this)) {
     QMetaObject::invokeMethod(this, "sendChannelMessage", Qt::QueuedConnection,
                               Q_ARG(QString, token), Q_ARG(QString, channelId),
                               Q_ARG(QString, content), Q_ARG(QString, nonce),
                               Q_ARG(QString, replyMessageId),
-                              Q_ARG(QString, attachmentPath));
+                              Q_ARG(QStringList, attachmentPaths));
     return;
   }
 
   m_chatWriteClient.sendChannelMessage(token, channelId, content, nonce,
-                                       replyMessageId, attachmentPath);
+                                       replyMessageId, attachmentPaths);
 }
 
 void DiscordNetworkWorker::editChannelMessage(const QString &token,

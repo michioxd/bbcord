@@ -65,51 +65,52 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="266"/>
-        <source>Attachment</source>
+        <location filename="../assets/ChatCard.qml" line="240"/>
+        <source>Attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="312"/>
+        <location filename="../assets/ChatCard.qml" line="303"/>
+        <source>File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="374"/>
         <source>Message #</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="339"/>
+        <location filename="../assets/ChatCard.qml" line="401"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="363"/>
-        <source>Attach file</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/ChatCard.qml" line="366"/>
-        <source>/accounts/1000/shared/...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/ChatCard.qml" line="367"/>
-        <source>Attach</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/ChatCard.qml" line="368"/>
-        <source>Cancel</source>
+        <location filename="../assets/ChatCard.qml" line="425"/>
+        <source>Attach files</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ChatController</name>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="234"/>
+        <location filename="../src/ui/ChatController.cpp" line="246"/>
+        <location filename="../src/ui/ChatController.cpp" line="988"/>
+        <source>Maximum 10 attachments</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChatController.cpp" line="973"/>
         <source>Attachment file not found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="240"/>
+        <location filename="../src/ui/ChatController.cpp" line="983"/>
         <source>Attachment is too large</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChatController.cpp" line="1022"/>
+        <source>%1 files</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

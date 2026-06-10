@@ -1,5 +1,5 @@
 import bb.cascades 1.4
-import bb.system 1.2
+import bb.cascades.pickers 1.0
 
 Page {
     id: chatPage
@@ -226,54 +226,116 @@ Page {
                 horizontalAlignment: HorizontalAlignment.Fill
                 bottomMargin: ui.du(1.0)
 
-                layout: StackLayout {
-                    orientation: LayoutOrientation.LeftToRight
-                }
-
-                ImageButton {
-                    preferredWidth: ui.du(5.0)
-                    preferredHeight: ui.du(5.0)
-                    verticalAlignment: VerticalAlignment.Center
-                    defaultImageSource: "asset:///images/icons/x.png"
-                    pressedImageSource: "asset:///images/icons/x-hold.png"
-                    disabledImageSource: "asset:///images/icons/x-disabled.png"
-
-                    onClicked: {
-                        chatController.clearPendingAttachment();
-                    }
-                }
-
-                Container {
-                    visible: chatController.pendingAttachmentIsImage
-                    preferredWidth: ui.du(8.0)
-                    preferredHeight: ui.du(8.0)
-                    leftMargin: ui.du(1.0)
-
-                    ImageView {
-                        imageSource: chatController.pendingAttachmentPreview
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        verticalAlignment: VerticalAlignment.Fill
-                        scalingMethod: ScalingMethod.AspectFit
-                    }
-                }
+                layout: StackLayout {}
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    verticalAlignment: VerticalAlignment.Center
-                    leftMargin: ui.du(1.0)
+                    bottomMargin: ui.du(0.8)
+
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.LeftToRight
+                    }
 
                     Label {
-                        text: qsTr("Attachment")
+                        text: qsTr("Attachments")
+                        horizontalAlignment: HorizontalAlignment.Fill
                         textStyle.fontSize: FontSize.XXSmall
                         textStyle.fontWeight: FontWeight.Bold
                         textStyle.color: Color.create("#F2F3F5")
                     }
 
-                    Label {
-                        text: chatController.pendingAttachmentName
-                        topMargin: ui.du(-0.3)
-                        textStyle.fontSize: FontSize.XXSmall
-                        textStyle.color: Color.create("#B5BAC1")
+                    ImageButton {
+                        preferredWidth: ui.du(5.0)
+                        preferredHeight: ui.du(5.0)
+                        defaultImageSource: "asset:///images/icons/x.png"
+                        pressedImageSource: "asset:///images/icons/x-hold.png"
+                        disabledImageSource: "asset:///images/icons/x-disabled.png"
+
+                        onClicked: {
+                            chatController.clearPendingAttachment();
+                        }
+                    }
+                }
+
+                ListView {
+                    id: pendingAttachmentList
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    preferredHeight: ui.du(15.0)
+                    dataModel: chatController.pendingAttachmentsModel
+
+                    layout: StackListLayout {
+                        orientation: LayoutOrientation.LeftToRight
+                    }
+
+                    listItemComponents: [
+                        ListItemComponent {
+                            type: ""
+
+                            Container {
+                                preferredWidth: ui.du(18.0)
+                                preferredHeight: ui.du(14.0)
+                                rightMargin: ui.du(1.0)
+                                background: Color.create("#2B2D31")
+
+                                layout: DockLayout {}
+
+                                Container {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+                                    topPadding: ui.du(1.0)
+                                    bottomPadding: ui.du(1.0)
+                                    leftPadding: ui.du(1.0)
+                                    rightPadding: ui.du(1.0)
+
+                                    layout: StackLayout {}
+
+                                    
+                                    ImageView {
+                                        visible: ListItemData.isImage
+                                        imageSource: ListItemData.preview
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        preferredHeight: ui.du(8.0)
+                                        scalingMethod: ScalingMethod.AspectFit
+                                    }
+
+                                    Label {
+                                        visible: !ListItemData.isImage
+                                        text: qsTr("File")
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        preferredHeight: ui.du(8.0)
+                                        verticalAlignment: VerticalAlignment.Center
+                                        textStyle.fontSize: FontSize.Small
+                                        textStyle.color: Color.create("#F2F3F5")
+                                    }
+
+                                    Label {
+                                        text: ListItemData.name
+                                        multiline: false
+                                        topMargin: ui.du(0.5)
+                                        textStyle.fontSize: FontSize.XXSmall
+                                        textStyle.color: Color.create("#B5BAC1")
+                                    }
+                                }
+
+                                ImageButton {
+                                    horizontalAlignment: HorizontalAlignment.Right
+                                    verticalAlignment: VerticalAlignment.Top
+                                    preferredWidth: ui.du(5.0)
+                                    preferredHeight: ui.du(5.0)
+                                    defaultImageSource: "asset:///images/icons/x.png"
+                                    pressedImageSource: "asset:///images/icons/x-hold.png"
+                                    disabledImageSource: "asset:///images/icons/x-disabled.png"
+
+                                    onClicked: {
+                                        chatController.removePendingAttachment(ListItemData.index);
+                                    }
+                                }
+                            }
+                        }
+                    ]
+
+                    function itemType(data, indexPath) {
+                        return "";
                     }
                 }
             }
@@ -299,7 +361,7 @@ Page {
                     preferredHeight: ui.du(7.0)
 
                     onClicked: {
-                        attachmentPathPrompt.show();
+                        attachmentPicker.open();
                     }
                     defaultImageSource: "asset:///images/icons/paperclip.png"
                     pressedImageSource: "asset:///images/icons/paperclip-hold.png"
@@ -358,19 +420,15 @@ Page {
     }
 
     attachedObjects: [
-        SystemPrompt {
-            id: attachmentPathPrompt
-            title: qsTr("Attach file")
-            modality: SystemUiModality.Application
-            inputField.inputMode: SystemUiInputMode.Default
-            inputField.emptyText: qsTr("/accounts/1000/shared/...")
-            confirmButton.label: qsTr("Attach")
-            cancelButton.label: qsTr("Cancel")
+        FilePicker {
+            id: attachmentPicker
+            title: qsTr("Attach files")
+            mode: FilePickerMode.PickerMultiple
+            type: FileType.Other
+            viewMode: FilePickerViewMode.Default
 
-            onFinished: {
-                if (result == SystemUiResult.ConfirmButtonSelection) {
-                    chatController.setPendingAttachment(inputFieldTextEntry());
-                }
+            onFileSelected: {
+                chatController.addPendingAttachments(selectedFiles);
             }
         }
     ]
