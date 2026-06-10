@@ -68,6 +68,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/paperclip-hold.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip.png) \
         $$quote($$BASEDIR/assets/images/icons/send.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_audio_active.png) \
         $$quote($$BASEDIR/assets/images/icons/speaker.png) \
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/x-hold.png) \
@@ -212,7 +213,10 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/images/icons/*.qs) \
         $$quote($$BASEDIR/../assets/images/icons/accent/*.qml) \
         $$quote($$BASEDIR/../assets/images/icons/accent/*.js) \
-        $$quote($$BASEDIR/../assets/images/icons/accent/*.qs)
+        $$quote($$BASEDIR/../assets/images/icons/accent/*.qs) \
+        $$quote($$BASEDIR/../assets/images/icons/settings/*.qml) \
+        $$quote($$BASEDIR/../assets/images/icons/settings/*.js) \
+        $$quote($$BASEDIR/../assets/images/icons/settings/*.qs)
 
     HEADERS += \
         $$quote($$BASEDIR/../src/*.h) \

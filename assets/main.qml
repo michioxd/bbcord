@@ -25,7 +25,7 @@ NavigationPane {
     property variant currentMainPage: null
     property variant currentUserSheet: null
     property variant aboutDialog: null
-    property variant currentSettingsPage: null
+    property variant currentSettingsSheet: null
 
     function playSfx(player) {
         if (!settingsController.sfxEnabled) {
@@ -63,6 +63,7 @@ NavigationPane {
 
     onCreationCompleted: {
         currentUserSheet = userSheetDefinition.createObject()
+        currentSettingsSheet = settingsSheetDefinition.createObject()
         aboutDialog = aboutDialogDefinition.createObject()
 
         var loginPage = loginPageDefinition.createObject()
@@ -141,14 +142,8 @@ NavigationPane {
                 title: "Settings"
 
                 onTriggered: {
-                    if (currentSettingsPage) {
-                        return
-                    }
-                    if (!currentSettingsPage) {
-                        currentSettingsPage = settingsPageDefinition.createObject()
-                    }
-                    if (currentSettingsPage) {
-                        nav.push(currentSettingsPage)
+                    if (currentSettingsSheet) {
+                        currentSettingsSheet.open()
                     }
                 }
             },
@@ -166,9 +161,6 @@ NavigationPane {
 
     onPopTransitionEnded: {
         if (page != currentMainPage) {
-            if (page == currentSettingsPage) {
-                currentSettingsPage = null
-            }
             page.destroy()
         }
     }
@@ -187,7 +179,7 @@ NavigationPane {
             source: "asset:///UserSheet.qml"
         },
         ComponentDefinition {
-            id: settingsPageDefinition
+            id: settingsSheetDefinition
             source: "asset:///Settings.qml"
         },
 

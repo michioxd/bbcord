@@ -1,17 +1,21 @@
 import bb.cascades 1.4
 
-Page {
-    titleBar: TitleBar {
-        title: qsTr("Settings")
-    }
+Sheet {
+    id: settingsSheet
 
-    Container {
-        horizontalAlignment: HorizontalAlignment.Fill
-        verticalAlignment: VerticalAlignment.Fill
+    Page {
+        titleBar: TitleBar {
+            title: qsTr("Settings")
+            dismissAction: ActionItem {
+                imageSource: "asset:///images/icons/accent/caret-left.png"
+                onTriggered: settingsSheet.close()
+            }
+        }
 
         ScrollView {
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
+            scrollRole: ScrollRole.Main
 
             Container {
                 horizontalAlignment: HorizontalAlignment.Fill
@@ -28,6 +32,14 @@ Page {
 
                         layout: StackLayout {
                             orientation: LayoutOrientation.LeftToRight
+                        }
+                        
+                        ImageView {
+                            imageSource: "asset:///images/icons/settings/ca_audio_active.png"
+                            scalingMethod: ScalingMethod.AspectFit
+                            preferredWidth: ui.du(10.0)
+                            preferredHeight: ui.du(10.0)
+                            verticalAlignment: VerticalAlignment.Center
                         }
 
                         Container {

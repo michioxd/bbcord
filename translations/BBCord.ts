@@ -197,22 +197,22 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../assets/Settings.qml" line="5"/>
+        <location filename="../assets/Settings.qml" line="8"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="20"/>
+        <location filename="../assets/Settings.qml" line="24"/>
         <source>Miscellaneous</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="43"/>
+        <location filename="../assets/Settings.qml" line="55"/>
         <source>Sound effects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="50"/>
+        <location filename="../assets/Settings.qml" line="62"/>
         <source>Play login, connecting, and error sounds. #MSNTV2</source>
         <translation type="unfinished"></translation>
     </message>
