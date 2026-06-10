@@ -532,6 +532,18 @@ void DiscordClient::onGuildIconCacheMiss(const QString &guildId,
 
 void DiscordClient::onGatewayDispatch(const QString &eventName,
                                       const QVariantMap &payload) {
+  if (eventName == "MESSAGE_CREATE" || eventName == "MESSAGE_UPDATE" ||
+      eventName == "MESSAGE_DELETE") {
+    QString channelId = payload.value("channel_id").toString().trimmed();
+    bool selectedOrLoaded =
+        m_store != 0 && (m_store->selectedChannelId() == channelId ||
+                         m_store->isChatInitialLoaded(channelId));
+    if (selectedOrLoaded || payload.value("guild_id").toString().isEmpty()) {
+      qDebug() << "[discord-client] gateway dispatch" << eventName << "guild"
+               << payload.value("guild_id").toString() << "channel" << channelId
+               << "message" << payload.value("id").toString();
+    }
+  }
   m_gatewayHandler->applyGatewayOrderingEvent(
       eventName, payload, m_pendingUnreadGuildIds,
       m_pendingMentionCountsByGuildId, m_pendingUnreadChannelIds,

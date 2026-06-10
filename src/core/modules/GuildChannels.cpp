@@ -4,6 +4,7 @@
 #include "../Client.hpp"
 #include "../client/ItemMapper.hpp"
 #include "../client/SortUtils.hpp"
+#include "../discord/GatewayWorker.hpp"
 #include "../discord/NetworkWorker.hpp"
 #include "FeatureConstants.hpp"
 
@@ -65,6 +66,11 @@ void DiscordClient::selectChannel(const QString &channelId) {
   }
   if (!guildId.isEmpty()) {
     m_chatGuildByChannelId.insert(safeChannelId, guildId);
+    if (m_gatewayWorker != 0) {
+      QMetaObject::invokeMethod(m_gatewayWorker, "sendLazyRequest",
+                                Qt::QueuedConnection, Q_ARG(QString, guildId),
+                                Q_ARG(QString, safeChannelId));
+    }
   }
 
   scheduleGuildsCacheSave();

@@ -60,6 +60,7 @@ private:
   void initializeTls(struct mg_connection *connection);
   void setState(ConnectionState state);
   void resetSession();
+  void flushPendingLazyRequests();
   QString lazyRequestKey(const QString &guildId,
                          const QString &channelId) const;
 
@@ -77,6 +78,7 @@ private:
   uint64_t m_nextHeartbeatMs;
   ConnectionState m_state;
   QSet<QString> m_sentLazyRequests;
+  QSet<QString> m_pendingLazyRequests;
   QString m_selectedChannelId;
   QStringList m_loadedChannelIds;
   QString m_currentUserId;

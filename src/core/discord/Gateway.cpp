@@ -101,31 +101,39 @@ DiscordGateway::ConnectionState DiscordGateway::state() const {
 void DiscordGateway::sendLazyRequest(const QString &guildId,
                                      const QString &channelId) {
   QString safeGuildId = guildId.trimmed();
+  QString safeChannelId = channelId.trimmed();
   if (safeGuildId.isEmpty()) {
+    return;
+  }
+
+  QString key = lazyRequestKey(safeGuildId, safeChannelId);
+  if (m_sentLazyRequests.contains(key)) {
     return;
   }
 
   if (m_state != Ready || m_connection == NULL || !m_connection->is_websocket ||
       m_connection->is_closing) {
-    return;
-  }
-
-  QString key = lazyRequestKey(safeGuildId, channelId);
-  if (m_sentLazyRequests.contains(key)) {
+    m_pendingLazyRequests.insert(key);
+    qDebug() << "[discord-gateway] subscribe request pending; gateway not ready"
+             << "state" << m_state << "guild" << safeGuildId << "channel"
+             << safeChannelId;
     return;
   }
 
   QString errorMessage;
-  QByteArray payload = DiscordJsonParser::buildLazyRequestPayload(
-      safeGuildId, channelId, &errorMessage);
+  QByteArray payload = DiscordJsonParser::buildGuildSubscribePayload(
+      safeGuildId, safeChannelId, &errorMessage);
   if (!errorMessage.isEmpty()) {
     emit error(
-        QString("Gateway lazy request JSON error: %1").arg(errorMessage));
+        QString("Gateway subscribe request JSON error: %1").arg(errorMessage));
     return;
   }
 
   sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
   m_sentLazyRequests.insert(key);
+  m_pendingLazyRequests.remove(key);
+  qDebug() << "[discord-gateway] subscribe request sent"
+           << "guild" << safeGuildId << "channel" << safeChannelId;
 }
 
 void DiscordGateway::updateMessageFilterState(
@@ -140,6 +148,10 @@ void DiscordGateway::updateMessageFilterState(
     }
   }
   m_currentUserId = currentUserId.trimmed();
+  qDebug() << "[discord-gateway] message filter updated"
+           << "selected" << m_selectedChannelId << "loaded"
+           << m_loadedChannelIds.size() << "hasCurrentUser"
+           << !m_currentUserId.isEmpty();
 }
 
 void DiscordGateway::timerEvent(QTimerEvent *event) {
@@ -176,6 +188,9 @@ void DiscordGateway::sendIdentify() {
     return;
   }
 
+  qDebug() << "[discord-gateway] identify sent"
+           << "guild_subscriptions=true"
+           << "payloadBytes" << payload.size();
   sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
 }
 
@@ -220,6 +235,26 @@ void DiscordGateway::resetSession() {
     inflateReset(&m_zstream);
   }
   m_sentLazyRequests.clear();
+  m_pendingLazyRequests.clear();
+}
+
+void DiscordGateway::flushPendingLazyRequests() {
+  if (m_state != Ready || m_pendingLazyRequests.isEmpty()) {
+    return;
+  }
+
+  QList<QString> pendingRequests = m_pendingLazyRequests.toList();
+  m_pendingLazyRequests.clear();
+  qDebug() << "[discord-gateway] flushing pending subscribe requests"
+           << pendingRequests.size();
+  for (int i = 0; i < pendingRequests.size(); ++i) {
+    QString key = pendingRequests.at(i);
+    int separator = key.indexOf(':');
+    if (separator <= 0) {
+      continue;
+    }
+    sendLazyRequest(key.left(separator), key.mid(separator + 1));
+  }
 }
 
 QString DiscordGateway::lazyRequestKey(const QString &guildId,

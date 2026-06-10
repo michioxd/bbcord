@@ -2,6 +2,7 @@
 
 #include "../AppStore.hpp"
 #include "../Client.hpp"
+#include "../discord/GatewayWorker.hpp"
 #include "../discord/NetworkWorker.hpp"
 #include "../models/Models.hpp"
 #include "FeatureConstants.hpp"
@@ -24,6 +25,26 @@ variantMessagesToDiscordMessages(const QVariantList &items) {
 }
 } // namespace
 
+void DiscordClient::subscribeToGuildChannel(const QString &channelId,
+                                            const QString &guildId) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeGuildId = guildId.trimmed();
+  if (safeChannelId.isEmpty() || safeGuildId.isEmpty()) {
+    qDebug() << "[discord-chat] subscribe skipped"
+             << "guild" << safeGuildId << "channel" << safeChannelId;
+    return;
+  }
+
+  m_chatGuildByChannelId.insert(safeChannelId, safeGuildId);
+  qDebug() << "[discord-chat] subscribe guild channel"
+           << "guild" << safeGuildId << "channel" << safeChannelId;
+  if (m_gatewayWorker != 0) {
+    QMetaObject::invokeMethod(m_gatewayWorker, "sendLazyRequest",
+                              Qt::QueuedConnection, Q_ARG(QString, safeGuildId),
+                              Q_ARG(QString, safeChannelId));
+  }
+}
+
 void DiscordClient::loadInitialChatMessages(const QString &channelId,
                                             const QString &guildId) {
   QString safeChannelId = channelId.trimmed();
@@ -34,8 +55,14 @@ void DiscordClient::loadInitialChatMessages(const QString &channelId,
     return;
   }
 
-  if (!guildId.trimmed().isEmpty()) {
-    m_chatGuildByChannelId.insert(safeChannelId, guildId.trimmed());
+  QString safeGuildId = guildId.trimmed();
+  if (!safeGuildId.isEmpty()) {
+    qDebug() << "[discord-chat] initial load subscribe"
+             << "guild" << safeGuildId << "channel" << safeChannelId;
+    subscribeToGuildChannel(safeChannelId, safeGuildId);
+  } else {
+    qDebug() << "[discord-chat] initial load without guild id"
+             << "channel" << safeChannelId;
   }
 
   if (m_store) {

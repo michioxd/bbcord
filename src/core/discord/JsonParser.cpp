@@ -85,7 +85,7 @@ QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
   data["capabilities"] = 30717;
   data["properties"] = properties;
   data["large_threshold"] = 50;
-  data["guild_subscriptions"] = false;
+  data["guild_subscriptions"] = true;
   QVariantMap presence;
   presence["status"] = "online";
   presence["since"] = QVariant();
@@ -124,18 +124,17 @@ QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
   return payload;
 }
 
-QByteArray DiscordJsonParser::buildLazyRequestPayload(const QString &guildId,
-                                                      const QString &channelId,
-                                                      QString *errorMessage) {
+QByteArray DiscordJsonParser::buildGuildSubscribePayload(
+    const QString &guildId, const QString &channelId, QString *errorMessage) {
   QVariantMap data;
-  data["guild_id"] = guildId.trimmed();
-
+  QString safeGuildId = guildId.trimmed();
   QString safeChannelId = channelId.trimmed();
-  if (!safeChannelId.isEmpty()) {
-    data["typing"] = true;
-    data["activities"] = true;
-    data["threads"] = true;
+  data["guild_id"] = safeGuildId;
+  data["typing"] = true;
+  data["activities"] = true;
+  data["threads"] = true;
 
+  if (!safeChannelId.isEmpty()) {
     QVariantList range;
     range.append(0);
     range.append(99);
@@ -147,6 +146,10 @@ QByteArray DiscordJsonParser::buildLazyRequestPayload(const QString &guildId,
     channels[safeChannelId] = ranges;
     data["channels"] = channels;
   }
+
+  QVariantMap guildSubscriptions;
+  guildSubscriptions[safeGuildId] = QVariantList();
+  data["guild_subscriptions"] = guildSubscriptions;
 
   QVariantMap root;
   root["op"] = 14;

@@ -123,6 +123,7 @@ void ChatController::openChannel(const QString &channelId,
   m_currentChannelName = channelName;
 
   if (m_client) {
+    m_client->subscribeToGuildChannel(safeChannelId, m_currentGuildId);
     m_client->selectChannel(safeChannelId);
   } else if (m_store) {
     m_store->selectChannel(safeChannelId);

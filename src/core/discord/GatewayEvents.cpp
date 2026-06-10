@@ -132,6 +132,85 @@ bool mentionsArrayContainsUserId(const QByteArray &bytes,
          mentionsBytes.indexOf(spaced) >= 0;
 }
 
+QString extractTopLevelStringField(const QByteArray &bytes,
+                                   const char *fieldName) {
+  QByteArray wanted(fieldName);
+  int pos = 0;
+  int depth = 0;
+  while (pos < bytes.size()) {
+    char ch = bytes.at(pos);
+    if (ch == '{' || ch == '[') {
+      ++depth;
+      ++pos;
+      continue;
+    }
+    if (ch == '}' || ch == ']') {
+      --depth;
+      ++pos;
+      continue;
+    }
+    if (ch != '"' || depth != 1) {
+      ++pos;
+      continue;
+    }
+
+    ++pos;
+    QByteArray key;
+    bool escaped = false;
+    for (; pos < bytes.size(); ++pos) {
+      ch = bytes.at(pos);
+      if (escaped) {
+        key.append(ch);
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        ++pos;
+        break;
+      } else {
+        key.append(ch);
+      }
+    }
+
+    while (pos < bytes.size() &&
+           (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+            bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+      ++pos;
+    }
+    if (pos >= bytes.size() || bytes.at(pos) != ':') {
+      continue;
+    }
+    ++pos;
+    while (pos < bytes.size() &&
+           (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
+            bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
+      ++pos;
+    }
+    if (key != wanted || pos >= bytes.size() || bytes.at(pos) != '"') {
+      continue;
+    }
+
+    ++pos;
+    QByteArray value;
+    escaped = false;
+    for (; pos < bytes.size(); ++pos) {
+      ch = bytes.at(pos);
+      if (escaped) {
+        value.append(ch);
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        break;
+      } else {
+        value.append(ch);
+      }
+    }
+    return QString::fromUtf8(value.constData(), value.size());
+  }
+  return QString();
+}
+
 QVariantMap buildLightMessageCreatePayload(const QByteArray &bytes,
                                            const QString &currentUserId) {
   QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
@@ -224,7 +303,7 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
     break;
   }
 
-  case MG_EV_CLOSE:
+  case MG_EV_CLOSE: {
     if (m_connection == connection) {
       m_connection = NULL;
     }
@@ -235,6 +314,7 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
     setState(Disconnected);
     emit closed();
     break;
+  }
   }
 }
 
@@ -290,26 +370,45 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
   QByteArray bytes(data, length);
 
   if (DiscordJsonParser::isLargeReadyPayload(bytes)) {
-    m_sequence = DiscordJsonParser::valueToInt(
-        DiscordJsonParser::extractStringField(bytes, "s"), m_sequence);
-    m_sessionId = DiscordJsonParser::extractStringField(bytes, "session_id");
+    int sequence = extractSequence(bytes);
+    if (sequence >= 0) {
+      m_sequence = sequence;
+    }
+
+    QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
+    m_sessionId = extractTopLevelStringField(dataBytes, "session_id");
+    if (m_sessionId.isEmpty()) {
+      m_sessionId =
+          DiscordJsonParser::extractStringField(dataBytes, "session_id");
+    }
     m_resumeGatewayUrl =
-        DiscordJsonParser::extractStringField(bytes, "resume_gateway_url");
+        extractTopLevelStringField(dataBytes, "resume_gateway_url");
+    if (m_resumeGatewayUrl.isEmpty()) {
+      m_resumeGatewayUrl = DiscordJsonParser::extractStringField(
+          dataBytes, "resume_gateway_url");
+    }
     QString userSettingsProto =
-        DiscordJsonParser::extractStringField(bytes, "user_settings_proto");
+        extractTopLevelStringField(dataBytes, "user_settings_proto");
+    if (userSettingsProto.isEmpty()) {
+      userSettingsProto = DiscordJsonParser::extractStringField(
+          dataBytes, "user_settings_proto");
+    }
     QVariantList presences =
-        DiscordJsonParser::extractArrayField(bytes, "presences");
+        DiscordJsonParser::extractArrayField(dataBytes, "presences");
 
     qDebug() << "[discord] large READY received; skipping full JSON parse"
-             << "session" << m_sessionId << "presences" << presences.size();
+             << "session" << m_sessionId << "seq" << m_sequence << "presences"
+             << presences.size() << "pendingSubscribes"
+             << m_pendingLazyRequests.size() << "payloadBytes" << bytes.size();
     setState(Ready);
-    emit ready(m_sessionId);
+    ready(m_sessionId);
     QVariantMap readyPayload;
-    readyPayload["session_id"] = m_sessionId;
-    readyPayload["resume_gateway_url"] = m_resumeGatewayUrl;
-    readyPayload["user_settings_proto"] = userSettingsProto;
-    readyPayload["presences"] = presences;
-    emit dispatchReceived("READY", readyPayload);
+    readyPayload.insert("session_id", m_sessionId);
+    readyPayload.insert("resume_gateway_url", m_resumeGatewayUrl);
+    readyPayload.insert("user_settings_proto", userSettingsProto);
+    readyPayload.insert("presences", presences);
+    flushPendingLazyRequests();
+    dispatchReceived("READY", readyPayload);
     return;
   }
 
@@ -330,13 +429,30 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
 
     QString channelId =
         DiscordJsonParser::extractStringField(bytes, "channel_id").trimmed();
+    QString guildId =
+        DiscordJsonParser::extractStringField(bytes, "guild_id").trimmed();
+    QString messageId =
+        DiscordJsonParser::extractStringField(bytes, "id").trimmed();
     bool shouldBuildFullMessage =
         !channelId.isEmpty() && (channelId == m_selectedChannelId ||
                                  m_loadedChannelIds.contains(channelId));
 
+    if (shouldBuildFullMessage) {
+      qDebug() << "[discord-gateway] selected MESSAGE_CREATE"
+               << "seq" << sequence << "guild" << guildId << "channel"
+               << channelId << "message" << messageId;
+    }
+
     if (!shouldBuildFullMessage) {
-      emit dispatchReceived("MESSAGE_CREATE", buildLightMessageCreatePayload(
-                                                  bytes, m_currentUserId));
+      QVariantMap lightPayload =
+          buildLightMessageCreatePayload(bytes, m_currentUserId);
+      bool shouldForwardLightEvent =
+          guildId.isEmpty() ||
+          lightPayload.value("mention_everyone").toBool() ||
+          lightPayload.contains("mention_count");
+      if (shouldForwardLightEvent) {
+        emit dispatchReceived("MESSAGE_CREATE", lightPayload);
+      }
       return;
     }
 
@@ -362,9 +478,18 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
 
     QString channelId =
         DiscordJsonParser::extractStringField(bytes, "channel_id").trimmed();
+    QString guildId =
+        DiscordJsonParser::extractStringField(bytes, "guild_id").trimmed();
+    QString messageId =
+        DiscordJsonParser::extractStringField(bytes, "id").trimmed();
     bool shouldParseMessageEvent =
         !channelId.isEmpty() && (channelId == m_selectedChannelId ||
                                  m_loadedChannelIds.contains(channelId));
+    if (shouldParseMessageEvent) {
+      qDebug() << "[discord-gateway] selected" << fastEventName << "seq"
+               << sequence << "guild" << guildId << "channel" << channelId
+               << "message" << messageId;
+    }
     if (!shouldParseMessageEvent) {
       return;
     }
@@ -397,6 +522,8 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
 
   switch (payload.op) {
   case 0:
+    qDebug() << "[discord-gateway] parsed dispatch" << payload.eventName
+             << "seq" << payload.sequence;
     handleDispatch(payload.eventName, payload.data, payload.sequence);
     break;
   case 10:
@@ -439,6 +566,7 @@ void DiscordGateway::handleDispatch(const QString &eventName,
     m_resumeGatewayUrl = data.value("resume_gateway_url").toString();
     setState(Ready);
     emit ready(m_sessionId);
+    flushPendingLazyRequests();
   }
 
   emit dispatchReceived(eventName, data);
