@@ -9,13 +9,9 @@
 #include <QVariantMap>
 
 class DiscordClient;
-
 class DiscordNetworkWorker;
-
 class AvatarCacheWorker;
-
 class AvatarManager : public QObject {
-
   Q_OBJECT
 public:
   explicit AvatarManager(DiscordClient *client,
@@ -24,14 +20,12 @@ public:
                          QObject *parent = 0);
 
   virtual ~AvatarManager();
-
   void loadCurrentUserAvatar(const DiscordUser &user,
                              QVariantMap &avatarCacheRequests,
                              QString &loadingAvatarUserId,
                              QString &loadingAvatarUserId2,
                              QQueue<QVariantMap> &pendingAvatars,
                              QStringList &queuedAvatarUserIds);
-
   void queueDmAvatar(const QString &channelId, const QString &userId,
                      const QString &avatarHash,
                      QStringList &loadedAvatarUserIds,
@@ -40,19 +34,16 @@ public:
                      QString &loadingAvatarUserId,
                      QString &loadingAvatarUserId2,
                      QQueue<QVariantMap> &pendingAvatars);
-
   void loadNextAvatar(QString &loadingAvatarUserId,
                       QString &loadingAvatarUserId2,
                       QQueue<QVariantMap> &pendingAvatars,
                       QStringList &queuedAvatarUserIds);
-
   void queueGuildIcon(const QString &guildId, const QString &iconHash,
                       QStringList &loadedGuildIconIds,
                       QVariantMap &guildIconCacheRequests,
                       QStringList &queuedGuildIconIds,
                       QString &loadingGuildIconId, QString &loadingGuildIconId2,
                       QQueue<QVariantMap> &pendingGuildIcons);
-
   void loadNextGuildIcon(QString &loadingGuildIconId,
                          QString &loadingGuildIconId2,
                          QQueue<QVariantMap> &pendingGuildIcons,
@@ -62,14 +53,11 @@ public:
 
 private:
   QString avatarCachePath(const DiscordUser &user) const;
-
   QString guildIconCachePath(const QString &guildId,
                              const QString &iconHash) const;
 
   DiscordClient *m_client;
-
   DiscordNetworkWorker *m_networkWorker;
-
   AvatarCacheWorker *m_avatarCacheWorker;
 };
 
