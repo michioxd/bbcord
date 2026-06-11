@@ -2,6 +2,9 @@
 
 void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
                                         const QString &afterId) {
+  Q_UNUSED(limit);
+  Q_UNUSED(afterId);
+
   RestRequest request;
   request.token = token.trimmed();
   if (request.token.isEmpty()) {
@@ -9,15 +12,7 @@ void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
     return;
   }
 
-  if (limit <= 0) {
-    limit = 25;
-  }
-
-  request.requestPath =
-      QString("/api/v9/users/@me/channels?limit=%1").arg(limit);
-  if (!afterId.trimmed().isEmpty()) {
-    request.requestPath += QString("&after=%1").arg(afterId.trimmed());
-  }
+  request.requestPath = "/api/v9/users/@me/channels";
 
   request.type = DmChannelsRequest;
   enqueueRequest(request);
@@ -26,6 +21,9 @@ void DiscordRestClient::fetchDmChannels(const QString &token, int limit,
 void DiscordRestClient::fetchGuildChannels(const QString &token,
                                            const QString &guildId, int limit,
                                            const QString &afterId) {
+  Q_UNUSED(limit);
+  Q_UNUSED(afterId);
+
   RestRequest request;
   request.token = token.trimmed();
   request.guildId = guildId.trimmed();
@@ -34,16 +32,8 @@ void DiscordRestClient::fetchGuildChannels(const QString &token,
     return;
   }
 
-  if (limit <= 0) {
-    limit = 25;
-  }
-
-  request.requestPath = QString("/api/v9/guilds/%1/channels?limit=%2")
-                            .arg(request.guildId)
-                            .arg(limit);
-  if (!afterId.trimmed().isEmpty()) {
-    request.requestPath += QString("&after=%1").arg(afterId.trimmed());
-  }
+  request.requestPath =
+      QString("/api/v9/guilds/%1/channels").arg(request.guildId);
 
   request.type = GuildChannelsRequest;
   enqueueRequest(request);
