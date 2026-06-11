@@ -1,5 +1,6 @@
 import bb.cascades 1.4
 import bb.cascades.pickers 1.0
+import "media"
 
 Page {
     id: chatPage
@@ -123,6 +124,10 @@ Page {
                                 ListItem.view.openAttachment(url);
                             }
 
+                            onImagePreviewRequested: {
+                                ListItem.view.previewImage(url, imageWidth, imageHeight);
+                            }
+
                             onAttachmentImageLoadRequested: {
                                 ListItem.view.loadAttachmentImage(url);
                             }
@@ -156,6 +161,10 @@ Page {
 
                 function openAttachment(url) {
                     chatController.openAttachment(url);
+                }
+
+                function previewImage(url, imageWidth, imageHeight) {
+                    chatPage.openImagePreview(url, imageWidth, imageHeight);
                 }
 
                 onDataModelChanged: {
@@ -454,6 +463,9 @@ Page {
             onFileSelected: {
                 chatController.addPendingAttachments(selectedFiles);
             }
+        },
+        ImagePreview {
+            id: imagePreviewSheet
         }
     ]
 
@@ -536,6 +548,10 @@ Page {
 
     function deactivatePage() {
         active = false;
+    }
+
+    function openImagePreview(url, imageWidth, imageHeight) {
+        imagePreviewSheet.openUrl(url, imageWidth, imageHeight);
     }
 
     function reactivatePage() {

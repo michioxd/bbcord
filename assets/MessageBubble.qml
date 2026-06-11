@@ -45,6 +45,7 @@ Container {
     signal replyRequested(string messageId, string author, string message)
     signal copyRequested(string text)
     signal attachmentOpenRequested(string url)
+    signal imagePreviewRequested(string url, int imageWidth, int imageHeight)
     signal attachmentImageLoadRequested(string url)
 
     horizontalAlignment: HorizontalAlignment.Fill
@@ -284,6 +285,16 @@ Container {
                 scalingMethod: ScalingMethod.AspectFit
             }
 
+            gestureHandlers: [
+                TapHandler {
+                    onTapped: {
+                        if (root.attachmentIsImage && root.attachmentUrl !== "") {
+                            root.imagePreviewRequested(root.attachmentUrl, root.imageWidth, root.imageHeight);
+                        }
+                    }
+                }
+            ]
+
             ActivityIndicator {
                 visible: root.imageLoading && root.image === ""
                 running: root.imageLoading && root.image === ""
@@ -415,6 +426,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(0));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(0) && root.inlineAttachmentUrl(0) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(0), root.inlineAttachmentImageWidth(0), root.inlineAttachmentImageHeight(0));
+                            }
+                        }
+                    }
+                ]
             }
 
             Container {
@@ -450,6 +471,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(1));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(1) && root.inlineAttachmentUrl(1) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(1), root.inlineAttachmentImageWidth(1), root.inlineAttachmentImageHeight(1));
+                            }
+                        }
+                    }
+                ]
             }
 
             Container {
@@ -485,6 +516,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(2));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(2) && root.inlineAttachmentUrl(2) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(2), root.inlineAttachmentImageWidth(2), root.inlineAttachmentImageHeight(2));
+                            }
+                        }
+                    }
+                ]
             }
 
             Container {
@@ -520,6 +561,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(3));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(3) && root.inlineAttachmentUrl(3) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(3), root.inlineAttachmentImageWidth(3), root.inlineAttachmentImageHeight(3));
+                            }
+                        }
+                    }
+                ]
             }
 
             Container {
@@ -555,6 +606,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(4));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(4) && root.inlineAttachmentUrl(4) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(4), root.inlineAttachmentImageWidth(4), root.inlineAttachmentImageHeight(4));
+                            }
+                        }
+                    }
+                ]
             }
 
             Container {
@@ -590,6 +651,16 @@ Container {
                         root.attachmentOpenRequested(root.inlineAttachmentUrl(5));
                     }
                 }
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            if (root.inlineAttachmentIsImage(5) && root.inlineAttachmentUrl(5) !== "") {
+                                root.imagePreviewRequested(root.inlineAttachmentUrl(5), root.inlineAttachmentImageWidth(5), root.inlineAttachmentImageHeight(5));
+                            }
+                        }
+                    }
+                ]
             }
         }
     }
@@ -681,6 +752,16 @@ Container {
     function inlineAttachmentImage(index) {
         var item = root.inlineAttachmentAt(index);
         return item === null || item.image === undefined ? "" : item.image;
+    }
+
+    function inlineAttachmentImageWidth(index) {
+        var item = root.inlineAttachmentAt(index);
+        return item === null || item.width === undefined ? 0 : item.width;
+    }
+
+    function inlineAttachmentImageHeight(index) {
+        var item = root.inlineAttachmentAt(index);
+        return item === null || item.height === undefined ? 0 : item.height;
     }
 
     function inlineAttachmentLoading(index) {

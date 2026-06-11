@@ -1,5 +1,5 @@
 1
-39
+41
 About.qml
 audio/connected.ogg
 audio/connecting.ogg
@@ -11,6 +11,7 @@ icon.png
 images/default-avt.png
 images/demo.png
 images/icons/accent/caret-left.png
+images/icons/accent/ic_save_image.png
 images/icons/accent/users.png
 images/icons/action_delete.png
 images/icons/caret-down.png
@@ -35,6 +36,7 @@ images/icons/x.png
 LoginPage.qml
 main.qml
 MainPage.qml
+media/ImagePreview.qml
 MessageBubble.qml
 ServerList.qml
 Settings.qml

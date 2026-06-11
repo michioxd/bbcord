@@ -30,6 +30,7 @@ class AppStore;
 class ChatController;
 class DiscordClient;
 class DmListController;
+class ImagePreview;
 class MainPageController;
 class ServerListController;
 class SettingsController;
@@ -55,6 +56,7 @@ private:
   AppStore *m_appStore;
   DiscordClient *m_discordClient;
   ChatController *m_chatController;
+  ImagePreview *m_imagePreview;
   DmListController *m_dmListController;
   MainPageController *m_mainPageController;
   ServerListController *m_serverListController;

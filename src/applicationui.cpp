@@ -20,6 +20,7 @@
 #include "core/Client.hpp"
 #include "ui/ChatController.hpp"
 #include "ui/DmListController.hpp"
+#include "ui/ImagePreview.hpp"
 #include "ui/MainPageController.hpp"
 #include "ui/ServerListController.hpp"
 #include "ui/SettingsController.hpp"
@@ -38,6 +39,7 @@ ApplicationUI::ApplicationUI()
     : QObject(), m_appStore(new AppStore(this)),
       m_discordClient(new DiscordClient(m_appStore, this)),
       m_chatController(new ChatController(m_discordClient, m_appStore, this)),
+      m_imagePreview(new ImagePreview(this)),
       m_dmListController(
           new DmListController(m_discordClient, m_appStore, this)),
       m_mainPageController(
@@ -66,6 +68,7 @@ ApplicationUI::ApplicationUI()
   qml->setContextProperty("appStore", m_appStore);
   qml->setContextProperty("discordClient", m_discordClient);
   qml->setContextProperty("chatController", m_chatController);
+  qml->setContextProperty("imagePreview", m_imagePreview);
   qml->setContextProperty("dmListController", m_dmListController);
   qml->setContextProperty("mainPageController", m_mainPageController);
   qml->setContextProperty("serverListController", m_serverListController);

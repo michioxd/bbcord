@@ -53,6 +53,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/default-avt.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/caret-left.png) \
+        $$quote($$BASEDIR/assets/images/icons/accent/ic_save_image.png) \
         $$quote($$BASEDIR/assets/images/icons/accent/users.png) \
         $$quote($$BASEDIR/assets/images/icons/action_delete.png) \
         $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
@@ -74,7 +75,8 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/x-hold.png) \
         $$quote($$BASEDIR/assets/images/icons/x.png) \
-        $$quote($$BASEDIR/assets/main.qml)
+        $$quote($$BASEDIR/assets/main.qml) \
+        $$quote($$BASEDIR/assets/media/ImagePreview.qml)
 }
 
 config_pri_source_group1 {
@@ -115,6 +117,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/main.cpp) \
         $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
+        $$quote($$BASEDIR/src/ui/ImagePreview.cpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.cpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.cpp) \
         $$quote($$BASEDIR/src/ui/SettingsController.cpp) \
@@ -150,6 +153,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/modules/Worker.hpp) \
         $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
+        $$quote($$BASEDIR/src/ui/ImagePreview.hpp) \
         $$quote($$BASEDIR/src/ui/MainPageController.hpp) \
         $$quote($$BASEDIR/src/ui/ServerListController.hpp) \
         $$quote($$BASEDIR/src/ui/SettingsController.hpp) \
@@ -224,7 +228,10 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/images/icons/accent/*.qs) \
         $$quote($$BASEDIR/../assets/images/icons/settings/*.qml) \
         $$quote($$BASEDIR/../assets/images/icons/settings/*.js) \
-        $$quote($$BASEDIR/../assets/images/icons/settings/*.qs)
+        $$quote($$BASEDIR/../assets/images/icons/settings/*.qs) \
+        $$quote($$BASEDIR/../assets/media/*.qml) \
+        $$quote($$BASEDIR/../assets/media/*.js) \
+        $$quote($$BASEDIR/../assets/media/*.qs)
 
     HEADERS += \
         $$quote($$BASEDIR/../src/*.h) \

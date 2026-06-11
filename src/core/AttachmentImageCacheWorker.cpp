@@ -102,6 +102,8 @@ void AttachmentImageCacheWorker::requestImage(const QString &url,
   context->filePath = safePath;
   context->host = connectHost;
   context->path = requestPath;
+  context->receivedBytes = 0;
+  context->totalBytes = -1;
   context->maxBytes = maxBytes;
   context->status = 0;
   context->ticks = 0;
@@ -275,6 +277,29 @@ void AttachmentImageCacheWorker::imageEventHandler(
     sendImageRequest(connection, context);
     break;
 
+  case MG_EV_READ:
+    context->receivedBytes = static_cast<qint64>(connection->recv.len);
+    emit context->worker->imageProgress(context->url, context->receivedBytes,
+                                        context->totalBytes);
+    break;
+
+  case MG_EV_HTTP_HDRS: {
+    struct mg_http_message *message =
+        static_cast<struct mg_http_message *>(eventData);
+    qint64 totalBytes = -1;
+    struct mg_str *contentLength =
+        mg_http_get_header(message, "Content-Length");
+    if (contentLength != NULL && contentLength->len > 0) {
+      totalBytes = QString::fromLatin1(contentLength->buf,
+                                       static_cast<int>(contentLength->len))
+                       .toLongLong();
+    }
+    context->totalBytes = totalBytes;
+    emit context->worker->imageProgress(context->url, context->receivedBytes,
+                                        context->totalBytes);
+    break;
+  }
+
   case MG_EV_HTTP_MSG: {
     struct mg_http_message *message =
         static_cast<struct mg_http_message *>(eventData);
@@ -282,6 +307,10 @@ void AttachmentImageCacheWorker::imageEventHandler(
     if (context->status == 200 && message->body.len > 0) {
       context->body =
           QByteArray(message->body.buf, static_cast<int>(message->body.len));
+      context->receivedBytes = static_cast<qint64>(message->body.len);
+      context->totalBytes = static_cast<qint64>(message->body.len);
+      emit context->worker->imageProgress(context->url, context->receivedBytes,
+                                          context->totalBytes);
     }
     context->worker->finishDownload(connection, true);
     break;

@@ -18,6 +18,8 @@ struct ImageDownloadContext {
   QString host;
   QString path;
   QByteArray body;
+  qint64 receivedBytes;
+  qint64 totalBytes;
   qint64 maxBytes;
   int status;
   int ticks;
@@ -46,6 +48,8 @@ private Q_SLOTS:
 Q_SIGNALS:
   void imageCached(const QString &url, const QString &path);
   void imageFailed(const QString &url);
+  void imageProgress(const QString &url, qint64 receivedBytes,
+                     qint64 totalBytes);
 
 private:
   void timerEvent(QTimerEvent *event);
