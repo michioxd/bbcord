@@ -18,10 +18,7 @@ void DiscordClient::loadMoreDmChannels() {
   }
 
   if (m_visibleDmChannelCount < m_allDmChannels.size()) {
-    int nextCount = m_visibleDmChannelCount + kPageSize;
-    if (nextCount > m_allDmChannels.size()) {
-      nextCount = m_allDmChannels.size();
-    }
+    int nextCount = m_allDmChannels.size();
 
     QVariantList appendedChannels;
     for (int i = m_visibleDmChannelCount; i < nextCount; ++i) {
@@ -38,7 +35,7 @@ void DiscordClient::loadMoreDmChannels() {
     }
 
     m_visibleDmChannelCount = nextCount;
-    m_dmChannelsHasMore = m_visibleDmChannelCount < m_allDmChannels.size();
+    m_dmChannelsHasMore = false;
     if (m_store) {
       m_store->appendDmChannels(appendedChannels);
     }
@@ -175,18 +172,17 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
 
   if (changed) {
     sortDmChannels();
-    rebuildDmChannelIndexes();
-    if (m_store) {
-      m_store->setDmChannels(m_dmChannels);
-    }
-    syncGatewayOrderingStateToWorker();
   }
 
-  m_dmChannelsHasMore = !channels.isEmpty();
-  if (m_dmChannelsHasMore) {
-    loadMoreDmChannels();
-    scheduleDmChannelsCacheSave();
-    return;
+  if (!m_allDmChannels.isEmpty()) {
+    m_dmChannels = m_allDmChannels;
+    m_visibleDmChannelCount = m_dmChannels.size();
+    m_lastDmChannelId = m_dmChannels.last().toMap().value("id").toString();
+  }
+  m_dmChannelsHasMore = false;
+  rebuildDmChannelIndexes();
+  if (m_store) {
+    m_store->setDmChannels(m_dmChannels);
   }
 
   syncGatewayOrderingStateToWorker();
