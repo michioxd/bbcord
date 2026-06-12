@@ -152,12 +152,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/media/ImagePreview.qml" line="30"/>
+        <location filename="../assets/media/ImagePreview.qml" line="39"/>
         <source>Image Viewer</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/media/ImagePreview.qml" line="277"/>
+        <location filename="../assets/media/ImagePreview.qml" line="409"/>
         <source>Saved image</source>
         <translation type="unfinished"></translation>
     </message>
