@@ -261,7 +261,6 @@ void DiscordClient::onRestLoginSucceeded(const QVariantMap &user) {
     m_visibleDmChannelIndexById.clear();
     rebuildDmRecipientIndex();
     rebuildDmChannelIndexes();
-    loadMoreDmChannels();
   }
 
   setStatusText("Connecting gateway...");
@@ -553,16 +552,15 @@ void DiscordClient::onGatewayDispatch(const QString &eventName,
 void DiscordClient::onGatewayReady(const QString &sessionId) {
   Q_UNUSED(sessionId);
 
-  if (m_loggedIn) {
-    return;
+  if (!m_loggedIn) {
+    saveToken();
+    setLoggedIn(true);
+    emit loginSucceeded();
+    loadGuilds();
   }
 
-  saveToken();
   setBusy(false);
-  setLoggedIn(true);
   setStatusText("Connected");
-  loadGuilds();
-  emit loginSucceeded();
 }
 
 void DiscordClient::onGatewayError(const QString &message) {
@@ -629,13 +627,23 @@ void DiscordClient::onGatewayGuildsAndDmsReady(
   }
 
   m_guilds = updatedGuilds;
-  m_allDmChannels = allDmChannels;
-  m_dmChannels = visibleDmChannels;
   m_orderedGuildIds = orderedGuildIds;
   m_dmPresenceByUserId = dmPresenceByUserId;
+  for (QVariantMap::const_iterator it = m_dmPresenceByUserId.constBegin();
+       it != m_dmPresenceByUserId.constEnd(); ++it) {
+    if (!it.key().isEmpty() && !m_pendingDmPresenceUserIds.contains(it.key())) {
+      m_pendingDmPresenceUserIds.append(it.key());
+    }
+  }
+
+  if (!allDmChannels.isEmpty() || !visibleDmChannels.isEmpty()) {
+    m_allDmChannels = allDmChannels;
+    m_dmChannels = visibleDmChannels;
+  }
 
   rebuildDmRecipientIndex();
   rebuildDmChannelIndexes();
+  applyPendingDmPresences();
   updateStoreWithGuildsAndDms();
   scheduleGuildsCacheSave();
   scheduleDmChannelsCacheSave();
@@ -755,9 +763,7 @@ void DiscordClient::flushGatewayUiUpdates() {
   m_pendingMentionCountsByGuildId.clear();
   m_pendingDmUiUpdate = false;
 
-  if (applyPendingDmPresences()) {
-    dmChanged = true;
-  }
+  applyPendingDmPresences();
 
   for (int i = 0; i < guildIds.size(); ++i) {
     updateGuildUnread(guildIds.at(i), true);

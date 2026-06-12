@@ -139,8 +139,21 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
       int existingIndex = m_allDmChannelIndexById.value(channelId, -1).toInt();
       if (existingIndex >= 0 && existingIndex < m_allDmChannels.size()) {
         QVariantMap existingChannel = m_allDmChannels.at(existingIndex).toMap();
-        item["status"] = existingChannel.value("status");
-        item["statusColor"] = existingChannel.value("statusColor");
+        bool hasKnownPresence = false;
+        QVariantList recipientIds = item.value("recipientIds").toList();
+        for (int recipientIndex = 0; recipientIndex < recipientIds.size();
+             ++recipientIndex) {
+          QString recipientId = recipientIds.at(recipientIndex).toString();
+          if (!recipientId.isEmpty() &&
+              m_dmPresenceByUserId.contains(recipientId)) {
+            hasKnownPresence = true;
+            break;
+          }
+        }
+        if (!hasKnownPresence) {
+          item["status"] = existingChannel.value("status");
+          item["statusColor"] = existingChannel.value("statusColor");
+        }
         item["unread"] = existingChannel.value("unread");
         m_allDmChannels.replace(existingIndex, item);
 
@@ -172,7 +185,12 @@ void DiscordClient::onDmChannelsLoaded(const QVariantList &channels) {
   m_dmChannelsHasMore = !channels.isEmpty();
   if (m_dmChannelsHasMore) {
     loadMoreDmChannels();
+    scheduleDmChannelsCacheSave();
+    return;
   }
+
+  syncGatewayOrderingStateToWorker();
+  syncGatewayMessageFilterStateToWorker();
   scheduleDmChannelsCacheSave();
   setStatusText("Connected");
 }
@@ -334,6 +352,9 @@ bool DiscordClient::applyPendingDmPresences() {
       visibleChannel["statusColor"] = statusColor;
       m_dmChannels.replace(visibleIndex, visibleChannel);
       m_dmChannelsById.insert(channelId, visibleChannel);
+      if (m_store) {
+        m_store->updateDmStatus(channelId, status, statusColor);
+      }
       changed = true;
     } else if (m_dmChannelsById.contains(channelId)) {
       QVariantMap visibleChannel = m_dmChannelsById.value(channelId).toMap();

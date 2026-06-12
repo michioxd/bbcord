@@ -16,6 +16,8 @@ DmListController::DmListController(DiscordClient *client, AppStore *store,
             SLOT(onDmAvatarChanged(QString, QString)));
     connect(m_store, SIGNAL(dmAvatar2Changed(QString, QString)), this,
             SLOT(onDmAvatar2Changed(QString, QString)));
+    connect(m_store, SIGNAL(dmStatusChanged(QString, QString, QString)), this,
+            SLOT(onDmStatusChanged(QString, QString, QString)));
     connect(m_store, SIGNAL(dataLoadingChanged(bool)), this,
             SLOT(onDataLoadingChanged(bool)));
     onDmChannelsChanged();
@@ -83,6 +85,24 @@ void DmListController::onDmAvatar2Changed(const QString &channelId,
     QVariantMap item = m_dmDataModel->value(i).toMap();
     if (item.value("id").toString() == channelId) {
       item["avatar2"] = avatarSource;
+      m_dmDataModel->replace(i, item);
+      return;
+    }
+  }
+}
+
+void DmListController::onDmStatusChanged(const QString &channelId,
+                                         const QString &status,
+                                         const QString &statusColor) {
+  if (channelId.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < m_dmDataModel->size(); ++i) {
+    QVariantMap item = m_dmDataModel->value(i).toMap();
+    if (item.value("id").toString() == channelId) {
+      item["status"] = status;
+      item["statusColor"] = statusColor;
       m_dmDataModel->replace(i, item);
       return;
     }

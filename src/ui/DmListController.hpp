@@ -30,6 +30,8 @@ private Q_SLOTS:
   void onDmAvatarChanged(const QString &channelId, const QString &avatarSource);
   void onDmAvatar2Changed(const QString &channelId,
                           const QString &avatarSource);
+  void onDmStatusChanged(const QString &channelId, const QString &status,
+                         const QString &statusColor);
   void onDataLoadingChanged(bool dataLoading);
 
 private:

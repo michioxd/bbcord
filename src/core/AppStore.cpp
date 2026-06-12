@@ -278,6 +278,25 @@ void AppStore::updateDmAvatar2(const QString &channelId,
   }
 }
 
+void AppStore::updateDmStatus(const QString &channelId, const QString &status,
+                              const QString &statusColor) {
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    if (channel.value("id").toString() == channelId) {
+      if (channel.value("status").toString() == status &&
+          channel.value("statusColor").toString() == statusColor) {
+        return;
+      }
+
+      channel["status"] = status;
+      channel["statusColor"] = statusColor;
+      m_dmChannels.replace(i, channel);
+      emit dmStatusChanged(channelId, status, statusColor);
+      return;
+    }
+  }
+}
+
 void AppStore::setDmChannels(const QVariantList &dmChannels) {
   if (dmChannels.size() == m_dmChannels.size()) {
     bool same = true;

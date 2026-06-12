@@ -57,7 +57,8 @@ bool shouldParseDispatch(const QString &eventName) {
   return eventName == "MESSAGE_CREATE" || eventName == "MESSAGE_UPDATE" ||
          eventName == "MESSAGE_DELETE" || eventName == "READY" ||
          eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
-         eventName == "USER_SETTINGS_PROTO_UPDATE";
+         eventName == "USER_SETTINGS_PROTO_UPDATE" ||
+         eventName == "PRESENCE_UPDATE";
 }
 
 QByteArray extractArrayBytes(const QByteArray &bytes, const char *fieldName) {
@@ -130,85 +131,6 @@ bool mentionsArrayContainsUserId(const QByteArray &bytes,
   QByteArray spaced = QByteArray("\"id\": \"") + userId.toUtf8() + "\"";
   return mentionsBytes.indexOf(compact) >= 0 ||
          mentionsBytes.indexOf(spaced) >= 0;
-}
-
-QString extractTopLevelStringField(const QByteArray &bytes,
-                                   const char *fieldName) {
-  QByteArray wanted(fieldName);
-  int pos = 0;
-  int depth = 0;
-  while (pos < bytes.size()) {
-    char ch = bytes.at(pos);
-    if (ch == '{' || ch == '[') {
-      ++depth;
-      ++pos;
-      continue;
-    }
-    if (ch == '}' || ch == ']') {
-      --depth;
-      ++pos;
-      continue;
-    }
-    if (ch != '"' || depth != 1) {
-      ++pos;
-      continue;
-    }
-
-    ++pos;
-    QByteArray key;
-    bool escaped = false;
-    for (; pos < bytes.size(); ++pos) {
-      ch = bytes.at(pos);
-      if (escaped) {
-        key.append(ch);
-        escaped = false;
-      } else if (ch == '\\') {
-        escaped = true;
-      } else if (ch == '"') {
-        ++pos;
-        break;
-      } else {
-        key.append(ch);
-      }
-    }
-
-    while (pos < bytes.size() &&
-           (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
-            bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
-      ++pos;
-    }
-    if (pos >= bytes.size() || bytes.at(pos) != ':') {
-      continue;
-    }
-    ++pos;
-    while (pos < bytes.size() &&
-           (bytes.at(pos) == ' ' || bytes.at(pos) == '\t' ||
-            bytes.at(pos) == '\r' || bytes.at(pos) == '\n')) {
-      ++pos;
-    }
-    if (key != wanted || pos >= bytes.size() || bytes.at(pos) != '"') {
-      continue;
-    }
-
-    ++pos;
-    QByteArray value;
-    escaped = false;
-    for (; pos < bytes.size(); ++pos) {
-      ch = bytes.at(pos);
-      if (escaped) {
-        value.append(ch);
-        escaped = false;
-      } else if (ch == '\\') {
-        escaped = true;
-      } else if (ch == '"') {
-        break;
-      } else {
-        value.append(ch);
-      }
-    }
-    return QString::fromUtf8(value.constData(), value.size());
-  }
-  return QString();
 }
 
 QVariantMap buildLightMessageCreatePayload(const QByteArray &bytes,
@@ -369,49 +291,6 @@ void DiscordGateway::handleCompressedMessage(const char *data, int length) {
 void DiscordGateway::handleTextMessage(const char *data, int length) {
   QByteArray bytes(data, length);
 
-  if (DiscordJsonParser::isLargeReadyPayload(bytes)) {
-    int sequence = extractSequence(bytes);
-    if (sequence >= 0) {
-      m_sequence = sequence;
-    }
-
-    QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
-    m_sessionId = extractTopLevelStringField(dataBytes, "session_id");
-    if (m_sessionId.isEmpty()) {
-      m_sessionId =
-          DiscordJsonParser::extractStringField(dataBytes, "session_id");
-    }
-    m_resumeGatewayUrl =
-        extractTopLevelStringField(dataBytes, "resume_gateway_url");
-    if (m_resumeGatewayUrl.isEmpty()) {
-      m_resumeGatewayUrl = DiscordJsonParser::extractStringField(
-          dataBytes, "resume_gateway_url");
-    }
-    QString userSettingsProto =
-        extractTopLevelStringField(dataBytes, "user_settings_proto");
-    if (userSettingsProto.isEmpty()) {
-      userSettingsProto = DiscordJsonParser::extractStringField(
-          dataBytes, "user_settings_proto");
-    }
-    QVariantList presences =
-        DiscordJsonParser::extractArrayField(dataBytes, "presences");
-
-    qDebug() << "[discord] large READY received; skipping full JSON parse"
-             << "session" << m_sessionId << "seq" << m_sequence << "presences"
-             << presences.size() << "pendingSubscribes"
-             << m_pendingLazyRequests.size() << "payloadBytes" << bytes.size();
-    setState(Ready);
-    ready(m_sessionId);
-    QVariantMap readyPayload;
-    readyPayload.insert("session_id", m_sessionId);
-    readyPayload.insert("resume_gateway_url", m_resumeGatewayUrl);
-    readyPayload.insert("user_settings_proto", userSettingsProto);
-    readyPayload.insert("presences", presences);
-    flushPendingLazyRequests();
-    dispatchReceived("READY", readyPayload);
-    return;
-  }
-
   QString fastEventName = DiscordJsonParser::extractStringField(bytes, "t");
   if (!fastEventName.isEmpty() && !shouldParseDispatch(fastEventName)) {
     int sequence = extractSequence(bytes);
@@ -524,6 +403,11 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
   case 0:
     qDebug() << "[discord-gateway] parsed dispatch" << payload.eventName
              << "seq" << payload.sequence;
+    if (payload.eventName == "READY") {
+      qDebug() << "[discord-gateway] READY presences"
+               << payload.data.value("presences").toList().size()
+               << "payloadBytes" << bytes.size();
+    }
     handleDispatch(payload.eventName, payload.data, payload.sequence);
     break;
   case 10:
