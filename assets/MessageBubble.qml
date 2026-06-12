@@ -1,4 +1,5 @@
 import bb.cascades 1.4
+import bb.system 1.2
 
 Container {
     id: root
@@ -34,6 +35,8 @@ Container {
     property bool imageLoading: false
     property bool imageLoadFailed: false
     property bool previewVisible: false
+    property bool ownMessage: false
+    property bool deleteAllowed: false
     property int attachmentTotal: 0
     property int maxInlineAttachments: 6
     property real maxImageWidthDu: 50.4
@@ -94,18 +97,19 @@ Container {
                 ActionItem {
                     title: qsTr("Edit")
                     imageSource: "asset:///images/icons/ic_edit.png"
-                    enabled: !root.pending && !root.failed
+                    enabled: root.isOwnMessage() && !root.pending && !root.failed
 
                     onTriggered: {
                         root.editRequested(root.messageId, root.message);
                     }
                 },
-                ActionItem {
+                DeleteActionItem {
                     title: qsTr("Delete")
                     imageSource: "asset:///images/icons/action_delete.png"
-
+                    enabled: root.canDeleteMessage()
+                                    
                     onTriggered: {
-                        root.deleteRequested(root.messageId);
+                        deleteMessageDialog.show();
                     }
                 }
             ]
@@ -115,6 +119,19 @@ Container {
     attachedObjects: [
         ArrayDataModel {
             id: attachmentModel
+        },
+        SystemDialog {
+            id: deleteMessageDialog
+            title: qsTr("Delete message")
+            body: qsTr("Delete this message?")
+            confirmButton.label: qsTr("Delete")
+            cancelButton.label: qsTr("Cancel")
+
+            onFinished: {
+                if (result == SystemUiResult.ConfirmButtonSelection) {
+                    root.deleteRequested(root.messageId);
+                }
+            }
         }
     ]
 
@@ -667,6 +684,14 @@ Container {
 
     function attachmentCount() {
         return attachmentModel.size();
+    }
+
+    function isOwnMessage() {
+        return root.ownMessage;
+    }
+
+    function canDeleteMessage() {
+        return root.isOwnMessage() || root.deleteAllowed;
     }
 
     function rebuildAttachmentModel() {

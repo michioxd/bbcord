@@ -103,6 +103,8 @@ Page {
                             pending: ListItemData.pending
                             failed: ListItemData.failed
                             edited: ListItemData.edited
+                            ownMessage: ListItemData.ownMessage === true
+                            deleteAllowed: ListItemData.deleteAllowed === true
 
                             onEditRequested: {
                                 ListItem.view.startEdit(messageId, message);

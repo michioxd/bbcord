@@ -910,6 +910,8 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
   item["id"] = item.value("id").toString();
   item["author"] = item.value("author").toString();
   item["authorId"] = authorId;
+  item["ownMessage"] =
+      !authorId.isEmpty() && m_store && authorId == m_store->currentUserId();
   item["initials"] = item.value("initials").toString();
   item["avatarHash"] = avatarHash;
   item["avatarSource"] = item.value("avatarSource").toString();
