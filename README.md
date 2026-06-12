@@ -8,6 +8,9 @@ Unofficial Discord client for QNX BlackBerry 10 devices. It is built using Qt an
 
 This project still in early stages of development, and many features are not yet implemented. The app is currently in a very rough state, and may be unstable. Use at your own risk.
 
+> [!WARNING]
+> Using third party clients is against Discord's TOS! Although the risk to get banned is low, the risk is there! The author of this software is not responsible for the status of your Discord account. [See this tweet](https://x.com/discord/status/1229357198918197248).
+
 ## Installation
 
 - Because this app is unsigned, you will need to [root your BB10 device (thanks Oleksandr)](https://bb10.root.sx) first.
@@ -17,7 +20,7 @@ This project still in early stages of development, and many features are not yet
 
 ## How to get Discord token
 
-[Google it](https://www.google.com/search?q=how+to+get+discord+token+github+gist)
+For obvious reasons, instructions are not provided here. Please [Google it](https://www.google.com/search?q=how+to+get+discord+token).
 
 ## License
 
