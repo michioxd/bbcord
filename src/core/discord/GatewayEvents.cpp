@@ -11,6 +11,8 @@ extern "C" {
 }
 
 namespace {
+const int kMaxCompressedBufferSize = 2 * 1024 * 1024;
+
 int extractSequence(const QByteArray &bytes) {
   int pos = bytes.indexOf("\"s\"");
   if (pos < 0) {
@@ -247,6 +249,15 @@ void DiscordGateway::handleCompressedMessage(const char *data, int length) {
   }
 
   m_compressedBuffer.append(data, length);
+  if (m_compressedBuffer.size() > kMaxCompressedBufferSize) {
+    emit error("Gateway compressed buffer overflow");
+    if (m_zstreamReady) {
+      inflateReset(&m_zstream);
+    }
+    m_compressedBuffer.clear();
+    return;
+  }
+
   if (m_compressedBuffer.size() < 4 ||
       static_cast<unsigned char>(
           m_compressedBuffer.at(m_compressedBuffer.size() - 4)) != 0x00 ||
