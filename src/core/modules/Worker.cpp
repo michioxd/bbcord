@@ -190,9 +190,16 @@ void DiscordClient::shutdownAvatarCacheWorker() {
 void DiscordClient::shutdownGatewayWorker() {
   if (m_gatewayWorker != 0 && m_gatewayThread != 0 &&
       m_gatewayThread->isRunning()) {
+    disconnect(m_gatewayWorker, 0, this, 0);
     QMetaObject::invokeMethod(m_gatewayWorker, "cancelAll",
                               Qt::QueuedConnection);
-    m_gatewayThread->wait();
+    if (!m_gatewayThread->wait(3000)) {
+      m_gatewayThread->quit();
+      if (!m_gatewayThread->wait(1000)) {
+        m_gatewayThread->terminate();
+        m_gatewayThread->wait();
+      }
+    }
   } else if (m_gatewayWorker != 0) {
     delete m_gatewayWorker;
   }
@@ -202,7 +209,10 @@ void DiscordClient::shutdownGatewayWorker() {
   if (m_gatewayThread != 0) {
     if (!m_gatewayThread->isFinished()) {
       m_gatewayThread->quit();
-      m_gatewayThread->wait();
+      if (!m_gatewayThread->wait(1000)) {
+        m_gatewayThread->terminate();
+        m_gatewayThread->wait();
+      }
     }
     delete m_gatewayThread;
     m_gatewayThread = 0;
@@ -212,9 +222,16 @@ void DiscordClient::shutdownGatewayWorker() {
 void DiscordClient::shutdownNetworkWorker() {
   if (m_networkWorker != 0 && m_networkThread != 0 &&
       m_networkThread->isRunning()) {
+    disconnect(m_networkWorker, 0, this, 0);
     QMetaObject::invokeMethod(m_networkWorker, "cancelAll",
                               Qt::QueuedConnection);
-    m_networkThread->wait();
+    if (!m_networkThread->wait(3000)) {
+      m_networkThread->quit();
+      if (!m_networkThread->wait(1000)) {
+        m_networkThread->terminate();
+        m_networkThread->wait();
+      }
+    }
   } else if (m_networkWorker != 0) {
     delete m_networkWorker;
   }
@@ -225,7 +242,10 @@ void DiscordClient::shutdownNetworkWorker() {
   if (m_networkThread != 0) {
     if (!m_networkThread->isFinished()) {
       m_networkThread->quit();
-      m_networkThread->wait();
+      if (!m_networkThread->wait(1000)) {
+        m_networkThread->terminate();
+        m_networkThread->wait();
+      }
     }
     delete m_networkThread;
     m_networkThread = 0;
