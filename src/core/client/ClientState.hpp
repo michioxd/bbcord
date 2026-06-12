@@ -30,6 +30,7 @@ public:
   QVariantList allGuildChannels;
   QVariantList visibleGuildChannels;
   QVariantMap pendingMentionCountsByGuildId;
+  QVariantMap pendingMentionCountsByChannelId;
   QStringList pendingUnreadGuildIds;
   QStringList pendingUnreadChannelIds;
   QStringList pendingDmPresenceUserIds;

@@ -54,7 +54,12 @@ void DiscordClient::selectChannel(const QString &channelId) {
     return;
   }
 
-  updateGuildChannelUnread(safeChannelId, false);
+  bool channelStatusChanged = updateGuildChannelUnread(safeChannelId, false);
+  channelStatusChanged =
+      updateGuildChannelMentionCount(safeChannelId, 0) || channelStatusChanged;
+  if (channelStatusChanged && m_store) {
+    m_store->setGuildChannels(m_visibleGuildChannels);
+  }
   if (m_store) {
     m_store->selectChannel(safeChannelId);
     syncGatewayMessageFilterStateToWorker();
@@ -99,20 +104,22 @@ void DiscordClient::onGuildChannelsLoaded(const QString &guildId,
   setStatusText("Connected");
 }
 
-void DiscordClient::updateGuildChannelUnread(const QString &channelId,
+bool DiscordClient::updateGuildChannelUnread(const QString &channelId,
                                              bool unread) {
   QString safeChannelId = channelId.trimmed();
   if (safeChannelId.isEmpty()) {
-    return;
+    return false;
   }
 
   bool changed = false;
   for (int i = 0; i < m_allGuildChannels.size(); ++i) {
     QVariantMap channel = m_allGuildChannels.at(i).toMap();
     if (channel.value("id").toString() == safeChannelId) {
-      channel["unread"] = unread;
-      m_allGuildChannels.replace(i, channel);
-      changed = true;
+      if (channel.value("unread").toBool() != unread) {
+        channel["unread"] = unread;
+        m_allGuildChannels.replace(i, channel);
+        changed = true;
+      }
       break;
     }
   }
@@ -120,14 +127,55 @@ void DiscordClient::updateGuildChannelUnread(const QString &channelId,
   for (int i = 0; i < m_visibleGuildChannels.size(); ++i) {
     QVariantMap channel = m_visibleGuildChannels.at(i).toMap();
     if (channel.value("id").toString() == safeChannelId) {
-      channel["unread"] = unread;
-      m_visibleGuildChannels.replace(i, channel);
-      changed = true;
+      if (channel.value("unread").toBool() != unread) {
+        channel["unread"] = unread;
+        m_visibleGuildChannels.replace(i, channel);
+        changed = true;
+      }
       break;
     }
   }
 
-  Q_UNUSED(changed);
+  return changed;
+}
+
+bool DiscordClient::updateGuildChannelMentionCount(const QString &channelId,
+                                                   int mentionCount) {
+  QString safeChannelId = channelId.trimmed();
+  if (safeChannelId.isEmpty()) {
+    return false;
+  }
+
+  if (mentionCount < 0) {
+    mentionCount = 0;
+  }
+
+  bool changed = false;
+  for (int i = 0; i < m_allGuildChannels.size(); ++i) {
+    QVariantMap channel = m_allGuildChannels.at(i).toMap();
+    if (channel.value("id").toString() == safeChannelId) {
+      if (channel.value("mentionCount").toInt() != mentionCount) {
+        channel["mentionCount"] = mentionCount;
+        m_allGuildChannels.replace(i, channel);
+        changed = true;
+      }
+      break;
+    }
+  }
+
+  for (int i = 0; i < m_visibleGuildChannels.size(); ++i) {
+    QVariantMap channel = m_visibleGuildChannels.at(i).toMap();
+    if (channel.value("id").toString() == safeChannelId) {
+      if (channel.value("mentionCount").toInt() != mentionCount) {
+        channel["mentionCount"] = mentionCount;
+        m_visibleGuildChannels.replace(i, channel);
+        changed = true;
+      }
+      break;
+    }
+  }
+
+  return changed;
 }
 
 void DiscordClient::appendVisibleGuildChannels() {

@@ -27,6 +27,7 @@ public:
                                  const QVariantMap &payload,
                                  QStringList &pendingUnreadGuildIds,
                                  QVariantMap &pendingMentionCountsByGuildId,
+                                 QVariantMap &pendingMentionCountsByChannelId,
                                  QStringList &pendingUnreadChannelIds,
                                  bool &pendingDmUiUpdate,
                                  bool &gatewayUiUpdateQueued);

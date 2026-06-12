@@ -44,6 +44,7 @@ void ClientState::resetDmChannels() {
 void ClientState::resetGatewayPendingUpdates() {
   pendingUnreadGuildIds.clear();
   pendingMentionCountsByGuildId.clear();
+  pendingMentionCountsByChannelId.clear();
   pendingUnreadChannelIds.clear();
   gatewayUiUpdateQueued = false;
   pendingDmUiUpdate = false;

@@ -162,5 +162,8 @@ QVariantMap ItemMapper::guildChannelToItem(const QVariantMap &channel) const {
   item["channelType"] = type;
   item["parentId"] = channel.value("parent_id").toString();
   item["unread"] = channel.value("unread").toBool();
+  item["mentionCount"] = channel.value("mention_count").toInt();
+  item["accessible"] =
+      !channel.contains("accessible") || channel.value("accessible").toBool();
   return item;
 }

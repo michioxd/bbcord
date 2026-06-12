@@ -24,6 +24,7 @@ void GatewayHandler::applyGatewayOrderingEvent(
     const QString &eventName, const QVariantMap &payload,
     QStringList &pendingUnreadGuildIds,
     QVariantMap &pendingMentionCountsByGuildId,
+    QVariantMap &pendingMentionCountsByChannelId,
     QStringList &pendingUnreadChannelIds, bool &pendingDmUiUpdate,
     bool &gatewayUiUpdateQueued) {
   if (eventName == "MESSAGE_CREATE") {
@@ -51,10 +52,11 @@ void GatewayHandler::applyGatewayOrderingEvent(
       if (!pendingUnreadGuildIds.contains(guildId)) {
         pendingUnreadGuildIds.append(guildId);
       }
+      bool mentionsCurrentUser = gatewayMessageMentionsCurrentUser(payload);
       if (payload.contains("mention_count")) {
         pendingMentionCountsByGuildId.insert(
             guildId, payload.value("mention_count").toInt());
-      } else if (gatewayMessageMentionsCurrentUser(payload)) {
+      } else if (mentionsCurrentUser) {
         int mentionCount = 0;
         if (pendingMentionCountsByGuildId.contains(guildId)) {
           mentionCount = pendingMentionCountsByGuildId.value(guildId).toInt();
@@ -64,6 +66,12 @@ void GatewayHandler::applyGatewayOrderingEvent(
               Q_RETURN_ARG(int, mentionCount), Q_ARG(QString, guildId));
         }
         pendingMentionCountsByGuildId.insert(guildId, mentionCount + 1);
+      }
+      if (mentionsCurrentUser && !channelId.isEmpty()) {
+        int channelMentionCount =
+            pendingMentionCountsByChannelId.value(channelId).toInt();
+        pendingMentionCountsByChannelId.insert(channelId,
+                                               channelMentionCount + 1);
       }
       if (!channelId.isEmpty() &&
           !pendingUnreadChannelIds.contains(channelId)) {

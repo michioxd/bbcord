@@ -79,7 +79,7 @@ Container {
 
                     topPadding: ui.du(2.0)
                     Label {
-                        text: ListItemData.name.toUpperCase()
+                        text: ListItemData.name
                         horizontalAlignment: HorizontalAlignment.Fill
                         verticalAlignment: VerticalAlignment.Center
                         opacity: 0.45
@@ -123,7 +123,24 @@ Container {
                             text: ListItemData.name
                             horizontalAlignment: HorizontalAlignment.Fill
                             textStyle.fontSize: FontSize.Medium
-                            opacity: ListItemData.unread ? 1.0 : 0.45
+                            opacity: (ListItemData.unread || ListItemData.mentionCount > 0) ? 1.0 : 0.45
+                        }
+
+                        Container {
+                            visible: ListItemData.mentionCount > 0
+                            preferredWidth: ui.du(4)
+                            preferredHeight: ui.du(4)
+                            verticalAlignment: VerticalAlignment.Center
+                            background: Color.create("#DA373C")
+                            layout: DockLayout {}
+
+                            Label {
+                                text: ListItemData.mentionCount > 99 ? "99+" : ListItemData.mentionCount
+                                horizontalAlignment: HorizontalAlignment.Center
+                                verticalAlignment: VerticalAlignment.Center
+                                textStyle.fontSize: FontSize.XXSmall
+                                textStyle.color: Color.White
+                            }
                         }
                     }
                 }

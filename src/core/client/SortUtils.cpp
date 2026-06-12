@@ -1,9 +1,31 @@
 #include "SortUtils.hpp"
 
 #include "../discord/DiscordUtils.hpp"
+#include "../models/Models.hpp"
 
 #include <QDebug>
 #include <QMap>
+
+namespace {
+const int kGuildStageVoiceChannelType = 13;
+
+bool isVoiceLikeChannel(const QVariantMap &item) {
+  int channelType = item.value("channelType").toInt();
+  return channelType == DiscordChannel::GuildVoice ||
+         channelType == kGuildStageVoiceChannelType;
+}
+
+bool channelShouldMoveBefore(const QVariantMap &left,
+                             const QVariantMap &right) {
+  bool leftVoiceLike = isVoiceLikeChannel(left);
+  bool rightVoiceLike = isVoiceLikeChannel(right);
+  if (leftVoiceLike != rightVoiceLike) {
+    return !leftVoiceLike;
+  }
+
+  return DiscordUtils::positionShouldMoveBefore(left, right);
+}
+} // namespace
 
 SortUtils::SortUtils(QObject *parent) : QObject(parent) {}
 
@@ -95,64 +117,53 @@ SortUtils::sortedAccessibleGuildChannels(const QVariantList &channels) const {
 
   for (int i = 0; i < channels.size(); ++i) {
     QVariantMap item = channels.at(i).toMap();
+    if (item.contains("accessible") && !item.value("accessible").toBool()) {
+      continue;
+    }
     if (item.value("type").toString() == "category") {
       categories.append(item);
       categoryIds.append(item.value("id").toString());
-    } else {
-      QString parentId = item.value("parentId").toString();
-      if (parentId.isEmpty() || !categoryIds.contains(parentId)) {
-        rootChannels.append(item);
-      } else {
-        QVariantList categoryChannels = channelsByCategory.value(parentId);
-        categoryChannels.append(item);
-        channelsByCategory.insert(parentId, categoryChannels);
-      }
     }
   }
 
-  for (int i = 0; i < rootChannels.size(); ++i) {
-    QVariantMap item = rootChannels.at(i).toMap();
+  for (int i = 0; i < channels.size(); ++i) {
+    QVariantMap item = channels.at(i).toMap();
+    if (item.contains("accessible") && !item.value("accessible").toBool()) {
+      continue;
+    }
+    if (item.value("type").toString() == "category") {
+      continue;
+    }
+
     QString parentId = item.value("parentId").toString();
     if (!parentId.isEmpty() && categoryIds.contains(parentId)) {
       QVariantList categoryChannels = channelsByCategory.value(parentId);
       categoryChannels.append(item);
       channelsByCategory.insert(parentId, categoryChannels);
-      rootChannels.removeAt(i);
-      --i;
+    } else {
+      rootChannels.append(item);
     }
   }
 
   DiscordUtils::stableSortItems(&categories,
                                 DiscordUtils::positionShouldMoveBefore);
-  DiscordUtils::stableSortItems(&rootChannels,
-                                DiscordUtils::positionShouldMoveBefore);
+  DiscordUtils::stableSortItems(&rootChannels, channelShouldMoveBefore);
 
   QVariantList result;
-  int rootIndex = 0;
+  for (int i = 0; i < rootChannels.size(); ++i) {
+    result.append(rootChannels.at(i));
+  }
+
   for (int i = 0; i < categories.size(); ++i) {
     QVariantMap item = categories.at(i).toMap();
-
-    while (rootIndex < rootChannels.size() &&
-           DiscordUtils::positionShouldMoveBefore(
-               rootChannels.at(rootIndex).toMap(), item)) {
-      result.append(rootChannels.at(rootIndex));
-      ++rootIndex;
-    }
-
     result.append(item);
 
     QVariantList categoryChannels =
         channelsByCategory.value(item.value("id").toString());
-    DiscordUtils::stableSortItems(&categoryChannels,
-                                  DiscordUtils::positionShouldMoveBefore);
+    DiscordUtils::stableSortItems(&categoryChannels, channelShouldMoveBefore);
     for (int j = 0; j < categoryChannels.size(); ++j) {
       result.append(categoryChannels.at(j));
     }
-  }
-
-  while (rootIndex < rootChannels.size()) {
-    result.append(rootChannels.at(rootIndex));
-    ++rootIndex;
   }
 
   return result;

@@ -371,7 +371,9 @@ void AppStore::setGuildChannels(const QVariantList &channels) {
       if (oldChannel.value("id").toString() !=
               newChannel.value("id").toString() ||
           oldChannel.value("unread").toBool() !=
-              newChannel.value("unread").toBool()) {
+              newChannel.value("unread").toBool() ||
+          oldChannel.value("mentionCount").toInt() !=
+              newChannel.value("mentionCount").toInt()) {
         same = false;
         break;
       }

@@ -144,7 +144,9 @@ private:
   void rebuildDmRecipientIndex();
   void updateGuildMentionCount(const QString &guildId, int mentionCount);
   void updateGuildUnread(const QString &guildId, bool unread);
-  void updateGuildChannelUnread(const QString &channelId, bool unread);
+  bool updateGuildChannelUnread(const QString &channelId, bool unread);
+  bool updateGuildChannelMentionCount(const QString &channelId,
+                                      int mentionCount);
   void appendVisibleGuildChannels();
   void scheduleGuildsCacheSave();
   void scheduleDmChannelsCacheSave();
@@ -207,6 +209,7 @@ private:
   QVariantList &m_allGuildChannels;
   QVariantList &m_visibleGuildChannels;
   QVariantMap &m_pendingMentionCountsByGuildId;
+  QVariantMap &m_pendingMentionCountsByChannelId;
   QStringList &m_pendingUnreadGuildIds;
   QStringList &m_pendingUnreadChannelIds;
   QStringList &m_pendingDmPresenceUserIds;

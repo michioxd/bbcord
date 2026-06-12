@@ -44,6 +44,8 @@ DiscordClient::DiscordClient(QObject *parent)
       m_allGuildChannels(m_state.allGuildChannels),
       m_visibleGuildChannels(m_state.visibleGuildChannels),
       m_pendingMentionCountsByGuildId(m_state.pendingMentionCountsByGuildId),
+      m_pendingMentionCountsByChannelId(
+          m_state.pendingMentionCountsByChannelId),
       m_pendingUnreadGuildIds(m_state.pendingUnreadGuildIds),
       m_pendingUnreadChannelIds(m_state.pendingUnreadChannelIds),
       m_pendingDmPresenceUserIds(m_state.pendingDmPresenceUserIds),
@@ -101,6 +103,8 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
       m_allGuildChannels(m_state.allGuildChannels),
       m_visibleGuildChannels(m_state.visibleGuildChannels),
       m_pendingMentionCountsByGuildId(m_state.pendingMentionCountsByGuildId),
+      m_pendingMentionCountsByChannelId(
+          m_state.pendingMentionCountsByChannelId),
       m_pendingUnreadGuildIds(m_state.pendingUnreadGuildIds),
       m_pendingUnreadChannelIds(m_state.pendingUnreadChannelIds),
       m_pendingDmPresenceUserIds(m_state.pendingDmPresenceUserIds),
@@ -545,8 +549,8 @@ void DiscordClient::onGatewayDispatch(const QString &eventName,
   }
   m_gatewayHandler->applyGatewayOrderingEvent(
       eventName, payload, m_pendingUnreadGuildIds,
-      m_pendingMentionCountsByGuildId, m_pendingUnreadChannelIds,
-      m_pendingDmUiUpdate, m_gatewayUiUpdateQueued);
+      m_pendingMentionCountsByGuildId, m_pendingMentionCountsByChannelId,
+      m_pendingUnreadChannelIds, m_pendingDmUiUpdate, m_gatewayUiUpdateQueued);
 }
 
 void DiscordClient::onGatewayReady(const QString &sessionId) {
@@ -757,10 +761,12 @@ void DiscordClient::flushGatewayUiUpdates() {
   QStringList guildIds = m_pendingUnreadGuildIds;
   QStringList channelIds = m_pendingUnreadChannelIds;
   QVariantMap mentionCounts = m_pendingMentionCountsByGuildId;
+  QVariantMap channelMentionCounts = m_pendingMentionCountsByChannelId;
   bool dmChanged = m_pendingDmUiUpdate;
   m_pendingUnreadGuildIds.clear();
   m_pendingUnreadChannelIds.clear();
   m_pendingMentionCountsByGuildId.clear();
+  m_pendingMentionCountsByChannelId.clear();
   m_pendingDmUiUpdate = false;
 
   applyPendingDmPresences();
@@ -775,6 +781,21 @@ void DiscordClient::flushGatewayUiUpdates() {
   for (int i = 0; i < channelIds.size(); ++i) {
     updateGuildChannelUnread(channelIds.at(i), true);
   }
+  QStringList mentionChannelIds = channelMentionCounts.keys();
+  for (int i = 0; i < mentionChannelIds.size(); ++i) {
+    QString mentionChannelId = mentionChannelIds.at(i);
+    int mentionCount = 0;
+    for (int j = 0; j < m_allGuildChannels.size(); ++j) {
+      QVariantMap channel = m_allGuildChannels.at(j).toMap();
+      if (channel.value("id").toString() == mentionChannelId) {
+        mentionCount = channel.value("mentionCount").toInt();
+        break;
+      }
+    }
+    updateGuildChannelMentionCount(
+        mentionChannelId,
+        mentionCount + channelMentionCounts.value(mentionChannelId).toInt());
+  }
 
   if (!guildIds.isEmpty()) {
     sortGuilds();
@@ -787,7 +808,7 @@ void DiscordClient::flushGatewayUiUpdates() {
     if (dmChanged) {
       m_store->setDmChannels(m_dmChannels);
     }
-    if (!channelIds.isEmpty()) {
+    if (!channelIds.isEmpty() || !mentionChannelIds.isEmpty()) {
       m_store->setGuildChannels(m_visibleGuildChannels);
     }
   }
