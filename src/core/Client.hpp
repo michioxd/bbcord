@@ -156,6 +156,7 @@ private:
   void initializeAvatarCacheWorker();
   void shutdownAvatarCacheWorker();
   void initializeManagers();
+  void updateAvatarManagerWorkers();
   void syncStateToNetworkWorker();
   void syncGatewayOrderingStateToWorker();
   void syncGatewayMessageFilterStateToWorker();

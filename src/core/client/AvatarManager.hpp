@@ -20,6 +20,8 @@ public:
                          QObject *parent = 0);
 
   virtual ~AvatarManager();
+  void setWorkers(DiscordNetworkWorker *networkWorker,
+                  AvatarCacheWorker *avatarCacheWorker);
   void loadCurrentUserAvatar(const DiscordUser &user,
                              QVariantMap &avatarCacheRequests,
                              QString &loadingAvatarUserId,

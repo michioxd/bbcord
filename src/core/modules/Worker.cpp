@@ -16,12 +16,30 @@
 #include <QThread>
 
 void DiscordClient::initializeManagers() {
-  m_cacheManager = new CacheManager(this, m_store, this);
-  m_avatarManager =
-      new AvatarManager(this, m_networkWorker, m_avatarCacheWorker, this);
-  m_gatewayHandler = new GatewayHandler(this, m_store, this);
-  m_itemMapper = new ItemMapper(this);
-  m_sortUtils = new SortUtils(this);
+  if (m_cacheManager == 0) {
+    m_cacheManager = new CacheManager(this, m_store, this);
+  }
+  if (m_avatarManager == 0) {
+    m_avatarManager =
+        new AvatarManager(this, m_networkWorker, m_avatarCacheWorker, this);
+  } else {
+    updateAvatarManagerWorkers();
+  }
+  if (m_gatewayHandler == 0) {
+    m_gatewayHandler = new GatewayHandler(this, m_store, this);
+  }
+  if (m_itemMapper == 0) {
+    m_itemMapper = new ItemMapper(this);
+  }
+  if (m_sortUtils == 0) {
+    m_sortUtils = new SortUtils(this);
+  }
+}
+
+void DiscordClient::updateAvatarManagerWorkers() {
+  if (m_avatarManager != 0) {
+    m_avatarManager->setWorkers(m_networkWorker, m_avatarCacheWorker);
+  }
 }
 
 void DiscordClient::initializeNetworkWorker() {
@@ -83,6 +101,7 @@ void DiscordClient::initializeNetworkWorker() {
           SLOT(quit()), Qt::DirectConnection);
 
   m_networkThread->start();
+  updateAvatarManagerWorkers();
 }
 
 void DiscordClient::initializeGatewayWorker() {
@@ -146,6 +165,7 @@ void DiscordClient::initializeAvatarCacheWorker() {
           Qt::QueuedConnection);
 
   m_avatarCacheThread->start();
+  updateAvatarManagerWorkers();
 }
 
 void DiscordClient::shutdownAvatarCacheWorker() {
@@ -164,6 +184,7 @@ void DiscordClient::shutdownAvatarCacheWorker() {
   }
 
   m_avatarCacheWorker = 0;
+  updateAvatarManagerWorkers();
 }
 
 void DiscordClient::shutdownGatewayWorker() {
@@ -199,6 +220,7 @@ void DiscordClient::shutdownNetworkWorker() {
   }
 
   m_networkWorker = 0;
+  updateAvatarManagerWorkers();
 
   if (m_networkThread != 0) {
     if (!m_networkThread->isFinished()) {

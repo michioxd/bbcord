@@ -16,6 +16,12 @@ AvatarManager::AvatarManager(DiscordClient *client,
 
 AvatarManager::~AvatarManager() {}
 
+void AvatarManager::setWorkers(DiscordNetworkWorker *networkWorker,
+                               AvatarCacheWorker *avatarCacheWorker) {
+  m_networkWorker = networkWorker;
+  m_avatarCacheWorker = avatarCacheWorker;
+}
+
 void AvatarManager::loadCurrentUserAvatar(const DiscordUser &user,
                                           QVariantMap &avatarCacheRequests,
                                           QString &loadingAvatarUserId,
