@@ -26,14 +26,17 @@ void DiscordRestClient::sendGetMeRequest(struct mg_connection *connection) {
   m_requestSent = true;
 
   QByteArray tokenBytes = m_token.toUtf8();
+  QByteArray pathBytes = apiRequestPath("/api/v9/users/@me").toUtf8();
+  QByteArray hostBytes = hostHeader(apiBaseUrl()).toUtf8();
   QByteArray userAgent = DiscordUtils::desktopUserAgent();
   mg_printf(connection,
-            "GET /api/v9/users/@me HTTP/1.1\r\n"
-            "Host: discord.com\r\n"
+            "GET %s HTTP/1.1\r\n"
+            "Host: %s\r\n"
             "Authorization: %s\r\n"
             "User-Agent: %s\r\n"
             "Accept: application/json\r\n"
             "Connection: keep-alive\r\n\r\n",
+            pathBytes.constData(), hostBytes.constData(),
             tokenBytes.constData(), userAgent.constData());
 }
 

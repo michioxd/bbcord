@@ -351,98 +351,155 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../assets/Settings.qml" line="14"/>
+        <location filename="../assets/Settings.qml" line="15"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="30"/>
+        <location filename="../assets/Settings.qml" line="31"/>
         <source>User interface</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="35"/>
+        <location filename="../assets/Settings.qml" line="36"/>
         <source>Compact message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="36"/>
+        <location filename="../assets/Settings.qml" line="37"/>
         <source>Fit more messages on screen at one time. #IRC</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="44"/>
+        <location filename="../assets/Settings.qml" line="45"/>
         <source>Storage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="49"/>
+        <location filename="../assets/Settings.qml" line="50"/>
         <source>Cached media location</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="55"/>
+        <location filename="../assets/Settings.qml" line="56"/>
         <source>Used</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="61"/>
-        <location filename="../assets/Settings.qml" line="148"/>
+        <location filename="../assets/Settings.qml" line="62"/>
+        <location filename="../assets/Settings.qml" line="158"/>
         <source>Clear cache</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="62"/>
+        <location filename="../assets/Settings.qml" line="63"/>
         <source>Clear cached media such as avatars and attachments.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="149"/>
+        <location filename="../assets/Settings.qml" line="159"/>
         <source>Clear cached media? This cannot be undone.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="150"/>
+        <location filename="../assets/Settings.qml" line="160"/>
         <source>Clear</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="151"/>
+        <location filename="../assets/Settings.qml" line="161"/>
+        <location filename="../assets/Settings.qml" line="175"/>
+        <location filename="../assets/Settings.qml" line="190"/>
+        <location filename="../assets/Settings.qml" line="203"/>
+        <location filename="../assets/Settings.qml" line="217"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="67"/>
+        <location filename="../assets/Settings.qml" line="172"/>
+        <source>Enter Discord API URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="174"/>
+        <location filename="../assets/Settings.qml" line="189"/>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="187"/>
+        <source>Enter Discord CDN URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="200"/>
+        <source>Update API URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="201"/>
+        <source>Updating the Discord API URL will log you out and clear your saved token for security. Continue?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="202"/>
+        <source>Update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="214"/>
+        <source>Reset Discord backend</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="215"/>
+        <source>Reset API and CDN URLs to the official Discord backend?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="215"/>
+        <source>Reset API and CDN URLs to the official Discord backend? Because the API URL is different from the official backend, you will be logged out.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="216"/>
+        <source>Reset</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="68"/>
         <source>Discord API</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="72"/>
+        <location filename="../assets/Settings.qml" line="73"/>
+        <location filename="../assets/Settings.qml" line="171"/>
         <source>API URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="78"/>
+        <location filename="../assets/Settings.qml" line="83"/>
+        <location filename="../assets/Settings.qml" line="186"/>
         <source>CDN URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="99"/>
+        <location filename="../assets/Settings.qml" line="108"/>
         <source>For security reasons, after you update the Discord API URL, your saved token will be cleared.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="125"/>
+        <location filename="../assets/Settings.qml" line="135"/>
         <source>Miscellaneous</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="130"/>
+        <location filename="../assets/Settings.qml" line="140"/>
         <source>Sound effects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="131"/>
+        <location filename="../assets/Settings.qml" line="141"/>
         <source>Play login, connecting, and error sounds. #MSNTV2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -450,7 +507,7 @@
 <context>
     <name>SettingsController</name>
     <message>
-        <location filename="../src/ui/SettingsController.cpp" line="129"/>
+        <location filename="../src/ui/SettingsController.cpp" line="190"/>
         <source>%1 B</source>
         <translation type="unfinished"></translation>
     </message>

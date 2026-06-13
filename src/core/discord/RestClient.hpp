@@ -123,6 +123,12 @@ private:
   void sendApiRequest(struct mg_connection *connection);
   void sendAvatarRequest(struct mg_connection *connection);
   void sendGuildIconRequest(struct mg_connection *connection);
+  QString apiBaseUrl() const;
+  QString cdnBaseUrl() const;
+  QString connectionUrl(const QString &url) const;
+  QString hostHeader(const QString &url) const;
+  QString apiRequestPath(const QString &requestPath) const;
+  QString cdnRequestPath(const QString &requestPath) const;
   QByteArray buildMultipartMessageBody(
       const QString &content, const QString &nonce, const QString &channelId,
       const QString &replyMessageId, const QStringList &attachmentPaths,
@@ -149,6 +155,7 @@ private:
   QString m_iconHash;
   QString m_outputPath;
   QString m_contentType;
+  QString m_connectionUrl;
   QList<RestRequest> m_requestQueue;
   bool m_isProcessing;
   bool m_requestSent;

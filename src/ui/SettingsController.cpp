@@ -4,15 +4,21 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSettings>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStringList>
+#include <QUrl>
 #include <QVariant>
 
 namespace {
 const char *kSfxEnabledKey = "sfx_enabled";
 const char *kCacheDirName = "cache";
+const char *kApiUrlKey = "discord/apiUrl";
+const char *kCdnUrlKey = "discord/cdnUrl";
+const char *kOfficialApiUrl = "https://discord.com/api/v9/";
+const char *kOfficialCdnUrl = "https://cdn.discordapp.com/";
 } // namespace
 
 SettingsController::SettingsController(QObject *parent)
@@ -20,6 +26,11 @@ SettingsController::SettingsController(QObject *parent)
       m_cacheUsed("0 B") {
   ensureDatabase();
   m_sfxEnabled = readBool(kSfxEnabledKey, false);
+  QSettings settings;
+  m_apiUrl =
+      normalizedUrl(settings.value(kApiUrlKey, kOfficialApiUrl).toString());
+  m_cdnUrl =
+      normalizedUrl(settings.value(kCdnUrlKey, kOfficialCdnUrl).toString());
   refreshCacheUsed();
 }
 
@@ -31,6 +42,14 @@ QString SettingsController::cachePath() const {
 }
 
 QString SettingsController::cacheUsed() const { return m_cacheUsed; }
+
+QString SettingsController::apiUrl() const { return m_apiUrl; }
+
+QString SettingsController::cdnUrl() const { return m_cdnUrl; }
+
+QString SettingsController::officialApiUrl() const { return kOfficialApiUrl; }
+
+QString SettingsController::officialCdnUrl() const { return kOfficialCdnUrl; }
 
 void SettingsController::setSfxEnabled(bool enabled) {
   if (m_sfxEnabled == enabled) {
@@ -56,6 +75,48 @@ void SettingsController::refreshCacheUsed() {
 
   m_cacheUsed = used;
   emit cacheUsedChanged(m_cacheUsed);
+}
+
+bool SettingsController::setApiUrl(const QString &url) {
+  QString normalized = normalizedUrl(url);
+  if (normalized.isEmpty()) {
+    return false;
+  }
+
+  if (m_apiUrl == normalized) {
+    return true;
+  }
+
+  m_apiUrl = normalized;
+  QSettings settings;
+  settings.setValue(kApiUrlKey, m_apiUrl);
+  settings.sync();
+  emit apiUrlChanged(m_apiUrl);
+  return true;
+}
+
+bool SettingsController::setCdnUrl(const QString &url) {
+  QString normalized = normalizedUrl(url);
+  if (normalized.isEmpty()) {
+    return false;
+  }
+
+  if (m_cdnUrl == normalized) {
+    return true;
+  }
+
+  m_cdnUrl = normalized;
+  QSettings settings;
+  settings.setValue(kCdnUrlKey, m_cdnUrl);
+  settings.sync();
+  emit cdnUrlChanged(m_cdnUrl);
+  return true;
+}
+
+bool SettingsController::resetDiscordBackend() {
+  bool apiChanged = setApiUrl(kOfficialApiUrl);
+  bool cdnChanged = setCdnUrl(kOfficialCdnUrl);
+  return apiChanged && cdnChanged;
 }
 
 void SettingsController::ensureDatabase() {
@@ -177,4 +238,26 @@ void SettingsController::writeBool(const QString &key, bool value) {
     qWarning() << "[settings] failed to write" << key
                << query.lastError().text();
   }
+}
+
+QString SettingsController::normalizedUrl(const QString &url) const {
+  QString value = url.trimmed();
+  if (value.isEmpty()) {
+    return QString();
+  }
+
+  QUrl parsed(value);
+  if (!parsed.isValid() || parsed.scheme().isEmpty() ||
+      parsed.host().isEmpty()) {
+    return QString();
+  }
+
+  QString path = parsed.path();
+  if (!path.endsWith('/')) {
+    path += '/';
+  }
+  parsed.setPath(path);
+  parsed.setEncodedQuery(QByteArray());
+  parsed.setFragment(QString());
+  return parsed.toString();
 }

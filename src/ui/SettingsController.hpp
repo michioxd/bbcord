@@ -10,6 +10,10 @@ class SettingsController : public QObject {
                  sfxEnabledChanged)
   Q_PROPERTY(QString cachePath READ cachePath CONSTANT)
   Q_PROPERTY(QString cacheUsed READ cacheUsed NOTIFY cacheUsedChanged)
+  Q_PROPERTY(QString apiUrl READ apiUrl NOTIFY apiUrlChanged)
+  Q_PROPERTY(QString cdnUrl READ cdnUrl NOTIFY cdnUrlChanged)
+  Q_PROPERTY(QString officialApiUrl READ officialApiUrl CONSTANT)
+  Q_PROPERTY(QString officialCdnUrl READ officialCdnUrl CONSTANT)
 
 public:
   explicit SettingsController(QObject *parent = 0);
@@ -17,13 +21,22 @@ public:
   bool sfxEnabled() const;
   QString cachePath() const;
   QString cacheUsed() const;
+  QString apiUrl() const;
+  QString cdnUrl() const;
+  QString officialApiUrl() const;
+  QString officialCdnUrl() const;
   Q_INVOKABLE void setSfxEnabled(bool enabled);
   Q_INVOKABLE void clearCache();
   Q_INVOKABLE void refreshCacheUsed();
+  Q_INVOKABLE bool setApiUrl(const QString &url);
+  Q_INVOKABLE bool setCdnUrl(const QString &url);
+  Q_INVOKABLE bool resetDiscordBackend();
 
 Q_SIGNALS:
   void sfxEnabledChanged(bool enabled);
   void cacheUsedChanged(const QString &cacheUsed);
+  void apiUrlChanged(const QString &apiUrl);
+  void cdnUrlChanged(const QString &cdnUrl);
 
 private:
   void ensureDatabase();
@@ -33,10 +46,13 @@ private:
   QString formatSize(qint64 bytes) const;
   bool readBool(const QString &key, bool defaultValue) const;
   void writeBool(const QString &key, bool value);
+  QString normalizedUrl(const QString &url) const;
 
   QString m_connectionName;
   bool m_sfxEnabled;
   QString m_cacheUsed;
+  QString m_apiUrl;
+  QString m_cdnUrl;
 };
 
 #endif /* SettingsController_HPP_ */

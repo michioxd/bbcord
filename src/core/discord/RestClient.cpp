@@ -4,6 +4,8 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QSettings>
+#include <QUrl>
 
 extern "C" {
 #include "mongoose.h"
@@ -14,8 +16,10 @@ extern "C" {
 namespace {
 const char *kDiscordApiHost = "discord.com";
 const char *kDiscordApiUrl = "https://discord.com";
-const char *kDiscordCdnHost = "cdn.discordapp.com";
-const char *kDiscordCdnUrl = "https://cdn.discordapp.com";
+const char *kDiscordApiSettingsKey = "discord/apiUrl";
+const char *kDiscordCdnSettingsKey = "discord/cdnUrl";
+const char *kOfficialApiBaseUrl = "https://discord.com/api/v9/";
+const char *kOfficialCdnBaseUrl = "https://cdn.discordapp.com/";
 const int kPollIntervalMs = 10;
 const int kRequestTimeoutTicks = 600;
 const int kKeepAliveIdleTimeoutTicks = 300;
@@ -109,6 +113,7 @@ void DiscordRestClient::cancel() {
   m_iconHash.clear();
   m_outputPath.clear();
   m_isProcessing = false;
+  m_connectionUrl.clear();
   stopTimerIfIdle();
 }
 
@@ -156,30 +161,120 @@ void DiscordRestClient::enqueueRequest(const RestRequest &request) {
   processNextRequest();
 }
 
+QString DiscordRestClient::apiBaseUrl() const {
+  QSettings settings;
+  QString url = settings.value(kDiscordApiSettingsKey, kOfficialApiBaseUrl)
+                    .toString()
+                    .trimmed();
+  return url.isEmpty() ? QString::fromLatin1(kOfficialApiBaseUrl) : url;
+}
+
+QString DiscordRestClient::cdnBaseUrl() const {
+  QSettings settings;
+  QString url = settings.value(kDiscordCdnSettingsKey, kOfficialCdnBaseUrl)
+                    .toString()
+                    .trimmed();
+  return url.isEmpty() ? QString::fromLatin1(kOfficialCdnBaseUrl) : url;
+}
+
+QString DiscordRestClient::connectionUrl(const QString &url) const {
+  QUrl parsed(url);
+  if (!parsed.isValid() || parsed.scheme().isEmpty() ||
+      parsed.host().isEmpty()) {
+    return QString::fromLatin1(kDiscordApiUrl);
+  }
+
+  QString result = parsed.scheme() + "://" + parsed.host();
+  if (parsed.port() > 0) {
+    result += QString(":%1").arg(parsed.port());
+  }
+  return result;
+}
+
+QString DiscordRestClient::hostHeader(const QString &url) const {
+  QUrl parsed(url);
+  if (!parsed.isValid() || parsed.host().isEmpty()) {
+    return QString::fromLatin1(kDiscordApiHost);
+  }
+
+  QString host = parsed.host();
+  if (parsed.port() > 0) {
+    host += QString(":%1").arg(parsed.port());
+  }
+  return host;
+}
+
+QString DiscordRestClient::apiRequestPath(const QString &requestPath) const {
+  QUrl parsed(apiBaseUrl());
+  QString basePath = parsed.path();
+  if (basePath.endsWith('/')) {
+    basePath.chop(1);
+  }
+  if (basePath.isEmpty()) {
+    basePath = "/api/v9";
+  }
+
+  QString path = requestPath;
+  if (path.startsWith("/api/v9")) {
+    path = path.mid(QString("/api/v9").length());
+  }
+  if (!path.startsWith('/')) {
+    path.prepend('/');
+  }
+  return basePath + path;
+}
+
+QString DiscordRestClient::cdnRequestPath(const QString &requestPath) const {
+  QUrl parsed(cdnBaseUrl());
+  QString basePath = parsed.path();
+  if (basePath.endsWith('/')) {
+    basePath.chop(1);
+  }
+
+  QString path = requestPath;
+  if (!path.startsWith('/')) {
+    path.prepend('/');
+  }
+  return basePath + path;
+}
+
 void DiscordRestClient::processNextRequest() {
   if (m_isProcessing || m_requestQueue.isEmpty()) {
     return;
   }
 
-  bool reuseConnection = m_connection != NULL && !m_connection->is_closing;
-  RestRequest request = m_requestQueue.takeFirst();
+  RestRequest restRequest = m_requestQueue.takeFirst();
+  QString url = connectionUrl((restRequest.type == AvatarRequest ||
+                               restRequest.type == GuildIconRequest)
+                                  ? cdnBaseUrl()
+                                  : apiBaseUrl());
+  bool reuseConnection = m_connection != NULL && !m_connection->is_closing &&
+                         m_connectionUrl == url;
+  if (m_connection != NULL && !reuseConnection) {
+    m_connection->fn_data = NULL;
+    if (!m_connection->is_closing) {
+      m_connection->is_closing = 1;
+    }
+    m_connection = NULL;
+    m_connectionUrl.clear();
+  }
   m_isProcessing = true;
-  m_requestType = request.type;
-  m_token = request.token;
-  m_requestPath = request.requestPath;
-  m_requestMethod = request.requestMethod;
-  m_requestBody = request.requestBody;
-  m_contentType = request.contentType;
-  m_guildId = request.guildId;
-  m_channelId = request.channelId;
-  m_messageId = request.messageId;
-  m_beforeMessageId = request.beforeMessageId;
-  m_nonce = request.nonce;
-  m_avatarUserId = request.avatarUserId;
-  m_avatarHash = request.avatarHash;
-  m_iconGuildId = request.iconGuildId;
-  m_iconHash = request.iconHash;
-  m_outputPath = request.outputPath;
+  m_requestType = restRequest.type;
+  m_token = restRequest.token;
+  m_requestPath = restRequest.requestPath;
+  m_requestMethod = restRequest.requestMethod;
+  m_requestBody = restRequest.requestBody;
+  m_contentType = restRequest.contentType;
+  m_guildId = restRequest.guildId;
+  m_channelId = restRequest.channelId;
+  m_messageId = restRequest.messageId;
+  m_beforeMessageId = restRequest.beforeMessageId;
+  m_nonce = restRequest.nonce;
+  m_avatarUserId = restRequest.avatarUserId;
+  m_avatarHash = restRequest.avatarHash;
+  m_iconGuildId = restRequest.iconGuildId;
+  m_iconHash = restRequest.iconHash;
+  m_outputPath = restRequest.outputPath;
   m_requestSent = false;
   m_finished = false;
   m_pollTicks = 0;
@@ -191,12 +286,12 @@ void DiscordRestClient::processNextRequest() {
     return;
   }
 
-  const char *url =
-      (m_requestType == AvatarRequest || m_requestType == GuildIconRequest)
-          ? kDiscordCdnUrl
-          : kDiscordApiUrl;
-  m_connection =
-      mg_http_connect(m_mgr, url, DiscordRestClient::eventHandler, this);
+  QByteArray urlBytes = url.toUtf8();
+  m_connection = mg_http_connect(m_mgr, urlBytes.constData(),
+                                 DiscordRestClient::eventHandler, this);
+  if (m_connection != NULL) {
+    m_connectionUrl = url;
+  }
 
   if (m_connection == NULL) {
     QString message;
@@ -271,10 +366,12 @@ void DiscordRestClient::handleEvent(struct mg_connection *connection, int event,
     if (connection->is_tls) {
       struct mg_tls_opts opts;
       memset(&opts, 0, sizeof(opts));
-      opts.name = mg_str(
-          (m_requestType == AvatarRequest || m_requestType == GuildIconRequest)
-              ? kDiscordCdnHost
-              : kDiscordApiHost);
+      QByteArray tlsHost = hostHeader((m_requestType == AvatarRequest ||
+                                       m_requestType == GuildIconRequest)
+                                          ? cdnBaseUrl()
+                                          : apiBaseUrl())
+                               .toUtf8();
+      opts.name = mg_str(tlsHost.constData());
       opts.skip_verification = true;
       mg_tls_init(connection, &opts);
     }

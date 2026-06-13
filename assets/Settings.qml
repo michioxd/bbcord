@@ -4,6 +4,7 @@ import "components"
 
 Sheet {
     id: settingsSheet
+    property string pendingApiUrl: ""
 
     onOpened: {
         settingsController.refreshCacheUsed()
@@ -70,13 +71,21 @@ Sheet {
                 SettingItem {
                     iconSource: ""
                     title: qsTr("API URL")
-                    description: "https://discord.com/api/v9/"
+                    description: settingsController.apiUrl
+                    onTriggered: {
+                        apiUrlPrompt.inputField.defaultText = settingsController.apiUrl
+                        apiUrlPrompt.show()
+                    }
                 }
                 
                 SettingItem {
                     iconSource: ""
                     title: qsTr("CDN URL")
-                    description: "https://cdn.discordapp.com/"
+                    description: settingsController.cdnUrl
+                    onTriggered: {
+                        cdnUrlPrompt.inputField.defaultText = settingsController.cdnUrl
+                        cdnUrlPrompt.show()
+                    }
                 }
                 
                 Container {
@@ -118,6 +127,7 @@ Sheet {
                         text: "Reset to official Discord backend"
                         horizontalAlignment: HorizontalAlignment.Fill
                         verticalAlignment: VerticalAlignment.Fill
+                        onClicked: resetBackendDialog.show()
                     }
                 }
 
@@ -153,6 +163,65 @@ Sheet {
                 onFinished: {
                     if (result == SystemUiResult.ConfirmButtonSelection) {
                         settingsController.clearCache()
+                    }
+                }
+            },
+            SystemPrompt {
+                id: apiUrlPrompt
+                title: qsTr("API URL")
+                body: qsTr("Enter Discord API URL")
+                inputField.defaultText: settingsController.apiUrl
+                confirmButton.label: qsTr("Save")
+                cancelButton.label: qsTr("Cancel")
+
+                onFinished: {
+                    if (result == SystemUiResult.ConfirmButtonSelection && inputFieldTextEntry() != settingsController.apiUrl) {
+                        settingsSheet.pendingApiUrl = inputFieldTextEntry()
+                        updateApiUrlDialog.show()
+                    }
+                }
+            },
+            SystemPrompt {
+                id: cdnUrlPrompt
+                title: qsTr("CDN URL")
+                body: qsTr("Enter Discord CDN URL")
+                inputField.defaultText: settingsController.cdnUrl
+                confirmButton.label: qsTr("Save")
+                cancelButton.label: qsTr("Cancel")
+
+                onFinished: {
+                    if (result == SystemUiResult.ConfirmButtonSelection) {
+                        settingsController.setCdnUrl(inputFieldTextEntry())
+                    }
+                }
+            },
+            SystemDialog {
+                id: updateApiUrlDialog
+                title: qsTr("Update API URL")
+                body: qsTr("Updating the Discord API URL will log you out and clear your saved token for security. Continue?")
+                confirmButton.label: qsTr("Update")
+                cancelButton.label: qsTr("Cancel")
+
+                onFinished: {
+                    if (result == SystemUiResult.ConfirmButtonSelection && settingsController.setApiUrl(settingsSheet.pendingApiUrl)) {
+                        discordClient.logout()
+                    }
+                    settingsSheet.pendingApiUrl = ""
+                }
+            },
+            SystemDialog {
+                id: resetBackendDialog
+                title: qsTr("Reset Discord backend")
+                body: settingsController.apiUrl == settingsController.officialApiUrl ? qsTr("Reset API and CDN URLs to the official Discord backend?") : qsTr("Reset API and CDN URLs to the official Discord backend? Because the API URL is different from the official backend, you will be logged out.")
+                confirmButton.label: qsTr("Reset")
+                cancelButton.label: qsTr("Cancel")
+
+                onFinished: {
+                    if (result == SystemUiResult.ConfirmButtonSelection) {
+                        var shouldLogout = settingsController.apiUrl != settingsController.officialApiUrl
+                        if (settingsController.resetDiscordBackend() && shouldLogout) {
+                            discordClient.logout()
+                        }
                     }
                 }
             }

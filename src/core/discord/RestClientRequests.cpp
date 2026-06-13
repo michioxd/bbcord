@@ -13,7 +13,8 @@ void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
 
   m_requestSent = true;
 
-  QByteArray pathBytes = m_requestPath.toUtf8();
+  QByteArray pathBytes = apiRequestPath(m_requestPath).toUtf8();
+  QByteArray hostBytes = hostHeader(apiBaseUrl()).toUtf8();
   QByteArray tokenBytes = m_token.toUtf8();
   QByteArray userAgent = DiscordUtils::desktopUserAgent();
   QByteArray methodBytes =
@@ -21,13 +22,14 @@ void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
   if (m_requestBody.isEmpty()) {
     mg_printf(connection,
               "%s %s HTTP/1.1\r\n"
-              "Host: discord.com\r\n"
+              "Host: %s\r\n"
               "Authorization: %s\r\n"
               "User-Agent: %s\r\n"
               "Accept: application/json\r\n"
               "Connection: keep-alive\r\n\r\n",
               methodBytes.constData(), pathBytes.constData(),
-              tokenBytes.constData(), userAgent.constData());
+              hostBytes.constData(), tokenBytes.constData(),
+              userAgent.constData());
     return;
   }
 
@@ -36,7 +38,7 @@ void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
                                     : m_contentType.toUtf8();
   mg_printf(connection,
             "%s %s HTTP/1.1\r\n"
-            "Host: discord.com\r\n"
+            "Host: %s\r\n"
             "Authorization: %s\r\n"
             "User-Agent: %s\r\n"
             "Accept: application/json\r\n"
@@ -44,8 +46,8 @@ void DiscordRestClient::sendApiRequest(struct mg_connection *connection) {
             "Content-Length: %d\r\n"
             "Connection: keep-alive\r\n\r\n",
             methodBytes.constData(), pathBytes.constData(),
-            tokenBytes.constData(), userAgent.constData(),
-            contentTypeBytes.constData(),
+            hostBytes.constData(), tokenBytes.constData(),
+            userAgent.constData(), contentTypeBytes.constData(),
             static_cast<int>(m_requestBody.size()));
   mg_send(connection, m_requestBody.constData(),
           static_cast<size_t>(m_requestBody.size()));
@@ -58,16 +60,19 @@ void DiscordRestClient::sendAvatarRequest(struct mg_connection *connection) {
 
   m_requestSent = true;
 
-  QByteArray userIdBytes = m_avatarUserId.toUtf8();
-  QByteArray avatarHashBytes = m_avatarHash.toUtf8();
+  QByteArray pathBytes = cdnRequestPath(QString("/avatars/%1/%2.png?size=128")
+                                            .arg(m_avatarUserId)
+                                            .arg(m_avatarHash))
+                             .toUtf8();
+  QByteArray hostBytes = hostHeader(cdnBaseUrl()).toUtf8();
   QByteArray userAgent = DiscordUtils::desktopUserAgent();
   mg_printf(connection,
-            "GET /avatars/%s/%s.png?size=128 HTTP/1.1\r\n"
-            "Host: cdn.discordapp.com\r\n"
+            "GET %s HTTP/1.1\r\n"
+            "Host: %s\r\n"
             "User-Agent: %s\r\n"
             "Accept: image/png,image/*\r\n"
             "Connection: keep-alive\r\n\r\n",
-            userIdBytes.constData(), avatarHashBytes.constData(),
+            pathBytes.constData(), hostBytes.constData(),
             userAgent.constData());
 }
 
@@ -79,15 +84,18 @@ void DiscordRestClient::sendGuildIconRequest(struct mg_connection *connection) {
 
   m_requestSent = true;
 
-  QByteArray guildIdBytes = m_iconGuildId.toUtf8();
-  QByteArray iconHashBytes = m_iconHash.toUtf8();
+  QByteArray pathBytes = cdnRequestPath(QString("/icons/%1/%2.png?size=128")
+                                            .arg(m_iconGuildId)
+                                            .arg(m_iconHash))
+                             .toUtf8();
+  QByteArray hostBytes = hostHeader(cdnBaseUrl()).toUtf8();
   QByteArray userAgent = DiscordUtils::desktopUserAgent();
   mg_printf(connection,
-            "GET /icons/%s/%s.png?size=128 HTTP/1.1\r\n"
-            "Host: cdn.discordapp.com\r\n"
+            "GET %s HTTP/1.1\r\n"
+            "Host: %s\r\n"
             "User-Agent: %s\r\n"
             "Accept: image/png,image/*\r\n"
             "Connection: keep-alive\r\n\r\n",
-            guildIdBytes.constData(), iconHashBytes.constData(),
+            pathBytes.constData(), hostBytes.constData(),
             userAgent.constData());
 }
