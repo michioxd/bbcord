@@ -155,9 +155,13 @@ QVariantMap ItemMapper::guildChannelToItem(const QVariantMap &channel) const {
   item["id"] = channel.value("id").toString();
   item["name"] = channel.value("name").toString();
   item["type"] = type == DiscordChannel::GuildCategory ? "category" : "channel";
-  item["icon"] = type == DiscordChannel::GuildVoice
-                     ? "asset:///images/icons/speaker.png"
-                     : "asset:///images/icons/hash.png";
+  item["icon"] = "asset:///images/icons/hash.png";
+  if (type == DiscordChannel::GuildVoice) {
+    item["icon"] = "asset:///images/icons/speaker.png";
+  } else if (type == DiscordChannel::GuildForum ||
+             type == DiscordChannel::GuildMedia) {
+    item["icon"] = "asset:///images/icons/ic_chat_multiperson.png";
+  }
   item["position"] = channel.value("position").toInt();
   item["channelType"] = type;
   item["parentId"] = channel.value("parent_id").toString();

@@ -1,5 +1,5 @@
 1
-48
+49
 About.qml
 audio/connected.ogg
 audio/connecting.ogg
@@ -19,6 +19,7 @@ images/icons/caret-down.png
 images/icons/first.png
 images/icons/hash.png
 images/icons/house.png
+images/icons/ic_chat_multiperson.png
 images/icons/ic_copy.png
 images/icons/ic_edit.png
 images/icons/ic_info.png

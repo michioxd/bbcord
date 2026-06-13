@@ -53,6 +53,8 @@ struct DiscordChannel {
     GroupDm = 3,
     GuildCategory = 4,
     GuildAnnouncement = 5,
+    GuildForum = 15,
+    GuildMedia = 16,
     Unknown = -1
   };
 

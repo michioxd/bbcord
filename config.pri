@@ -61,6 +61,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/first.png) \
         $$quote($$BASEDIR/assets/images/icons/hash.png) \
         $$quote($$BASEDIR/assets/images/icons/house.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_chat_multiperson.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_copy.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_edit.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_info.png) \
