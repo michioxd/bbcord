@@ -60,32 +60,37 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="244"/>
+        <location filename="../assets/ChatCard.qml" line="212"/>
+        <source>Loading more messages...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/ChatCard.qml" line="267"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="275"/>
+        <location filename="../assets/ChatCard.qml" line="299"/>
         <source>Attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="338"/>
+        <location filename="../assets/ChatCard.qml" line="366"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="409"/>
-        <source>Message #</source>
+        <location filename="../assets/ChatCard.qml" line="441"/>
+        <source>Message </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="436"/>
+        <location filename="../assets/ChatCard.qml" line="468"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="460"/>
+        <location filename="../assets/ChatCard.qml" line="494"/>
         <source>Attach files</source>
         <translation type="unfinished"></translation>
     </message>

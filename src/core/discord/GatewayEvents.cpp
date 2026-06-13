@@ -447,8 +447,8 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
 
   switch (payload.op) {
   case 0:
-    qDebug() << "[discord-gateway] parsed dispatch" << payload.eventName
-             << "seq" << payload.sequence;
+    // qDebug() << "[discord-gateway] parsed dispatch" << payload.eventName
+    //          << "seq" << payload.sequence;
     if (payload.eventName == "READY") {
       qDebug() << "[discord-gateway] READY presences"
                << payload.data.value("presences").toList().size()

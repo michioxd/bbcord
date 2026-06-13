@@ -188,18 +188,36 @@ Page {
 
             Container {
                 visible: appStore.chatLoadingBefore
-                preferredHeight: ui.du(7.0)
+                preferredHeight: ui.du(6.0)
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Top
-                background: Color.create("#18191C")
-
-                layout: DockLayout {}
-
-                ActivityIndicator {
-                    running: appStore.chatLoadingBefore
-                    horizontalAlignment: HorizontalAlignment.Center
+                background: Color.create("#8518191c")
+                
+                Container {
+                    preferredHeight: ui.du(6.0)
                     verticalAlignment: VerticalAlignment.Center
+                    horizontalAlignment: HorizontalAlignment.Center
+                    
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.LeftToRight
+                    }
+
+                    ActivityIndicator {
+                        running: appStore.chatLoadingBefore
+                        horizontalAlignment: HorizontalAlignment.Center
+                        verticalAlignment: VerticalAlignment.Center
+                    }
+                    
+                    Label {
+                        text: qsTr("Loading more messages...")
+                        textStyle.fontSize: FontSize.XSmall
+                        opacity: 0.6
+                        horizontalAlignment: HorizontalAlignment.Center
+                        verticalAlignment: VerticalAlignment.Center
+                    }
                 }
+
+                
             }
         }
 
@@ -207,7 +225,8 @@ Page {
             horizontalAlignment: HorizontalAlignment.Fill
             background: Color.create("#18191C")
 
-            layout: StackLayout {}
+            layout: StackLayout {
+            }
 
             topPadding: ui.du(1.5)
             bottomPadding: ui.du(1.5)
@@ -224,8 +243,8 @@ Page {
                 }
 
                 ImageButton {
-                    preferredWidth: ui.du(5.0)
-                    preferredHeight: ui.du(5.0)
+                    preferredWidth: ui.du(3.0)
+                    preferredHeight: ui.du(3.0)
                     verticalAlignment: VerticalAlignment.Center
                     defaultImageSource: "asset:///images/icons/x.png"
 
@@ -234,6 +253,10 @@ Page {
                     }
                     pressedImageSource: "asset:///images/icons/x-hold.png"
                     disabledImageSource: "asset:///images/icons/x-disabled.png"
+                    maxWidth: ui.du(3.0)
+                    maxHeight: ui.du(3.0)
+                    minWidth: ui.du(3.0)
+                    minHeight: ui.du(3.0)
                 }
 
                 Container {
@@ -261,7 +284,8 @@ Page {
                 horizontalAlignment: HorizontalAlignment.Fill
                 bottomMargin: ui.du(1.0)
 
-                layout: StackLayout {}
+                layout: StackLayout {
+                }
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
@@ -277,11 +301,12 @@ Page {
                         textStyle.fontSize: FontSize.XXSmall
                         textStyle.fontWeight: FontWeight.Bold
                         textStyle.color: Color.create("#F2F3F5")
+                        rightMargin: ui.du(0.0)
                     }
 
                     ImageButton {
-                        preferredWidth: ui.du(5.0)
-                        preferredHeight: ui.du(5.0)
+                        preferredWidth: ui.du(3.0)
+                        preferredHeight: ui.du(3.0)
                         defaultImageSource: "asset:///images/icons/x.png"
                         pressedImageSource: "asset:///images/icons/x-hold.png"
                         disabledImageSource: "asset:///images/icons/x-disabled.png"
@@ -289,6 +314,7 @@ Page {
                         onClicked: {
                             chatController.clearPendingAttachment();
                         }
+                        leftMargin: ui.du(0.5)
                     }
                 }
 
@@ -307,12 +333,14 @@ Page {
                             type: ""
 
                             Container {
+                                id: pendingAttachmentItem
                                 preferredWidth: ui.du(18.0)
                                 preferredHeight: ui.du(14.0)
                                 rightMargin: ui.du(1.0)
                                 background: Color.create("#2B2D31")
 
-                                layout: DockLayout {}
+                                layout: DockLayout {
+                                }
 
                                 Container {
                                     horizontalAlignment: HorizontalAlignment.Fill
@@ -322,9 +350,9 @@ Page {
                                     leftPadding: ui.du(1.0)
                                     rightPadding: ui.du(1.0)
 
-                                    layout: StackLayout {}
+                                    layout: StackLayout {
+                                    }
 
-                                    
                                     ImageView {
                                         visible: ListItemData.isImage
                                         imageSource: ListItemData.preview
@@ -334,7 +362,7 @@ Page {
                                     }
 
                                     Label {
-                                        visible: !ListItemData.isImage
+                                        visible: ! ListItemData.isImage
                                         text: qsTr("File")
                                         horizontalAlignment: HorizontalAlignment.Center
                                         preferredHeight: ui.du(8.0)
@@ -362,7 +390,7 @@ Page {
                                     disabledImageSource: "asset:///images/icons/x-disabled.png"
 
                                     onClicked: {
-                                        chatController.removePendingAttachment(ListItemData.index);
+                                        pendingAttachmentItem.ListItem.view.removePendingAttachment(pendingAttachmentItem.ListItem.indexPath[0]);
                                     }
                                 }
                             }
@@ -371,6 +399,10 @@ Page {
 
                     function itemType(data, indexPath) {
                         return "";
+                    }
+
+                    function removePendingAttachment(index) {
+                        chatController.removePendingAttachment(index);
                     }
                 }
             }
@@ -406,7 +438,7 @@ Page {
                 TextArea {
                     id: inputMessage
 
-                    hintText: qsTr("Message #") + chatPage.channelName
+                    hintText: qsTr("Message ") + chatPage.channelName
                     inputMode: TextAreaInputMode.Text
                     textFormat: TextFormat.Plain
 
@@ -437,11 +469,12 @@ Page {
                     horizontalAlignment: HorizontalAlignment.Fill
                     textStyle.fontSize: FontSize.XXSmall
                     textStyle.color: Color.create("#B5BAC1")
+                    verticalAlignment: VerticalAlignment.Center
                 }
 
                 ImageButton {
-                    preferredWidth: ui.du(5.0)
-                    preferredHeight: ui.du(5.0)
+                    preferredWidth: ui.du(3.0)
+                    preferredHeight: ui.du(3.0)
                     defaultImageSource: "asset:///images/icons/x.png"
                     pressedImageSource: "asset:///images/icons/x-hold.png"
                     disabledImageSource: "asset:///images/icons/x-disabled.png"
@@ -449,6 +482,7 @@ Page {
                     onClicked: {
                         chatPage.cancelEdit();
                     }
+                    verticalAlignment: VerticalAlignment.Center
                 }
             }
         }
