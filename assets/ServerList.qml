@@ -1,4 +1,5 @@
 import bb.cascades 1.4
+import bb.system 1.2
 
 Container {
     id: serverList
@@ -43,6 +44,11 @@ Container {
             var item = serverListController.channelDataModel.data(indexPath);
 
             if (item.type == "channel") {
+                if (item.implemented == false) {
+                    unsupportedChannelToast.body = qsTr("Discussion/media channels are not implemented yet");
+                    unsupportedChannelToast.show();
+                    return;
+                }
                 serverList.channelSelected(item.id, serverList.serverId, item.name);
             }
         }
@@ -152,4 +158,10 @@ Container {
         }
 
     }
+
+    attachedObjects: [
+        SystemToast {
+            id: unsupportedChannelToast
+        }
+    ]
 }

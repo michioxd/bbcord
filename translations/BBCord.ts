@@ -269,6 +269,14 @@
     </message>
 </context>
 <context>
+    <name>ServerList</name>
+    <message>
+        <location filename="../assets/ServerList.qml" line="48"/>
+        <source>Discussion/media channels are not implemented yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Settings</name>
     <message>
         <location filename="../assets/Settings.qml" line="9"/>

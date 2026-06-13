@@ -162,6 +162,8 @@ QVariantMap ItemMapper::guildChannelToItem(const QVariantMap &channel) const {
              type == DiscordChannel::GuildMedia) {
     item["icon"] = "asset:///images/icons/ic_chat_multiperson.png";
   }
+  item["implemented"] =
+      type != DiscordChannel::GuildForum && type != DiscordChannel::GuildMedia;
   item["position"] = channel.value("position").toInt();
   item["channelType"] = type;
   item["parentId"] = channel.value("parent_id").toString();
