@@ -165,23 +165,23 @@
 <context>
     <name>ChatController</name>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="302"/>
-        <location filename="../src/ui/ChatController.cpp" line="1175"/>
+        <location filename="../src/ui/ChatController.cpp" line="307"/>
+        <location filename="../src/ui/ChatController.cpp" line="1182"/>
         <source>Maximum 10 attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="1160"/>
+        <location filename="../src/ui/ChatController.cpp" line="1167"/>
         <source>Attachment file not found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="1170"/>
+        <location filename="../src/ui/ChatController.cpp" line="1177"/>
         <source>Attachment is too large</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/ChatController.cpp" line="1209"/>
+        <location filename="../src/ui/ChatController.cpp" line="1216"/>
         <source>%1 files</source>
         <translation type="unfinished"></translation>
     </message>

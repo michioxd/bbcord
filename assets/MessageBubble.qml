@@ -287,7 +287,7 @@ Container {
         }
 
         Container {
-            visible: root.attachmentTotal <= 1 && (root.image !== "" || root.imageLoading)
+            visible: root.attachmentTotal <= 1 && root.attachmentIsImage && !root.imageLoadFailed && root.attachmentUrl !== ""
             preferredWidth: ui.du(root.displayImageWidth())
             preferredHeight: ui.du(root.displayImageHeight())
             minWidth: ui.du(root.displayImageWidth())
@@ -299,8 +299,8 @@ Container {
             layout: DockLayout {}
 
             ImageView {
-                visible: root.image !== ""
-                imageSource: root.image
+                visible: root.image !== "" || root.attachmentUrl !== ""
+                imageSource: root.image !== "" ? root.image : root.attachmentUrl
                 preferredWidth: ui.du(root.displayImageWidth())
                 preferredHeight: ui.du(root.displayImageHeight())
                 minWidth: ui.du(root.displayImageWidth())
@@ -321,8 +321,8 @@ Container {
             ]
 
             ActivityIndicator {
-                visible: root.imageLoading && root.image === ""
-                running: root.imageLoading && root.image === ""
+                visible: root.imageLoading && root.image === "" && root.attachmentUrl === ""
+                running: visible
                 horizontalAlignment: HorizontalAlignment.Center
                 verticalAlignment: VerticalAlignment.Center
             }

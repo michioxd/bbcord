@@ -23,6 +23,11 @@ const int kMaxPendingAttachments = 10;
 const int kAttachmentPreviewWidthPx = 512;
 const int kAttachmentPreviewHeightPx = 512;
 
+bool shouldUseDiscordPreview(int originalWidth, int originalHeight) {
+  return originalWidth > kAttachmentPreviewWidthPx ||
+         originalHeight > kAttachmentPreviewHeightPx;
+}
+
 void discordPreviewSize(int originalWidth, int originalHeight,
                         int &previewWidth, int &previewHeight) {
   if (originalWidth <= 0 || originalHeight <= 0) {
@@ -847,7 +852,9 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
     bool isImage = attachment.value("isImage").toBool();
     int width = attachment.value("width", 0).toInt();
     int height = attachment.value("height", 0).toInt();
-    QString previewUrl = isImage ? discordPreviewUrl(url, width, height) : url;
+    QString previewUrl = isImage && shouldUseDiscordPreview(width, height)
+                             ? discordPreviewUrl(url, width, height)
+                             : url;
     QString image = attachment.value("image").toString();
     bool failed = isImage && !url.isEmpty() &&
                   attachment.value("imageLoadFailed").toBool();
