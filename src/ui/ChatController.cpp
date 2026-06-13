@@ -23,16 +23,57 @@ const int kMaxPendingAttachments = 10;
 const int kAttachmentPreviewWidthPx = 512;
 const int kAttachmentPreviewHeightPx = 512;
 
-QString discordPreviewUrl(const QString &url) {
+void discordPreviewSize(int originalWidth, int originalHeight,
+                        int &previewWidth, int &previewHeight) {
+  if (originalWidth <= 0 || originalHeight <= 0) {
+    previewWidth = kAttachmentPreviewWidthPx;
+    previewHeight = kAttachmentPreviewHeightPx;
+    return;
+  }
+
+  if (originalWidth <= kAttachmentPreviewWidthPx &&
+      originalHeight <= kAttachmentPreviewHeightPx) {
+    previewWidth = originalWidth;
+    previewHeight = originalHeight;
+    return;
+  }
+
+  double widthScale = static_cast<double>(kAttachmentPreviewWidthPx) /
+                      static_cast<double>(originalWidth);
+  double heightScale = static_cast<double>(kAttachmentPreviewHeightPx) /
+                       static_cast<double>(originalHeight);
+  double scale = widthScale < heightScale ? widthScale : heightScale;
+  previewWidth =
+      static_cast<int>(static_cast<double>(originalWidth) * scale + 0.5);
+  previewHeight =
+      static_cast<int>(static_cast<double>(originalHeight) * scale + 0.5);
+}
+
+QString discordPreviewUrl(const QString &url, int originalWidth,
+                          int originalHeight) {
   QUrl parsed(url.trimmed());
   if (!parsed.isValid()) {
     return url.trimmed();
   }
 
+  QString scheme = parsed.scheme().toLower();
+  QString host = parsed.host().toLower();
+  if ((scheme != "http" && scheme != "https") ||
+      !host.endsWith("discordapp.com")) {
+    return url.trimmed();
+  }
+
+  parsed.setScheme("https");
+  parsed.setHost("media.discordapp.net");
+
+  int previewWidth = kAttachmentPreviewWidthPx;
+  int previewHeight = kAttachmentPreviewHeightPx;
+  discordPreviewSize(originalWidth, originalHeight, previewWidth,
+                     previewHeight);
   parsed.removeAllQueryItems("width");
   parsed.removeAllQueryItems("height");
-  parsed.addQueryItem("width", QString::number(kAttachmentPreviewWidthPx));
-  parsed.addQueryItem("height", QString::number(kAttachmentPreviewHeightPx));
+  parsed.addQueryItem("width", QString::number(previewWidth));
+  parsed.addQueryItem("height", QString::number(previewHeight));
   return parsed.toString();
 }
 } // namespace
@@ -798,7 +839,9 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
     QVariantMap attachment = attachments.at(i).toMap();
     QString url = attachment.value("url").toString();
     bool isImage = attachment.value("isImage").toBool();
-    QString previewUrl = isImage ? discordPreviewUrl(url) : url;
+    int width = attachment.value("width", 0).toInt();
+    int height = attachment.value("height", 0).toInt();
+    QString previewUrl = isImage ? discordPreviewUrl(url, width, height) : url;
     QString image = attachment.value("image").toString();
     bool failed = isImage && !url.isEmpty() &&
                   attachment.value("imageLoadFailed").toBool();
@@ -831,11 +874,9 @@ QVariantMap ChatController::prepareMessageForModel(const QVariantMap &message) {
     attachment["imageLoading"] = loading;
     attachment["imageLoadFailed"] = failed;
     attachment["isImage"] = isImage;
-    attachment["width"] = attachment.value("width", 0).toInt();
-    attachment["height"] = attachment.value("height", 0).toInt();
+    attachment["width"] = width;
+    attachment["height"] = height;
     double ratio = 16.0 / 9.0;
-    int width = attachment.value("width", 0).toInt();
-    int height = attachment.value("height", 0).toInt();
     if (width > 0 && height > 0) {
       ratio = static_cast<double>(width) / static_cast<double>(height);
     }
