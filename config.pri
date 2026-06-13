@@ -49,6 +49,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/audio/connected.ogg) \
         $$quote($$BASEDIR/assets/audio/connecting.ogg) \
         $$quote($$BASEDIR/assets/audio/error.ogg) \
+        $$quote($$BASEDIR/assets/components/SettingItem.qml) \
         $$quote($$BASEDIR/assets/icon.png) \
         $$quote($$BASEDIR/assets/images/default-avt.png) \
         $$quote($$BASEDIR/assets/images/demo.png) \
@@ -71,6 +72,12 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/paperclip.png) \
         $$quote($$BASEDIR/assets/images/icons/send.png) \
         $$quote($$BASEDIR/assets/images/icons/settings/ca_audio_active.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_data_management.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_message_error.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_security_wipe.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_sms.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_software_updates.png) \
+        $$quote($$BASEDIR/assets/images/icons/settings/ca_storage_access.png) \
         $$quote($$BASEDIR/assets/images/icons/speaker.png) \
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \
         $$quote($$BASEDIR/assets/images/icons/x-hold.png) \
@@ -217,6 +224,9 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../assets/audio/*.qml) \
         $$quote($$BASEDIR/../assets/audio/*.js) \
         $$quote($$BASEDIR/../assets/audio/*.qs) \
+        $$quote($$BASEDIR/../assets/components/*.qml) \
+        $$quote($$BASEDIR/../assets/components/*.js) \
+        $$quote($$BASEDIR/../assets/components/*.qs) \
         $$quote($$BASEDIR/../assets/images/*.qml) \
         $$quote($$BASEDIR/../assets/images/*.js) \
         $$quote($$BASEDIR/../assets/images/*.qs) \

@@ -1,11 +1,12 @@
 1
-41
+48
 About.qml
 audio/connected.ogg
 audio/connecting.ogg
 audio/error.ogg
 ChannelMemberList.qml
 ChatCard.qml
+components/SettingItem.qml
 DmList.qml
 icon.png
 images/default-avt.png
@@ -29,6 +30,12 @@ images/icons/paperclip-hold.png
 images/icons/paperclip.png
 images/icons/send.png
 images/icons/settings/ca_audio_active.png
+images/icons/settings/ca_data_management.png
+images/icons/settings/ca_message_error.png
+images/icons/settings/ca_security_wipe.png
+images/icons/settings/ca_sms.png
+images/icons/settings/ca_software_updates.png
+images/icons/settings/ca_storage_access.png
 images/icons/speaker.png
 images/icons/x-disabled.png
 images/icons/x-hold.png
