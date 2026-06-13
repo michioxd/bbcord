@@ -122,16 +122,6 @@ Sheet {
                 }
 
                 SettingItem {
-                    iconSource: "asset:///images/icons/settings/ca_software_updates.png"
-                    title: qsTr("Auto check for updates")
-                    description: qsTr("Automatically check for updates to BBCord on startup.")
-
-                    ToggleButton {
-                        id: updateSwitch
-                    }
-                }
-
-                SettingItem {
                     iconSource: "asset:///images/icons/settings/ca_audio_active.png"
                     title: qsTr("Sound effects")
                     description: qsTr("Play login, connecting, and error sounds. #MSNTV2")

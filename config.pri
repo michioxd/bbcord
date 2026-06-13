@@ -66,6 +66,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/ic_edit.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_info.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_open.png) \
+        $$quote($$BASEDIR/assets/images/icons/ic_reload.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_reply.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_sign_out.png) \
         $$quote($$BASEDIR/assets/images/icons/paperclip-disabled.png) \
@@ -123,6 +124,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/modules/User.cpp) \
         $$quote($$BASEDIR/src/core/modules/Worker.cpp) \
         $$quote($$BASEDIR/src/main.cpp) \
+        $$quote($$BASEDIR/src/ui/AboutController.cpp) \
         $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/ImagePreview.cpp) \
@@ -159,6 +161,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/modules/Guilds.hpp) \
         $$quote($$BASEDIR/src/core/modules/User.hpp) \
         $$quote($$BASEDIR/src/core/modules/Worker.hpp) \
+        $$quote($$BASEDIR/src/ui/AboutController.hpp) \
         $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/ImagePreview.hpp) \

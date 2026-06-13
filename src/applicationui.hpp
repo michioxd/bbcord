@@ -34,6 +34,7 @@ class ImagePreview;
 class MainPageController;
 class ServerListController;
 class SettingsController;
+class AboutController;
 
 /*!
  * @brief Application UI object
@@ -61,6 +62,7 @@ private:
   MainPageController *m_mainPageController;
   ServerListController *m_serverListController;
   SettingsController *m_settingsController;
+  AboutController *m_aboutController;
 };
 
 #endif /* ApplicationUI_HPP_ */

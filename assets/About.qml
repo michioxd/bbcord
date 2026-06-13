@@ -3,6 +3,8 @@ import bb.cascades 1.4
 Sheet {
     id: aboutSheet
 
+    onOpened: aboutController.checkForUpdates(false)
+
     function openLink(url) {
         applicationUI.openLink(url);
     }
@@ -58,7 +60,7 @@ Sheet {
                 }
                 
                 Label {
-                    text: "v" + applicationInfo.version
+                    text: "v" + (applicationInfo.version)
                     textStyle.textAlign: TextAlign.Center
                     horizontalAlignment: HorizontalAlignment.Center
                     opacity: 0.4
@@ -84,6 +86,108 @@ Sheet {
                             onTapped: aboutSheet.openLink("https://github.com/michioxd/bbcord/blob/main/LICENSE")
                         }
                     ]
+                }
+
+                Header {
+                    title: qsTr("Updates")
+                }
+                
+                Container {
+                    id: checkingForUpdate
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: ui.du(2.0)
+                    rightPadding: ui.du(2.0)
+
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.LeftToRight
+
+                    }
+                    verticalAlignment: VerticalAlignment.Center
+                    topPadding: ui.du(2.0)
+                    bottomPadding: ui.du(2.0)
+                    visible: !aboutController.updateAvailable
+                    
+                    ActivityIndicator {
+                        running: aboutController.checking
+                        visible: aboutController.checking
+                    }
+                    
+                    Label {
+                        text: aboutController.statusText
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        layoutProperties: StackLayoutProperties {
+                            spaceQuota: 1
+                        }
+                    }
+                    
+                    Button {
+                        imageSource: "asset:///images/icons/ic_reload.png"
+                        enabled: !aboutController.checking
+                        layoutProperties: StackLayoutProperties {
+                            spaceQuota: -1
+                        }
+                        onClicked: aboutController.checkForUpdates(true)
+                        preferredWidth: ui.du(5.0)
+                        preferredHeight: ui.du(5.0)
+                    }
+
+                }
+                
+                Container {
+                    id: updateNewAvailable
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: ui.du(2.0)
+                    rightPadding: ui.du(2.0)
+                    
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.TopToBottom
+                    }
+                    verticalAlignment: VerticalAlignment.Center
+                    topPadding: ui.du(2.0)
+                    bottomPadding: ui.du(2.0)
+                    visible: aboutController.updateAvailable
+                    
+                    Label {
+                        text: aboutController.statusText
+                        horizontalAlignment: HorizontalAlignment.Fill
+                    }
+                    
+                    Label {
+                        text: qsTr("Date:") + " " + aboutController.publishedAtText + " - " + qsTr("Size:") + " " + aboutController.sizeText
+                        topMargin: ui.du(0)
+                        textStyle.fontSize: FontSize.XXSmall
+                        opacity: 0.7
+                    }
+                    
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        layout: StackLayout {
+                            orientation: LayoutOrientation.LeftToRight
+                        }
+                        
+                        Button {
+                            text: "Download .bar"
+                            enabled: aboutController.downloadUrl.length > 0
+                            onClicked: aboutSheet.openLink(aboutController.downloadUrl)
+                        }
+                        
+                        Button {
+                            text: "Changelog"
+                            enabled: aboutController.releaseUrl.length > 0
+                            onClicked: aboutSheet.openLink(aboutController.releaseUrl)
+                        }
+                    }
+
+                    Button {
+                        imageSource: "asset:///images/icons/ic_reload.png"
+                        enabled: !aboutController.checking
+                        layoutProperties: StackLayoutProperties {
+                            spaceQuota: -1
+                        }
+                        onClicked: aboutController.checkForUpdates(true)
+                        preferredWidth: ui.du(5.0)
+                        preferredHeight: ui.du(5.0)
+                    }
                 }
                 
                 Header {

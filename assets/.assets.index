@@ -1,5 +1,5 @@
 1
-49
+50
 About.qml
 audio/connected.ogg
 audio/connecting.ogg
@@ -24,6 +24,7 @@ images/icons/ic_copy.png
 images/icons/ic_edit.png
 images/icons/ic_info.png
 images/icons/ic_open.png
+images/icons/ic_reload.png
 images/icons/ic_reply.png
 images/icons/ic_sign_out.png
 images/icons/paperclip-disabled.png

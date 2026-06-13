@@ -18,12 +18,14 @@
 
 #include "core/AppStore.hpp"
 #include "core/Client.hpp"
+#include "ui/AboutController.hpp"
 #include "ui/ChatController.hpp"
 #include "ui/DmListController.hpp"
 #include "ui/ImagePreview.hpp"
 #include "ui/MainPageController.hpp"
 #include "ui/ServerListController.hpp"
 #include "ui/SettingsController.hpp"
+
 
 #include <bb/ApplicationInfo>
 #include <bb/cascades/AbstractPane>
@@ -46,7 +48,8 @@ ApplicationUI::ApplicationUI()
           new MainPageController(m_discordClient, m_appStore, this)),
       m_serverListController(
           new ServerListController(m_discordClient, m_appStore, this)),
-      m_settingsController(new SettingsController(this)) {
+      m_settingsController(new SettingsController(this)),
+      m_aboutController(new AboutController(this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);
   m_pLocaleHandler = new LocaleHandler(this);
@@ -73,6 +76,7 @@ ApplicationUI::ApplicationUI()
   qml->setContextProperty("mainPageController", m_mainPageController);
   qml->setContextProperty("serverListController", m_serverListController);
   qml->setContextProperty("settingsController", m_settingsController);
+  qml->setContextProperty("aboutController", m_aboutController);
   qml->setContextProperty("applicationInfo", new bb::ApplicationInfo(this));
   qml->setContextProperty("applicationUI", this);
 

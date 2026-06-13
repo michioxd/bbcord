@@ -4,48 +4,115 @@
 <context>
     <name>About</name>
     <message>
-        <location filename="../assets/About.qml" line="12"/>
+        <location filename="../assets/About.qml" line="14"/>
         <source>About BBCord</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="76"/>
+        <location filename="../assets/About.qml" line="78"/>
         <source>Released under GPL v3.0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="90"/>
+        <location filename="../assets/About.qml" line="92"/>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="156"/>
+        <source>Date:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="156"/>
+        <source>Size:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/About.qml" line="183"/>
         <source>Created by</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="105"/>
+        <location filename="../assets/About.qml" line="198"/>
         <source>Thanks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="109"/>
+        <location filename="../assets/About.qml" line="202"/>
         <source>BlackBerry (RIM)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="110"/>
+        <location filename="../assets/About.qml" line="203"/>
         <source>For QNX and BlackBerry 10</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="165"/>
+        <location filename="../assets/About.qml" line="258"/>
         <source>Contributors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="169"/>
+        <location filename="../assets/About.qml" line="262"/>
         <source>You</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="170"/>
+        <location filename="../assets/About.qml" line="263"/>
         <source>Still love and using BB10 right now :3</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>AboutController</name>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="32"/>
+        <location filename="../src/ui/AboutController.cpp" line="81"/>
+        <source>Checking for update...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="93"/>
+        <source>Could not create update connection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="102"/>
+        <location filename="../src/ui/AboutController.cpp" line="126"/>
+        <location filename="../src/ui/AboutController.cpp" line="196"/>
+        <source>Unknown update check error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="122"/>
+        <source>Update check timeout</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="178"/>
+        <source>Update connection error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="243"/>
+        <location filename="../src/ui/AboutController.cpp" line="296"/>
+        <source>Yay! You are on latest version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="252"/>
+        <source>Could not check for update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="294"/>
+        <source>A new version is available: v%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/AboutController.cpp" line="301"/>
+        <source>Unknown update parse error</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -355,21 +422,11 @@
     </message>
     <message>
         <location filename="../assets/Settings.qml" line="126"/>
-        <source>Auto check for updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/Settings.qml" line="127"/>
-        <source>Automatically check for updates to BBCord on startup.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../assets/Settings.qml" line="136"/>
         <source>Sound effects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="137"/>
+        <location filename="../assets/Settings.qml" line="127"/>
         <source>Play login, connecting, and error sounds. #MSNTV2</source>
         <translation type="unfinished"></translation>
     </message>
