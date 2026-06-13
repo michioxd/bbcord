@@ -8,6 +8,8 @@ class SettingsController : public QObject {
   Q_OBJECT
   Q_PROPERTY(bool sfxEnabled READ sfxEnabled WRITE setSfxEnabled NOTIFY
                  sfxEnabledChanged)
+  Q_PROPERTY(bool compactMessageEnabled READ compactMessageEnabled WRITE
+                 setCompactMessageEnabled NOTIFY compactMessageEnabledChanged)
   Q_PROPERTY(QString cachePath READ cachePath CONSTANT)
   Q_PROPERTY(QString cacheUsed READ cacheUsed NOTIFY cacheUsedChanged)
   Q_PROPERTY(QString apiUrl READ apiUrl NOTIFY apiUrlChanged)
@@ -19,6 +21,7 @@ public:
   explicit SettingsController(QObject *parent = 0);
 
   bool sfxEnabled() const;
+  bool compactMessageEnabled() const;
   QString cachePath() const;
   QString cacheUsed() const;
   QString apiUrl() const;
@@ -26,6 +29,7 @@ public:
   QString officialApiUrl() const;
   QString officialCdnUrl() const;
   Q_INVOKABLE void setSfxEnabled(bool enabled);
+  Q_INVOKABLE void setCompactMessageEnabled(bool enabled);
   Q_INVOKABLE void clearCache();
   Q_INVOKABLE void refreshCacheUsed();
   Q_INVOKABLE bool setApiUrl(const QString &url);
@@ -34,6 +38,7 @@ public:
 
 Q_SIGNALS:
   void sfxEnabledChanged(bool enabled);
+  void compactMessageEnabledChanged(bool enabled);
   void cacheUsedChanged(const QString &cacheUsed);
   void apiUrlChanged(const QString &apiUrl);
   void cdnUrlChanged(const QString &cdnUrl);
@@ -50,6 +55,7 @@ private:
 
   QString m_connectionName;
   bool m_sfxEnabled;
+  bool m_compactMessageEnabled;
   QString m_cacheUsed;
   QString m_apiUrl;
   QString m_cdnUrl;

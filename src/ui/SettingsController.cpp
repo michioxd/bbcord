@@ -14,6 +14,7 @@
 
 namespace {
 const char *kSfxEnabledKey = "sfx_enabled";
+const char *kCompactMessageEnabledKey = "compact_message_enabled";
 const char *kCacheDirName = "cache";
 const char *kApiUrlKey = "discord/apiUrl";
 const char *kCdnUrlKey = "discord/cdnUrl";
@@ -23,9 +24,10 @@ const char *kOfficialCdnUrl = "https://cdn.discordapp.com/";
 
 SettingsController::SettingsController(QObject *parent)
     : QObject(parent), m_connectionName("BBCordSettings"), m_sfxEnabled(false),
-      m_cacheUsed("0 B") {
+      m_compactMessageEnabled(false), m_cacheUsed("0 B") {
   ensureDatabase();
   m_sfxEnabled = readBool(kSfxEnabledKey, false);
+  m_compactMessageEnabled = readBool(kCompactMessageEnabledKey, false);
   QSettings settings;
   m_apiUrl =
       normalizedUrl(settings.value(kApiUrlKey, kOfficialApiUrl).toString());
@@ -35,6 +37,10 @@ SettingsController::SettingsController(QObject *parent)
 }
 
 bool SettingsController::sfxEnabled() const { return m_sfxEnabled; }
+
+bool SettingsController::compactMessageEnabled() const {
+  return m_compactMessageEnabled;
+}
 
 QString SettingsController::cachePath() const {
   QDir dir(QDir::homePath());
@@ -59,6 +65,16 @@ void SettingsController::setSfxEnabled(bool enabled) {
   m_sfxEnabled = enabled;
   writeBool(kSfxEnabledKey, enabled);
   emit sfxEnabledChanged(m_sfxEnabled);
+}
+
+void SettingsController::setCompactMessageEnabled(bool enabled) {
+  if (m_compactMessageEnabled == enabled) {
+    return;
+  }
+
+  m_compactMessageEnabled = enabled;
+  writeBool(kCompactMessageEnabledKey, enabled);
+  emit compactMessageEnabledChanged(m_compactMessageEnabled);
 }
 
 void SettingsController::clearCache() {

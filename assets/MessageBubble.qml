@@ -29,6 +29,7 @@ Container {
     property bool showAvatar: true
     property bool showUsername: true
     property bool showTimestamp: true
+    property bool compactMessage: false
     property bool pending: false
     property bool failed: false
     property bool edited: false
@@ -53,10 +54,10 @@ Container {
 
     horizontalAlignment: HorizontalAlignment.Fill
     preferredWidth: ui.du(100.0)
-    leftPadding: ui.du(2.0)
+    leftPadding: root.compactMessage ? ui.du(1.0) : ui.du(2.0)
     rightPadding: ui.du(2.0)
-    topPadding: root.isGroupStart ? ui.du(1.5) : ui.du(0.1)
-    bottomPadding: root.isGroupEnd ? ui.du(1.0) : ui.du(0.2)
+    topPadding: root.compactMessage ? ui.du(0.1) : (root.isGroupStart ? ui.du(1.5) : ui.du(0.1))
+    bottomPadding: root.compactMessage ? ui.du(0.1) : (root.isGroupEnd ? ui.du(1.0) : ui.du(0.2))
 
     layout: StackLayout {
         orientation: LayoutOrientation.LeftToRight
@@ -144,6 +145,7 @@ Container {
     }
 
     Container {
+        visible: !root.compactMessage
         preferredWidth: ui.du(8.0)
         verticalAlignment: VerticalAlignment.Top
 
@@ -192,7 +194,7 @@ Container {
 
         Container {
             horizontalAlignment: HorizontalAlignment.Fill
-            visible: root.showUsername || root.showTimestamp
+            visible: !root.compactMessage && (root.showUsername || root.showTimestamp)
 
             layout: StackLayout {
                 orientation: LayoutOrientation.LeftToRight
@@ -275,9 +277,9 @@ Container {
         }
 
         Label {
-            text: root.messageHtml
+            text: root.compactMessage ? root.compactMessageHtml() : root.messageHtml
             horizontalAlignment: HorizontalAlignment.Fill
-            topMargin: root.isGroupStart ? ui.du(-0.6) : ui.du(-0.2)
+            topMargin: root.compactMessage ? ui.du(0.0) : (root.isGroupStart ? ui.du(-0.6) : ui.du(-0.2))
             multiline: true
             textFormat: TextFormat.Html
             textStyle.fontSize: FontSize.XSmall
@@ -742,6 +744,21 @@ Container {
 
     function inlineAttachmentRows() {
         return root.attachmentTotal > 1 ? 1 : 0;
+    }
+
+    function compactMessageHtml() {
+        var prefix = "<span style=\"color:#666A70\">" + root.escapeHtml(root.time) + " &lt;</span>" +
+                "<span style=\"color:#F2F3F5\">" + root.escapeHtml(root.author) + "</span>" +
+            "<span style=\"color:#666A70\">&gt; </span>";
+        var body = root.messageHtml;
+        if (body === "") {
+            body = root.escapeHtml(root.message);
+        }
+        return prefix + body;
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
     }
 
     function inlineAttachmentAt(index) {

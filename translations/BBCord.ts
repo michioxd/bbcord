@@ -127,37 +127,37 @@
 <context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="212"/>
+        <location filename="../assets/ChatCard.qml" line="215"/>
         <source>Loading more messages...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="267"/>
+        <location filename="../assets/ChatCard.qml" line="270"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="299"/>
+        <location filename="../assets/ChatCard.qml" line="302"/>
         <source>Attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="366"/>
+        <location filename="../assets/ChatCard.qml" line="369"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="441"/>
+        <location filename="../assets/ChatCard.qml" line="444"/>
         <source>Message </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="468"/>
+        <location filename="../assets/ChatCard.qml" line="471"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="494"/>
+        <location filename="../assets/ChatCard.qml" line="497"/>
         <source>Attach files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -270,72 +270,72 @@
 <context>
     <name>MessageBubble</name>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="72"/>
+        <location filename="../assets/MessageBubble.qml" line="73"/>
         <source>Reply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="80"/>
+        <location filename="../assets/MessageBubble.qml" line="81"/>
         <source>Copy message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="89"/>
+        <location filename="../assets/MessageBubble.qml" line="90"/>
         <source>Open attachment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="98"/>
+        <location filename="../assets/MessageBubble.qml" line="99"/>
         <source>Edit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="107"/>
-        <location filename="../assets/MessageBubble.qml" line="127"/>
+        <location filename="../assets/MessageBubble.qml" line="108"/>
+        <location filename="../assets/MessageBubble.qml" line="128"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="125"/>
+        <location filename="../assets/MessageBubble.qml" line="126"/>
         <source>Delete message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="126"/>
+        <location filename="../assets/MessageBubble.qml" line="127"/>
         <source>Delete this message?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="128"/>
+        <location filename="../assets/MessageBubble.qml" line="129"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="221"/>
+        <location filename="../assets/MessageBubble.qml" line="223"/>
         <source>failed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="221"/>
+        <location filename="../assets/MessageBubble.qml" line="223"/>
         <source>sending</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="221"/>
+        <location filename="../assets/MessageBubble.qml" line="223"/>
         <source>edited</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="325"/>
-        <location filename="../assets/MessageBubble.qml" line="385"/>
-        <location filename="../assets/MessageBubble.qml" line="814"/>
+        <location filename="../assets/MessageBubble.qml" line="327"/>
+        <location filename="../assets/MessageBubble.qml" line="387"/>
+        <location filename="../assets/MessageBubble.qml" line="831"/>
         <source>Open attachment: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/MessageBubble.qml" line="325"/>
-        <location filename="../assets/MessageBubble.qml" line="385"/>
-        <location filename="../assets/MessageBubble.qml" line="814"/>
+        <location filename="../assets/MessageBubble.qml" line="327"/>
+        <location filename="../assets/MessageBubble.qml" line="387"/>
+        <location filename="../assets/MessageBubble.qml" line="831"/>
         <source>Open image: </source>
         <translation type="unfinished"></translation>
     </message>
@@ -371,135 +371,135 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="45"/>
+        <location filename="../assets/Settings.qml" line="50"/>
         <source>Storage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="50"/>
+        <location filename="../assets/Settings.qml" line="55"/>
         <source>Cached media location</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="56"/>
+        <location filename="../assets/Settings.qml" line="61"/>
         <source>Used</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="62"/>
-        <location filename="../assets/Settings.qml" line="158"/>
+        <location filename="../assets/Settings.qml" line="67"/>
+        <location filename="../assets/Settings.qml" line="163"/>
         <source>Clear cache</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="63"/>
+        <location filename="../assets/Settings.qml" line="68"/>
         <source>Clear cached media such as avatars and attachments.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="159"/>
+        <location filename="../assets/Settings.qml" line="164"/>
         <source>Clear cached media? This cannot be undone.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="160"/>
+        <location filename="../assets/Settings.qml" line="165"/>
         <source>Clear</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="161"/>
-        <location filename="../assets/Settings.qml" line="175"/>
-        <location filename="../assets/Settings.qml" line="190"/>
-        <location filename="../assets/Settings.qml" line="203"/>
-        <location filename="../assets/Settings.qml" line="217"/>
+        <location filename="../assets/Settings.qml" line="166"/>
+        <location filename="../assets/Settings.qml" line="180"/>
+        <location filename="../assets/Settings.qml" line="195"/>
+        <location filename="../assets/Settings.qml" line="208"/>
+        <location filename="../assets/Settings.qml" line="222"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="172"/>
+        <location filename="../assets/Settings.qml" line="177"/>
         <source>Enter Discord API URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="174"/>
-        <location filename="../assets/Settings.qml" line="189"/>
+        <location filename="../assets/Settings.qml" line="179"/>
+        <location filename="../assets/Settings.qml" line="194"/>
         <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="187"/>
+        <location filename="../assets/Settings.qml" line="192"/>
         <source>Enter Discord CDN URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="200"/>
+        <location filename="../assets/Settings.qml" line="205"/>
         <source>Update API URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="201"/>
+        <location filename="../assets/Settings.qml" line="206"/>
         <source>Updating the Discord API URL will log you out and clear your saved token for security. Continue?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="202"/>
+        <location filename="../assets/Settings.qml" line="207"/>
         <source>Update</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="214"/>
+        <location filename="../assets/Settings.qml" line="219"/>
         <source>Reset Discord backend</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="215"/>
+        <location filename="../assets/Settings.qml" line="220"/>
         <source>Reset API and CDN URLs to the official Discord backend?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="215"/>
+        <location filename="../assets/Settings.qml" line="220"/>
         <source>Reset API and CDN URLs to the official Discord backend? Because the API URL is different from the official backend, you will be logged out.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="216"/>
+        <location filename="../assets/Settings.qml" line="221"/>
         <source>Reset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="68"/>
+        <location filename="../assets/Settings.qml" line="73"/>
         <source>Discord API</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="73"/>
-        <location filename="../assets/Settings.qml" line="171"/>
+        <location filename="../assets/Settings.qml" line="78"/>
+        <location filename="../assets/Settings.qml" line="176"/>
         <source>API URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="83"/>
-        <location filename="../assets/Settings.qml" line="186"/>
+        <location filename="../assets/Settings.qml" line="88"/>
+        <location filename="../assets/Settings.qml" line="191"/>
         <source>CDN URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="108"/>
+        <location filename="../assets/Settings.qml" line="113"/>
         <source>For security reasons, after you update the Discord API URL, your saved token will be cleared.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="135"/>
+        <location filename="../assets/Settings.qml" line="140"/>
         <source>Miscellaneous</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="140"/>
+        <location filename="../assets/Settings.qml" line="145"/>
         <source>Sound effects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="141"/>
+        <location filename="../assets/Settings.qml" line="146"/>
         <source>Play login, connecting, and error sounds. #MSNTV2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -507,7 +507,7 @@
 <context>
     <name>SettingsController</name>
     <message>
-        <location filename="../src/ui/SettingsController.cpp" line="190"/>
+        <location filename="../src/ui/SettingsController.cpp" line="206"/>
         <source>%1 B</source>
         <translation type="unfinished"></translation>
     </message>

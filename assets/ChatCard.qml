@@ -15,6 +15,7 @@ Page {
     property bool active: true
     property bool olderLoadRequested: false
     property bool olderScrollReady: false
+    property bool compactMessageEnabled: false
 
     signal backRequested
     signal memberListRequested
@@ -65,6 +66,7 @@ Page {
                 dataModel: chatController.chatDataModel
                 stickToEdgePolicy: ListViewStickToEdgePolicy.End
                 scrollRole: ScrollRole.Main
+                property bool compactMessageEnabled: chatPage.compactMessageEnabled
 
                 listItemComponents: [
                     ListItemComponent {
@@ -100,6 +102,7 @@ Page {
                             showAvatar: ListItemData.showAvatar
                             showUsername: ListItemData.showUsername
                             showTimestamp: ListItemData.showTimestamp
+                            compactMessage: ListItem.view.compactMessageEnabled
                             pending: ListItemData.pending
                             failed: ListItemData.failed
                             edited: ListItemData.edited

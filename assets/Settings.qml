@@ -38,6 +38,11 @@ Sheet {
 
                     ToggleButton {
                         id: uiCompactSwitch
+                        checked: settingsController.compactMessageEnabled
+
+                        onCheckedChanged: {
+                            settingsController.setCompactMessageEnabled(checked)
+                        }
                     }
                 }
 

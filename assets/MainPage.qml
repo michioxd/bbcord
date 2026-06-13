@@ -166,6 +166,10 @@ Page {
             chatController.openChannel(channelId, guildId, channelName);
             page.channelName = channelName;
             page.title = channelName;
+            page.compactMessageEnabled = settingsController.compactMessageEnabled;
+            settingsController.compactMessageEnabledChanged.connect(function (enabled) {
+                page.compactMessageEnabled = enabled;
+            });
             page.backRequested.connect(function () {
                 if (mainPage.navigationPane) {
                     mainPage.navigationPane.pop();
