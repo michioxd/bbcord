@@ -8,6 +8,7 @@ void ClientState::resetSession() {
   allDmChannelIndexById.clear();
   visibleDmChannelIndexById.clear();
   orderedGuildIds.clear();
+  guildFolders.clear();
   dmPresenceByUserId.clear();
   pendingDmPresenceUserIds.clear();
   guilds.clear();

@@ -2,13 +2,19 @@
 
 #include "../core/AppStore.hpp"
 #include "../core/Client.hpp"
+#include "SettingsController.hpp"
+
+#include <QStringList>
 
 MainPageController::MainPageController(DiscordClient *client, AppStore *store,
+                                       SettingsController *settings,
                                        QObject *parent)
-    : QObject(parent), m_client(client), m_store(store),
+    : QObject(parent), m_client(client), m_store(store), m_settings(settings),
       m_serverDataModel(new bb::cascades::ArrayDataModel(this)) {
   if (m_store) {
     connect(m_store, SIGNAL(guildsChanged()), this, SLOT(onGuildsChanged()));
+    connect(m_store, SIGNAL(guildFoldersChanged()), this,
+            SLOT(onGuildFoldersChanged()));
     connect(m_store, SIGNAL(guildsReordered()), this,
             SLOT(onGuildsReordered()));
     connect(m_store, SIGNAL(guildIconChanged(QString, QString)), this,
@@ -59,6 +65,16 @@ void MainPageController::selectGuild(const QString &guildId) {
   }
 }
 
+void MainPageController::toggleGuildFolder(const QString &folderId) {
+  if (!m_settings || folderId.trimmed().isEmpty()) {
+    return;
+  }
+
+  bool expanded = !m_settings->guildFolderExpanded(folderId);
+  m_settings->setGuildFolderExpanded(folderId, expanded);
+  onGuildsChanged();
+}
+
 QVariantMap
 MainPageController::withSelectionState(const QVariantMap &item) const {
   QVariantMap result = item;
@@ -73,6 +89,120 @@ MainPageController::withSelectionState(const QVariantMap &item) const {
          itemId == selectedGuildId);
   }
   result["active"] = selected;
+  return result;
+}
+
+QVariantMap MainPageController::guildById(const QVariantMap &guildsById,
+                                          const QString &guildId) const {
+  return guildsById.value(guildId).toMap();
+}
+
+QString MainPageController::folderIdFor(const QVariantMap &folder) const {
+  QString folderId = folder.value("id").toString().trimmed();
+  if (!folderId.isEmpty()) {
+    return folderId;
+  }
+
+  QVariantList guildIds = folder.value("guild_ids").toList();
+  QStringList parts;
+  for (int i = 0; i < guildIds.size(); ++i) {
+    QString guildId = guildIds.at(i).toString().trimmed();
+    if (!guildId.isEmpty()) {
+      parts.append(guildId);
+    }
+  }
+  return parts.join("_");
+}
+
+QVariantList MainPageController::flattenedGuildItems() const {
+  QVariantList result;
+  if (!m_store) {
+    return result;
+  }
+
+  QVariantList guilds = m_store->guilds();
+  QVariantMap guildsById;
+  QStringList usedGuildIds;
+  for (int i = 0; i < guilds.size(); ++i) {
+    QVariantMap guild = guilds.at(i).toMap();
+    QString guildId = guild.value("id").toString();
+    if (!guildId.isEmpty()) {
+      guildsById.insert(guildId, guild);
+    }
+  }
+
+  QVariantList folders = m_store->guildFolders();
+  if (folders.isEmpty()) {
+    return guilds;
+  }
+
+  for (int i = 0; i < folders.size(); ++i) {
+    QVariantMap folder = folders.at(i).toMap();
+    QVariantList folderGuildIds = folder.value("guild_ids").toList();
+    QVariantList folderGuilds;
+    for (int j = 0; j < folderGuildIds.size(); ++j) {
+      QString guildId = folderGuildIds.at(j).toString();
+      QVariantMap guild = guildById(guildsById, guildId);
+      if (!guild.isEmpty()) {
+        folderGuilds.append(guild);
+      }
+    }
+
+    if (folderGuilds.size() <= 1) {
+      for (int j = 0; j < folderGuilds.size(); ++j) {
+        QVariantMap guild = folderGuilds.at(j).toMap();
+        result.append(guild);
+        usedGuildIds.append(guild.value("id").toString());
+      }
+      continue;
+    }
+
+    QString folderId = folderIdFor(folder);
+    if (folderId.isEmpty()) {
+      folderId = QString("folder_%1").arg(i);
+    }
+    bool expanded = m_settings && m_settings->guildFolderExpanded(folderId);
+    QVariantMap folderItem;
+    folderItem["type"] = "folder";
+    folderItem["id"] = folderId;
+    folderItem["name"] = folder.value("name").toString();
+    if (folderItem.value("name").toString().isEmpty()) {
+      folderItem["name"] = "Folder";
+    }
+    folderItem["expanded"] = expanded;
+    folderItem["guilds"] = folderGuilds;
+    folderItem["icon"] = QString();
+    folderItem["initials"] = "F";
+    folderItem["mentionCount"] = 0;
+    folderItem["unread"] = false;
+    int mentionCount = 0;
+    bool unread = false;
+    for (int j = 0; j < folderGuilds.size(); ++j) {
+      QVariantMap guild = folderGuilds.at(j).toMap();
+      mentionCount += guild.value("mentionCount").toInt();
+      unread = unread || guild.value("unread").toBool();
+    }
+    folderItem["mentionCount"] = mentionCount;
+    folderItem["unread"] = unread;
+    result.append(folderItem);
+
+    for (int j = 0; j < folderGuilds.size(); ++j) {
+      QVariantMap guild = folderGuilds.at(j).toMap();
+      usedGuildIds.append(guild.value("id").toString());
+      if (expanded) {
+        result.append(guild);
+      }
+    }
+  }
+
+  for (int i = 0; i < guilds.size(); ++i) {
+    QVariantMap guild = guilds.at(i).toMap();
+    QString guildId = guild.value("id").toString();
+    if (!usedGuildIds.contains(guildId)) {
+      result.append(guild);
+    }
+  }
+
   return result;
 }
 
@@ -92,7 +222,7 @@ void MainPageController::onGuildsChanged() {
     return;
   }
 
-  QVariantList guilds = m_store->guilds();
+  QVariantList guilds = flattenedGuildItems();
 
   QVariantMap home;
   home["type"] = "dm";
@@ -144,13 +274,15 @@ void MainPageController::onGuildsChanged() {
   }
 }
 
+void MainPageController::onGuildFoldersChanged() { onGuildsChanged(); }
+
 void MainPageController::onGuildsReordered() {
   if (!m_store) {
     m_serverDataModel->clear();
     return;
   }
 
-  QVariantList guilds = m_store->guilds();
+  QVariantList guilds = flattenedGuildItems();
   if (m_serverDataModel->size() != guilds.size() + 1) {
     onGuildsChanged();
     return;
@@ -193,15 +325,7 @@ void MainPageController::onGuildIconChanged(const QString &guildId,
     return;
   }
 
-  for (int i = 0; i < m_serverDataModel->size(); ++i) {
-    QVariantMap item = m_serverDataModel->value(i).toMap();
-    if (item.value("id").toString() == guildId) {
-      item["icon"] = iconSource;
-      item = withSelectionState(item);
-      m_serverDataModel->replace(i, item);
-      return;
-    }
-  }
+  onGuildsChanged();
 }
 
 void MainPageController::onSelectionChanged() { refreshSelectionState(); }

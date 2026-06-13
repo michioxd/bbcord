@@ -33,6 +33,8 @@ Page {
                     if (item.type == "dm") {
                         mainPage.loadDmList();
                         mainPageController.selectHome();
+                    } else if (item.type == "folder") {
+                        mainPageController.toggleGuildFolder(item.id);
                     } else if (item.type == "server") {
                         mainPageController.selectGuild(item.id);
                         mainPage.loadServerList(item.id, item.name);
@@ -49,11 +51,13 @@ Page {
                             property string lastIconRequestId: ""
                             property bool selectedItem: ListItemData.active == true
                             property bool selectedServer: selectedItem && ListItemData.type == "server"
+                            property bool folderItem: ListItemData.type == "folder"
+                            property variant folderGuilds: folderItem ? ListItemData.guilds : []
 
                             topMargin: ui.du(1)
                             bottomMargin: ui.du(1)
 
-                            background: selectedItem ? Color.create("#5865F2") : Color.create("#333333")
+                            background: selectedItem ? Color.create("#5865F2") : (folderItem ? Color.create("#2B2D31") : Color.create("#333333"))
 
                             layout: DockLayout {}
 
@@ -64,6 +68,17 @@ Page {
                                 if (ListItemData.type == "server" && ListItemData.icon === "" && ListItemData.iconHash !== "") {
                                     lastIconRequestId = ListItemData.id;
                                     ListItem.view.loadVisibleGuildIcon(ListItemData.id);
+                                } else if (ListItemData.type == "folder") {
+                                    var guilds = ListItemData.guilds;
+                                    if (!guilds) {
+                                        return;
+                                    }
+                                    for (var i = 0; i < guilds.length && i < 4; ++i) {
+                                        var guild = guilds[i];
+                                        if (guild.icon === "" && guild.iconHash !== "") {
+                                            ListItem.view.loadVisibleGuildIcon(guild.id);
+                                        }
+                                    }
                                 }
                             }
 
@@ -78,7 +93,7 @@ Page {
                             }
 
                             Container {
-                                visible: ListItemData.icon !== ""
+                                visible: ListItemData.type != "folder" && ListItemData.icon !== ""
                                 horizontalAlignment: HorizontalAlignment.Fill
                                 verticalAlignment: VerticalAlignment.Fill
                                 topPadding: selectedServer ? ui.du(0.5) : 0
@@ -99,7 +114,7 @@ Page {
                             Label {
                                 text: ListItemData.initials
 
-                                visible: ListItemData.icon === ""
+                                visible: ListItemData.type != "folder" && ListItemData.icon === ""
 
                                 horizontalAlignment: HorizontalAlignment.Center
                                 verticalAlignment: VerticalAlignment.Center
@@ -109,12 +124,168 @@ Page {
                             }
 
                             Container {
+                                visible: ListItemData.type == "folder"
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                verticalAlignment: VerticalAlignment.Fill
+                                topPadding: ui.du(0.5)
+                                bottomPadding: ui.du(0.5)
+                                leftPadding: ui.du(0.5)
+                                rightPadding: ui.du(0.5)
+
+                                layout: DockLayout {}
+
+                                Container {
+                                    visible: ListItemData.expanded == true
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+
+                                    layout: DockLayout {}
+
+                                    ImageView {
+                                        imageSource: "asset:///images/icons/ic_folder_color.png"
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        scalingMethod: ScalingMethod.AspectFit
+                                        preferredWidth: ui.du(8)
+                                        preferredHeight: ui.du(8)
+                                    }
+                                }
+
+                                Container {
+                                    visible: ListItemData.expanded != true
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+
+                                    layout: StackLayout {
+                                        orientation: LayoutOrientation.TopToBottom
+                                    }
+
+                                    Container {
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        layout: StackLayout {
+                                            orientation: LayoutOrientation.LeftToRight
+                                        }
+
+                                        Container {
+                                            preferredWidth: ui.du(4.25)
+                                            preferredHeight: ui.du(4.25)
+                                            rightMargin: ui.du(0.25)
+                                            background: Color.create("#5865F2")
+                                            layout: DockLayout {}
+
+                                            ImageView {
+                                                imageSource: folderGuilds.length > 0 ? folderGuilds[0].icon : ""
+                                                visible: folderGuilds.length > 0 && folderGuilds[0].icon !== ""
+                                                horizontalAlignment: HorizontalAlignment.Fill
+                                                verticalAlignment: VerticalAlignment.Fill
+                                                scalingMethod: ScalingMethod.AspectFit
+                                            }
+
+                                            Label {
+                                                text: folderGuilds.length > 0 ? folderGuilds[0].initials : ""
+                                                visible: folderGuilds.length > 0 && folderGuilds[0].icon === ""
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
+                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontSize: FontSize.XXSmall
+                                            }
+                                        }
+
+                                        Container {
+                                            preferredWidth: ui.du(4.25)
+                                            preferredHeight: ui.du(4.25)
+                                            leftMargin: ui.du(0.25)
+                                            background: Color.create("#5865F2")
+                                            layout: DockLayout {}
+
+                                            ImageView {
+                                                imageSource: folderGuilds.length > 1 ? folderGuilds[1].icon : ""
+                                                visible: folderGuilds.length > 1 && folderGuilds[1].icon !== ""
+                                                horizontalAlignment: HorizontalAlignment.Fill
+                                                verticalAlignment: VerticalAlignment.Fill
+                                                scalingMethod: ScalingMethod.AspectFit
+                                            }
+
+                                            Label {
+                                                text: folderGuilds.length > 1 ? folderGuilds[1].initials : ""
+                                                visible: folderGuilds.length > 1 && folderGuilds[1].icon === ""
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
+                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontSize: FontSize.XXSmall
+                                            }
+                                        }
+                                    }
+
+                                    Container {
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        topMargin: ui.du(0.5)
+                                        layout: StackLayout {
+                                            orientation: LayoutOrientation.LeftToRight
+                                        }
+
+                                        Container {
+                                            preferredWidth: ui.du(4.25)
+                                            preferredHeight: ui.du(4.25)
+                                            rightMargin: ui.du(0.25)
+                                            background: Color.create("#5865F2")
+                                            layout: DockLayout {}
+
+                                            ImageView {
+                                                imageSource: folderGuilds.length > 2 ? folderGuilds[2].icon : ""
+                                                visible: folderGuilds.length > 2 && folderGuilds[2].icon !== ""
+                                                horizontalAlignment: HorizontalAlignment.Fill
+                                                verticalAlignment: VerticalAlignment.Fill
+                                                scalingMethod: ScalingMethod.AspectFit
+                                            }
+
+                                            Label {
+                                                text: folderGuilds.length > 2 ? folderGuilds[2].initials : ""
+                                                visible: folderGuilds.length > 2 && folderGuilds[2].icon === ""
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
+                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontSize: FontSize.XXSmall
+                                            }
+                                        }
+
+                                        Container {
+                                            preferredWidth: ui.du(4.25)
+                                            preferredHeight: ui.du(4.25)
+                                            leftMargin: ui.du(0.25)
+                                            background: Color.create("#5865F2")
+                                            layout: DockLayout {}
+
+                                            ImageView {
+                                                imageSource: folderGuilds.length > 3 ? folderGuilds[3].icon : ""
+                                                visible: folderGuilds.length > 3 && folderGuilds[3].icon !== ""
+                                                horizontalAlignment: HorizontalAlignment.Fill
+                                                verticalAlignment: VerticalAlignment.Fill
+                                                scalingMethod: ScalingMethod.AspectFit
+                                            }
+
+                                            Label {
+                                                text: folderGuilds.length > 3 ? folderGuilds[3].initials : ""
+                                                visible: folderGuilds.length > 3 && folderGuilds[3].icon === ""
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
+                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontSize: FontSize.XXSmall
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Container {
                                 preferredWidth: ui.du(1.0)
                                 preferredHeight: ui.du(4.0)
                                 horizontalAlignment: HorizontalAlignment.Left
                                 verticalAlignment: VerticalAlignment.Center
                                 background: Color.create("#FFFFFF")
-                                visible: ListItemData.type == "server" && ListItemData.unread == true
+                                visible: (ListItemData.type == "server" || ListItemData.type == "folder") && ListItemData.unread == true
                             }
 
                             Container {
@@ -136,6 +307,7 @@ Page {
                                     textStyle.fontSize: FontSize.XXSmall
                                 }
                             }
+
                         }
                     }
                 ]

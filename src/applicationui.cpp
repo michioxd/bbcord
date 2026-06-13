@@ -43,11 +43,11 @@ ApplicationUI::ApplicationUI()
       m_imagePreview(new ImagePreview(this)),
       m_dmListController(
           new DmListController(m_discordClient, m_appStore, this)),
-      m_mainPageController(
-          new MainPageController(m_discordClient, m_appStore, this)),
+      m_settingsController(new SettingsController(this)),
+      m_mainPageController(new MainPageController(m_discordClient, m_appStore,
+                                                  m_settingsController, this)),
       m_serverListController(
           new ServerListController(m_discordClient, m_appStore, this)),
-      m_settingsController(new SettingsController(this)),
       m_aboutController(new AboutController(this)) {
   // prepare the localization
   m_pTranslator = new QTranslator(this);

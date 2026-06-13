@@ -18,6 +18,7 @@ QString cleanSnowflake(const QVariant &value);
 void appendUniqueGuildId(QStringList *guildIds, const QString &guildId);
 void appendGuildIdsFromUserSettingsProto(QStringList *orderedGuildIds,
                                          const QString &base64Proto);
+QVariantList guildFoldersFromUserSettingsProto(const QString &base64Proto);
 bool positionShouldMoveBefore(const QVariantMap &left,
                               const QVariantMap &right);
 bool dmShouldMoveBefore(const QVariantMap &left, const QVariantMap &right);

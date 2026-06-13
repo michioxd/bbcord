@@ -1,8 +1,10 @@
 #include "Client.hpp"
 
 #include "AppStore.hpp"
+#include "discord/DiscordUtils.hpp"
 #include "discord/GatewayWorker.hpp"
 #include "discord/NetworkWorker.hpp"
+
 
 #include "client/AvatarManager.hpp"
 #include "client/CacheManager.hpp"
@@ -36,6 +38,7 @@ DiscordClient::DiscordClient(QObject *parent)
       m_queuedGuildIconIds(m_avatarState.queuedGuildIconIds),
       m_loadedGuildIconIds(m_avatarState.loadedGuildIconIds),
       m_orderedGuildIds(m_state.orderedGuildIds),
+      m_guildFolders(m_state.guildFolders),
       m_dmPresenceByUserId(m_state.dmPresenceByUserId),
       m_lastGuildId(m_state.lastGuildId),
       m_lastDmChannelId(m_state.lastDmChannelId),
@@ -95,6 +98,7 @@ DiscordClient::DiscordClient(AppStore *store, QObject *parent)
       m_queuedGuildIconIds(m_avatarState.queuedGuildIconIds),
       m_loadedGuildIconIds(m_avatarState.loadedGuildIconIds),
       m_orderedGuildIds(m_state.orderedGuildIds),
+      m_guildFolders(m_state.guildFolders),
       m_dmPresenceByUserId(m_state.dmPresenceByUserId),
       m_lastGuildId(m_state.lastGuildId),
       m_lastDmChannelId(m_state.lastDmChannelId),
@@ -195,6 +199,7 @@ void DiscordClient::logout() {
   m_queuedGuildIconIds.clear();
   m_loadedGuildIconIds.clear();
   m_orderedGuildIds.clear();
+  m_guildFolders.clear();
   m_dmPresenceByUserId.clear();
   m_pendingDmPresenceUserIds.clear();
   m_guilds.clear();
@@ -551,6 +556,31 @@ void DiscordClient::onGuildIconCacheMiss(const QString &guildId,
 
 void DiscordClient::onGatewayDispatch(const QString &eventName,
                                       const QVariantMap &payload) {
+  if (eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
+    QVariantList folders = payload.value("guild_folders").toList();
+    if (folders.isEmpty()) {
+      folders = payload.value("user_settings")
+                    .toMap()
+                    .value("guild_folders")
+                    .toList();
+    }
+    if (folders.isEmpty()) {
+      folders = DiscordUtils::guildFoldersFromUserSettingsProto(
+          payload.value("user_settings_proto").toString());
+    }
+    if (folders.isEmpty()) {
+      QVariantMap settings = payload.value("settings").toMap();
+      folders = DiscordUtils::guildFoldersFromUserSettingsProto(
+          settings.value("proto").toString());
+    }
+    if (!folders.isEmpty()) {
+      m_guildFolders = folders;
+      if (m_store) {
+        m_store->setGuildFolders(m_guildFolders);
+      }
+    }
+  }
+
   if (eventName == "MESSAGE_CREATE" || eventName == "MESSAGE_UPDATE" ||
       eventName == "MESSAGE_DELETE") {
     QString channelId = payload.value("channel_id").toString().trimmed();
@@ -767,6 +797,7 @@ void DiscordClient::savePendingDmChannelsCache() {
 
 void DiscordClient::updateStoreWithGuildsAndDms() {
   if (m_store) {
+    m_store->setGuildFolders(m_guildFolders);
     m_store->reorderGuilds(m_guilds);
     m_store->setDmChannels(m_dmChannels);
   }

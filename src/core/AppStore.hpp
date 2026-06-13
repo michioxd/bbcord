@@ -25,6 +25,8 @@ class AppStore : public QObject {
   Q_PROPERTY(QString currentUserAvatarSource READ currentUserAvatarSource NOTIFY
                  currentUserChanged)
   Q_PROPERTY(QVariantList guilds READ guilds NOTIFY guildsChanged)
+  Q_PROPERTY(
+      QVariantList guildFolders READ guildFolders NOTIFY guildFoldersChanged)
   Q_PROPERTY(QVariantList dmChannels READ dmChannels NOTIFY dmChannelsChanged)
   Q_PROPERTY(
       QVariantList guildChannels READ guildChannels NOTIFY guildChannelsChanged)
@@ -59,6 +61,7 @@ public:
   QString currentUserTag() const;
   QString currentUserAvatarSource() const;
   QVariantList guilds() const;
+  QVariantList guildFolders() const;
   QVariantList dmChannels() const;
   QVariantList guildChannels() const;
   QString selectedGuildId() const;
@@ -94,6 +97,7 @@ public Q_SLOTS:
   void setCurrentUser(const DiscordUser &user);
   void setCurrentUserAvatarSource(const QString &avatarSource);
   void setGuilds(const QVariantList &guilds);
+  void setGuildFolders(const QVariantList &folders);
   void reorderGuilds(const QVariantList &guilds);
   void updateGuildIcon(const QString &guildId, const QString &iconSource);
   void updateDmAvatar(const QString &channelId, const QString &avatarSource);
@@ -131,6 +135,7 @@ Q_SIGNALS:
   void statusTextChanged(const QString &statusText);
   void currentUserChanged();
   void guildsChanged();
+  void guildFoldersChanged();
   void guildsReordered();
   void guildIconChanged(const QString &guildId, const QString &iconSource);
   void dmChannelsChanged();
@@ -163,6 +168,7 @@ private:
   DiscordUser m_currentUser;
   QString m_currentUserAvatarSource;
   QVariantList m_guilds;
+  QVariantList m_guildFolders;
   QVariantList m_dmChannels;
   QVariantList m_guildChannels;
   QString m_selectedGuildId;

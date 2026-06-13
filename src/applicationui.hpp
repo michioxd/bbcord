@@ -59,9 +59,9 @@ private:
   ChatController *m_chatController;
   ImagePreview *m_imagePreview;
   DmListController *m_dmListController;
+  SettingsController *m_settingsController;
   MainPageController *m_mainPageController;
   ServerListController *m_serverListController;
-  SettingsController *m_settingsController;
   AboutController *m_aboutController;
 };
 

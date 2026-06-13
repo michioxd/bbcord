@@ -50,6 +50,8 @@ QString AppStore::currentUserAvatarSource() const {
 
 QVariantList AppStore::guilds() const { return m_guilds; }
 
+QVariantList AppStore::guildFolders() const { return m_guildFolders; }
+
 QVariantList AppStore::dmChannels() const { return m_dmChannels; }
 
 QVariantList AppStore::guildChannels() const { return m_guildChannels; }
@@ -165,6 +167,7 @@ void AppStore::clearSession() {
   setStatusText("Disconnected");
   setCurrentUser(DiscordUser());
   setGuilds(QVariantList());
+  setGuildFolders(QVariantList());
   setDmChannels(QVariantList());
   setGuildChannels(QVariantList());
   clearChatCache();
@@ -237,6 +240,11 @@ void AppStore::setCurrentUserAvatarSource(const QString &avatarSource) {
 void AppStore::setGuilds(const QVariantList &guilds) {
   m_guilds = guilds;
   emit guildsChanged();
+}
+
+void AppStore::setGuildFolders(const QVariantList &folders) {
+  m_guildFolders = folders;
+  emit guildFoldersChanged();
 }
 
 void AppStore::reorderGuilds(const QVariantList &guilds) {

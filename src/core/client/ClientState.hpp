@@ -20,6 +20,7 @@ public:
   QVariantMap allDmChannelIndexById;
   QVariantMap visibleDmChannelIndexById;
   QStringList orderedGuildIds;
+  QVariantList guildFolders;
   QVariantMap dmPresenceByUserId;
   QString lastGuildId;
   QString lastDmChannelId;

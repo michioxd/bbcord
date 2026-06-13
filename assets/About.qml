@@ -176,17 +176,17 @@ Sheet {
                             enabled: aboutController.releaseUrl.length > 0
                             onClicked: aboutSheet.openLink(aboutController.releaseUrl)
                         }
-                    }
-
-                    Button {
-                        imageSource: "asset:///images/icons/ic_reload.png"
-                        enabled: !aboutController.checking
-                        layoutProperties: StackLayoutProperties {
-                            spaceQuota: -1
+                        
+                        Button {
+                            imageSource: "asset:///images/icons/ic_reload.png"
+                            enabled: !aboutController.checking
+                            layoutProperties: StackLayoutProperties {
+                                spaceQuota: -1
+                            }
+                            onClicked: aboutController.checkForUpdates(true)
+                            preferredWidth: ui.du(5.0)
+                            preferredHeight: ui.du(5.0)
                         }
-                        onClicked: aboutController.checkForUpdates(true)
-                        preferredWidth: ui.du(5.0)
-                        preferredHeight: ui.du(5.0)
                     }
                 }
                 

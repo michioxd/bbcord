@@ -136,6 +136,25 @@ bool SettingsController::resetDiscordBackend() {
   return apiChanged && cdnChanged;
 }
 
+bool SettingsController::guildFolderExpanded(const QString &folderId) const {
+  QString safeFolderId = folderId.trimmed();
+  if (safeFolderId.isEmpty()) {
+    return false;
+  }
+
+  return readBool(QString("guild_folder/%1/expanded").arg(safeFolderId), false);
+}
+
+void SettingsController::setGuildFolderExpanded(const QString &folderId,
+                                                bool expanded) {
+  QString safeFolderId = folderId.trimmed();
+  if (safeFolderId.isEmpty()) {
+    return;
+  }
+
+  writeBool(QString("guild_folder/%1/expanded").arg(safeFolderId), expanded);
+}
+
 void SettingsController::ensureDatabase() {
   QSqlDatabase db;
   if (QSqlDatabase::contains(m_connectionName)) {

@@ -507,7 +507,7 @@
 <context>
     <name>SettingsController</name>
     <message>
-        <location filename="../src/ui/SettingsController.cpp" line="207"/>
+        <location filename="../src/ui/SettingsController.cpp" line="226"/>
         <source>%1 B</source>
         <translation type="unfinished"></translation>
     </message>

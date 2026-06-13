@@ -16,6 +16,11 @@ void DiscordClient::loadMainData() {
     return;
   }
 
+  if (m_store) {
+    m_store->setGuildFolders(m_guildFolders);
+    m_store->setGuilds(m_guilds);
+  }
+
   if (m_guilds.isEmpty()) {
     loadGuilds();
   } else if (m_dmChannels.isEmpty()) {
@@ -148,6 +153,7 @@ void DiscordClient::onGuildsLoaded(const QVariantList &guilds) {
   syncGatewayOrderingStateToWorker();
 
   if (m_store) {
+    m_store->setGuildFolders(m_guildFolders);
     m_store->setGuilds(m_guilds);
     scheduleGuildsCacheSave();
   }

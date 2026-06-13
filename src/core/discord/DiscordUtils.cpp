@@ -4,6 +4,8 @@ namespace {
 const int kProtoFieldGuildFolders = 14;
 const int kProtoFieldGuildFolderItems = 1;
 const int kProtoFieldGuildFolderGuildIds = 1;
+const int kProtoFieldGuildFolderId = 2;
+const int kProtoFieldGuildFolderName = 3;
 
 bool snowflakeNewerThan(const QString &left, const QString &right) {
   if (left.isEmpty()) {
@@ -98,6 +100,116 @@ void appendGuildIdsFromProtoBytes(QStringList *orderedGuildIds,
     DiscordUtils::appendUniqueGuildId(orderedGuildIds,
                                       QString::number(guildId));
   }
+}
+
+QString snowflakeFromProtoBytes(const QByteArray &guildBytes, int index) {
+  if (index < 0 || index + 7 >= guildBytes.size()) {
+    return QString();
+  }
+
+  quint64 guildId = 0;
+  for (int j = 0; j < 8; ++j) {
+    guildId |= (static_cast<quint64>(
+                    static_cast<unsigned char>(guildBytes.at(index + j)))
+                << (j * 8));
+  }
+  return QString::number(guildId);
+}
+
+QString wrappedVarintValue(const QByteArray &bytes) {
+  int offset = 0;
+  while (offset < bytes.size()) {
+    quint64 tag = 0;
+    if (!readProtoVarint(bytes, &offset, &tag)) {
+      return QString();
+    }
+
+    int fieldNumber = static_cast<int>(tag >> 3);
+    int wireType = static_cast<int>(tag & 0x07);
+    if (fieldNumber == 1 && wireType == 0) {
+      quint64 value = 0;
+      if (!readProtoVarint(bytes, &offset, &value)) {
+        return QString();
+      }
+      return QString::number(value);
+    }
+
+    if (!skipProtoField(bytes, &offset, wireType)) {
+      return QString();
+    }
+  }
+  return QString();
+}
+
+QString wrappedStringValue(const QByteArray &bytes) {
+  int offset = 0;
+  while (offset < bytes.size()) {
+    quint64 tag = 0;
+    if (!readProtoVarint(bytes, &offset, &tag)) {
+      return QString();
+    }
+
+    int fieldNumber = static_cast<int>(tag >> 3);
+    int wireType = static_cast<int>(tag & 0x07);
+    if (fieldNumber == 1 && wireType == 2) {
+      QByteArray value;
+      if (!readProtoLengthDelimited(bytes, &offset, &value)) {
+        return QString();
+      }
+      return QString::fromUtf8(value);
+    }
+
+    if (!skipProtoField(bytes, &offset, wireType)) {
+      return QString();
+    }
+  }
+  return QString();
+}
+
+QVariantMap guildFolderFromProtoItem(const QByteArray &itemBytes) {
+  QVariantMap folder;
+  QVariantList guildIds;
+
+  int offset = 0;
+  while (offset < itemBytes.size()) {
+    quint64 tag = 0;
+    if (!readProtoVarint(itemBytes, &offset, &tag)) {
+      return folder;
+    }
+
+    int fieldNumber = static_cast<int>(tag >> 3);
+    int wireType = static_cast<int>(tag & 0x07);
+
+    if (fieldNumber == kProtoFieldGuildFolderGuildIds && wireType == 2) {
+      QByteArray guildBytes;
+      if (!readProtoLengthDelimited(itemBytes, &offset, &guildBytes)) {
+        return folder;
+      }
+      for (int i = 0; i + 7 < guildBytes.size(); i += 8) {
+        QString guildId = snowflakeFromProtoBytes(guildBytes, i);
+        if (!guildId.isEmpty()) {
+          guildIds.append(guildId);
+        }
+      }
+    } else if (fieldNumber == kProtoFieldGuildFolderId && wireType == 2) {
+      QByteArray idBytes;
+      if (!readProtoLengthDelimited(itemBytes, &offset, &idBytes)) {
+        return folder;
+      }
+      folder["id"] = wrappedVarintValue(idBytes);
+    } else if (fieldNumber == kProtoFieldGuildFolderName && wireType == 2) {
+      QByteArray nameBytes;
+      if (!readProtoLengthDelimited(itemBytes, &offset, &nameBytes)) {
+        return folder;
+      }
+      folder["name"] = wrappedStringValue(nameBytes);
+    } else if (!skipProtoField(itemBytes, &offset, wireType)) {
+      return folder;
+    }
+  }
+
+  folder["guild_ids"] = guildIds;
+  return folder;
 }
 
 void appendGuildIdsFromProtoFolderItem(QStringList *orderedGuildIds,
@@ -226,6 +338,63 @@ void DiscordUtils::appendGuildIdsFromUserSettingsProto(
       return;
     }
   }
+}
+
+QVariantList
+DiscordUtils::guildFoldersFromUserSettingsProto(const QString &base64Proto) {
+  QVariantList folders;
+  QByteArray settings = QByteArray::fromBase64(base64Proto.toLatin1());
+  if (settings.isEmpty()) {
+    return folders;
+  }
+
+  int offset = 0;
+  while (offset < settings.size()) {
+    quint64 tag = 0;
+    if (!readProtoVarint(settings, &offset, &tag)) {
+      return folders;
+    }
+
+    int fieldNumber = static_cast<int>(tag >> 3);
+    int wireType = static_cast<int>(tag & 0x07);
+
+    if (fieldNumber == kProtoFieldGuildFolders && wireType == 2) {
+      QByteArray guildFolders;
+      if (!readProtoLengthDelimited(settings, &offset, &guildFolders)) {
+        return folders;
+      }
+
+      int foldersOffset = 0;
+      while (foldersOffset < guildFolders.size()) {
+        quint64 folderTag = 0;
+        if (!readProtoVarint(guildFolders, &foldersOffset, &folderTag)) {
+          return folders;
+        }
+
+        int folderFieldNumber = static_cast<int>(folderTag >> 3);
+        int folderWireType = static_cast<int>(folderTag & 0x07);
+        if (folderFieldNumber == kProtoFieldGuildFolderItems &&
+            folderWireType == 2) {
+          QByteArray itemBytes;
+          if (!readProtoLengthDelimited(guildFolders, &foldersOffset,
+                                        &itemBytes)) {
+            return folders;
+          }
+          QVariantMap folder = guildFolderFromProtoItem(itemBytes);
+          if (!folder.value("guild_ids").toList().isEmpty()) {
+            folders.append(folder);
+          }
+        } else if (!skipProtoField(guildFolders, &foldersOffset,
+                                   folderWireType)) {
+          return folders;
+        }
+      }
+    } else if (!skipProtoField(settings, &offset, wireType)) {
+      return folders;
+    }
+  }
+
+  return folders;
 }
 
 bool DiscordUtils::positionShouldMoveBefore(const QVariantMap &left,

@@ -35,6 +35,9 @@ public:
   Q_INVOKABLE bool setApiUrl(const QString &url);
   Q_INVOKABLE bool setCdnUrl(const QString &url);
   Q_INVOKABLE bool resetDiscordBackend();
+  Q_INVOKABLE bool guildFolderExpanded(const QString &folderId) const;
+  Q_INVOKABLE void setGuildFolderExpanded(const QString &folderId,
+                                          bool expanded);
 
 Q_SIGNALS:
   void sfxEnabledChanged(bool enabled);

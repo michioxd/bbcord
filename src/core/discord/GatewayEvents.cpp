@@ -169,6 +169,8 @@ QVariantMap buildLightReadyPayload(const QByteArray &bytes) {
       DiscordJsonParser::extractStringField(dataBytes, "resume_gateway_url");
   payload["user_settings_proto"] =
       DiscordJsonParser::extractStringField(dataBytes, "user_settings_proto");
+  payload["guild_folders"] =
+      DiscordJsonParser::extractArrayField(dataBytes, "guild_folders");
 
   QByteArray settingsBytes =
       DiscordJsonParser::extractObjectField(dataBytes, "settings");

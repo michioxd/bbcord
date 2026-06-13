@@ -199,6 +199,7 @@ private:
   QStringList &m_queuedGuildIconIds;
   QStringList &m_loadedGuildIconIds;
   QStringList &m_orderedGuildIds;
+  QVariantList &m_guildFolders;
   QVariantMap &m_dmPresenceByUserId;
   QString m_token;
   QString &m_lastGuildId;
