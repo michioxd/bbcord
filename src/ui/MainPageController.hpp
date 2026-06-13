@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariantMap>
 
 #include <bb/cascades/ArrayDataModel>
 #include <bb/cascades/DataModel>
@@ -32,8 +33,12 @@ private Q_SLOTS:
   void onGuildsChanged();
   void onGuildsReordered();
   void onGuildIconChanged(const QString &guildId, const QString &iconSource);
+  void onSelectionChanged();
 
 private:
+  QVariantMap withSelectionState(const QVariantMap &item) const;
+  void refreshSelectionState();
+
   DiscordClient *m_client;
   AppStore *m_store;
   bb::cascades::ArrayDataModel *m_serverDataModel;

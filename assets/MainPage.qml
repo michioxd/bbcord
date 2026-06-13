@@ -47,11 +47,13 @@ Page {
                             preferredWidth: ui.du(10)
                             preferredHeight: ui.du(10)
                             property string lastIconRequestId: ""
+                            property bool selectedItem: ListItemData.active == true
+                            property bool selectedServer: selectedItem && ListItemData.type == "server"
 
                             topMargin: ui.du(1)
                             bottomMargin: ui.du(1)
 
-                            background: Color.create("#333333")
+                            background: selectedItem ? Color.create("#5865F2") : Color.create("#333333")
 
                             layout: DockLayout {}
 
@@ -75,12 +77,23 @@ Page {
                                 }
                             }
 
-                            ImageView {
-                                imageSource: ListItemData.icon
+                            Container {
                                 visible: ListItemData.icon !== ""
                                 horizontalAlignment: HorizontalAlignment.Fill
                                 verticalAlignment: VerticalAlignment.Fill
-                                scalingMethod: ScalingMethod.AspectFit
+                                topPadding: selectedServer ? ui.du(0.5) : 0
+                                bottomPadding: selectedServer ? ui.du(0.5) : 0
+                                leftPadding: selectedServer ? ui.du(0.5) : 0
+                                rightPadding: selectedServer ? ui.du(0.5) : 0
+
+                                layout: DockLayout {}
+
+                                ImageView {
+                                    imageSource: ListItemData.icon
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+                                    scalingMethod: ScalingMethod.AspectFit
+                                }
                             }
 
                             Label {
@@ -195,6 +208,8 @@ Page {
     }
 
     function loadDmList() {
+        mainPageController.selectHome();
+
         if (activeContentType == "dm") {
             return;
         }

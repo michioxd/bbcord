@@ -13,6 +13,8 @@ MainPageController::MainPageController(DiscordClient *client, AppStore *store,
             SLOT(onGuildsReordered()));
     connect(m_store, SIGNAL(guildIconChanged(QString, QString)), this,
             SLOT(onGuildIconChanged(QString, QString)));
+    connect(m_store, SIGNAL(selectionChanged()), this,
+            SLOT(onSelectionChanged()));
     onGuildsChanged();
   }
 }
@@ -57,6 +59,33 @@ void MainPageController::selectGuild(const QString &guildId) {
   }
 }
 
+QVariantMap
+MainPageController::withSelectionState(const QVariantMap &item) const {
+  QVariantMap result = item;
+  bool selected = false;
+  if (m_store) {
+    QString itemType = result.value("type").toString();
+    QString itemId = result.value("id").toString();
+    QString selectedGuildId = m_store->selectedGuildId();
+    selected =
+        (itemType == "dm" && itemId == "home" && selectedGuildId.isEmpty()) ||
+        (itemType == "server" && !selectedGuildId.isEmpty() &&
+         itemId == selectedGuildId);
+  }
+  result["active"] = selected;
+  return result;
+}
+
+void MainPageController::refreshSelectionState() {
+  for (int i = 0; i < m_serverDataModel->size(); ++i) {
+    QVariantMap item = m_serverDataModel->value(i).toMap();
+    QVariantMap updatedItem = withSelectionState(item);
+    if (item != updatedItem) {
+      m_serverDataModel->replace(i, updatedItem);
+    }
+  }
+}
+
 void MainPageController::onGuildsChanged() {
   if (!m_store) {
     m_serverDataModel->clear();
@@ -72,6 +101,7 @@ void MainPageController::onGuildsChanged() {
   home["icon"] = "asset:///images/icons/first.png";
   home["mentionCount"] = 0;
   home["unread"] = false;
+  home = withSelectionState(home);
 
   bool canUpdateInPlace = m_serverDataModel->size() == guilds.size() + 1;
   if (canUpdateInPlace) {
@@ -83,7 +113,7 @@ void MainPageController::onGuildsChanged() {
   if (canUpdateInPlace) {
     for (int i = 0; i < guilds.size(); ++i) {
       QVariantMap currentGuild = m_serverDataModel->value(i + 1).toMap();
-      QVariantMap newGuild = guilds.at(i).toMap();
+      QVariantMap newGuild = withSelectionState(guilds.at(i).toMap());
       if (currentGuild.value("id").toString() !=
           newGuild.value("id").toString()) {
         canUpdateInPlace = false;
@@ -99,7 +129,7 @@ void MainPageController::onGuildsChanged() {
     }
     for (int i = 0; i < guilds.size(); ++i) {
       QVariantMap currentGuild = m_serverDataModel->value(i + 1).toMap();
-      QVariantMap newGuild = guilds.at(i).toMap();
+      QVariantMap newGuild = withSelectionState(guilds.at(i).toMap());
       if (currentGuild != newGuild) {
         m_serverDataModel->replace(i + 1, newGuild);
       }
@@ -110,7 +140,7 @@ void MainPageController::onGuildsChanged() {
   m_serverDataModel->clear();
   m_serverDataModel->append(home);
   for (int i = 0; i < guilds.size(); ++i) {
-    m_serverDataModel->append(guilds.at(i));
+    m_serverDataModel->append(withSelectionState(guilds.at(i).toMap()));
   }
 }
 
@@ -127,7 +157,7 @@ void MainPageController::onGuildsReordered() {
   }
 
   for (int i = 0; i < guilds.size(); ++i) {
-    QVariantMap newGuild = guilds.at(i).toMap();
+    QVariantMap newGuild = withSelectionState(guilds.at(i).toMap());
     QString targetId = newGuild.value("id").toString();
     int targetIndex = i + 1;
     QVariantMap currentGuild = m_serverDataModel->value(targetIndex).toMap();
@@ -167,8 +197,11 @@ void MainPageController::onGuildIconChanged(const QString &guildId,
     QVariantMap item = m_serverDataModel->value(i).toMap();
     if (item.value("id").toString() == guildId) {
       item["icon"] = iconSource;
+      item = withSelectionState(item);
       m_serverDataModel->replace(i, item);
       return;
     }
   }
 }
+
+void MainPageController::onSelectionChanged() { refreshSelectionState(); }
