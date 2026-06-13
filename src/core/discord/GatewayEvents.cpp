@@ -159,6 +159,28 @@ QVariantMap buildLightMessageCreatePayload(const QByteArray &bytes,
   }
   return payload;
 }
+
+QVariantMap buildLightReadyPayload(const QByteArray &bytes) {
+  QByteArray dataBytes = DiscordJsonParser::extractObjectField(bytes, "d");
+  QVariantMap payload;
+  payload["session_id"] =
+      DiscordJsonParser::extractStringField(dataBytes, "session_id");
+  payload["resume_gateway_url"] =
+      DiscordJsonParser::extractStringField(dataBytes, "resume_gateway_url");
+  payload["user_settings_proto"] =
+      DiscordJsonParser::extractStringField(dataBytes, "user_settings_proto");
+
+  QByteArray settingsBytes =
+      DiscordJsonParser::extractObjectField(dataBytes, "settings");
+  if (!settingsBytes.isEmpty()) {
+    QVariantMap settings;
+    settings["proto"] =
+        DiscordJsonParser::extractStringField(settingsBytes, "proto");
+    payload["settings"] = settings;
+  }
+
+  return payload;
+}
 } // namespace
 
 void DiscordGateway::eventHandler(struct mg_connection *connection, int event,
@@ -396,6 +418,19 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
     }
 
     handleDispatch(fastEventName, messagePayload, sequence);
+    return;
+  }
+
+  if (fastEventName == "READY") {
+    int sequence = extractSequence(bytes);
+    if (sequence >= 0) {
+      m_sequence = sequence;
+    }
+
+    QVariantMap readyPayload = buildLightReadyPayload(bytes);
+    qDebug() << "[discord-gateway] READY fast-path"
+             << "seq" << sequence << "payloadBytes" << bytes.size();
+    handleDispatch("READY", readyPayload, sequence);
     return;
   }
 

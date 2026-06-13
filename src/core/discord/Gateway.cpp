@@ -189,7 +189,7 @@ void DiscordGateway::sendIdentify() {
   }
 
   qDebug() << "[discord-gateway] identify sent"
-           << "guild_subscriptions=true"
+           << "guild_subscriptions=false"
            << "payloadBytes" << payload.size();
   sendJsonText(QString::fromUtf8(payload.constData(), payload.size()));
 }

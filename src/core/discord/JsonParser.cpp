@@ -84,8 +84,8 @@ QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
   data["token"] = token;
   data["capabilities"] = 30717;
   data["properties"] = properties;
-  data["large_threshold"] = 50;
-  data["guild_subscriptions"] = true;
+  data["large_threshold"] = 250;
+  data["guild_subscriptions"] = false;
   QVariantMap presence;
   presence["status"] = "online";
   presence["since"] = QVariant();

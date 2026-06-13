@@ -9,6 +9,8 @@ MainPageController::MainPageController(DiscordClient *client, AppStore *store,
       m_serverDataModel(new bb::cascades::ArrayDataModel(this)) {
   if (m_store) {
     connect(m_store, SIGNAL(guildsChanged()), this, SLOT(onGuildsChanged()));
+    connect(m_store, SIGNAL(guildsReordered()), this,
+            SLOT(onGuildsReordered()));
     connect(m_store, SIGNAL(guildIconChanged(QString, QString)), this,
             SLOT(onGuildIconChanged(QString, QString)));
     onGuildsChanged();
@@ -109,6 +111,49 @@ void MainPageController::onGuildsChanged() {
   m_serverDataModel->append(home);
   for (int i = 0; i < guilds.size(); ++i) {
     m_serverDataModel->append(guilds.at(i));
+  }
+}
+
+void MainPageController::onGuildsReordered() {
+  if (!m_store) {
+    m_serverDataModel->clear();
+    return;
+  }
+
+  QVariantList guilds = m_store->guilds();
+  if (m_serverDataModel->size() != guilds.size() + 1) {
+    onGuildsChanged();
+    return;
+  }
+
+  for (int i = 0; i < guilds.size(); ++i) {
+    QVariantMap newGuild = guilds.at(i).toMap();
+    QString targetId = newGuild.value("id").toString();
+    int targetIndex = i + 1;
+    QVariantMap currentGuild = m_serverDataModel->value(targetIndex).toMap();
+    if (currentGuild.value("id").toString() == targetId) {
+      if (currentGuild != newGuild) {
+        m_serverDataModel->replace(targetIndex, newGuild);
+      }
+      continue;
+    }
+
+    int sourceIndex = -1;
+    for (int j = targetIndex + 1; j < m_serverDataModel->size(); ++j) {
+      QVariantMap candidate = m_serverDataModel->value(j).toMap();
+      if (candidate.value("id").toString() == targetId) {
+        sourceIndex = j;
+        break;
+      }
+    }
+
+    if (sourceIndex < 0) {
+      onGuildsChanged();
+      return;
+    }
+
+    m_serverDataModel->removeAt(sourceIndex);
+    m_serverDataModel->insert(targetIndex, newGuild);
   }
 }
 

@@ -91,6 +91,7 @@ public:
   void setCurrentUser(const DiscordUser &user);
   void setCurrentUserAvatarSource(const QString &avatarSource);
   void setGuilds(const QVariantList &guilds);
+  void reorderGuilds(const QVariantList &guilds);
   void updateGuildIcon(const QString &guildId, const QString &iconSource);
   void updateDmAvatar(const QString &channelId, const QString &avatarSource);
   void updateDmAvatar2(const QString &channelId, const QString &avatarSource);
@@ -127,6 +128,7 @@ Q_SIGNALS:
   void statusTextChanged(const QString &statusText);
   void currentUserChanged();
   void guildsChanged();
+  void guildsReordered();
   void guildIconChanged(const QString &guildId, const QString &iconSource);
   void dmChannelsChanged();
   void dmChannelsAppended(const QVariantList &channels);

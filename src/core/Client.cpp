@@ -632,6 +632,7 @@ void DiscordClient::onGatewayGuildsAndDmsReady(
 
   m_guilds = updatedGuilds;
   m_orderedGuildIds = orderedGuildIds;
+  sortGuilds();
   m_dmPresenceByUserId = dmPresenceByUserId;
   for (QVariantMap::const_iterator it = m_dmPresenceByUserId.constBegin();
        it != m_dmPresenceByUserId.constEnd(); ++it) {
@@ -750,7 +751,7 @@ void DiscordClient::savePendingDmChannelsCache() {
 
 void DiscordClient::updateStoreWithGuildsAndDms() {
   if (m_store) {
-    m_store->setGuilds(m_guilds);
+    m_store->reorderGuilds(m_guilds);
     m_store->setDmChannels(m_dmChannels);
   }
 }

@@ -239,6 +239,38 @@ void AppStore::setGuilds(const QVariantList &guilds) {
   emit guildsChanged();
 }
 
+void AppStore::reorderGuilds(const QVariantList &guilds) {
+  if (m_guilds.size() != guilds.size()) {
+    setGuilds(guilds);
+    return;
+  }
+
+  QStringList oldIds;
+  QStringList newIds;
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    oldIds.append(m_guilds.at(i).toMap().value("id").toString());
+    newIds.append(guilds.at(i).toMap().value("id").toString());
+  }
+
+  QStringList sortedOldIds = oldIds;
+  QStringList sortedNewIds = newIds;
+  sortedOldIds.sort();
+  sortedNewIds.sort();
+  if (sortedOldIds != sortedNewIds) {
+    setGuilds(guilds);
+    return;
+  }
+
+  if (oldIds == newIds) {
+    m_guilds = guilds;
+    emit guildsChanged();
+    return;
+  }
+
+  m_guilds = guilds;
+  emit guildsReordered();
+}
+
 void AppStore::updateGuildIcon(const QString &guildId,
                                const QString &iconSource) {
   for (int i = 0; i < m_guilds.size(); ++i) {

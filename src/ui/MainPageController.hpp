@@ -30,6 +30,7 @@ public:
 
 private Q_SLOTS:
   void onGuildsChanged();
+  void onGuildsReordered();
   void onGuildIconChanged(const QString &guildId, const QString &iconSource);
 
 private:
