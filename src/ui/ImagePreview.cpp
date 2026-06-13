@@ -181,7 +181,7 @@ QString ImagePreview::cachePathForUrl(const QString &url) const {
     suffix = "img";
   }
   QDir dir(QDir::homePath());
-  return dir.absoluteFilePath(QString("data/image-preview-cache/%1.%2")
+  return dir.absoluteFilePath(QString("cache/image-preview-cache/%1.%2")
                                   .arg(QString::fromLatin1(hash))
                                   .arg(suffix));
 }

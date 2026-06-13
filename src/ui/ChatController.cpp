@@ -1181,7 +1181,7 @@ QString ChatController::attachmentImageCachePath(const QString &url) const {
   }
 
   QDir dir(QDir::homePath());
-  return dir.absoluteFilePath(QString("data/chat-image-cache/%1.%2")
+  return dir.absoluteFilePath(QString("cache/chat-image-cache/%1.%2")
                                   .arg(QString::fromLatin1(hash))
                                   .arg(suffix));
 }

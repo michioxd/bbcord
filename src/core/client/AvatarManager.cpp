@@ -208,15 +208,16 @@ void AvatarManager::loadNextGuildIcon(QString &loadingGuildIconId,
 
 QString AvatarManager::avatarCachePath(const DiscordUser &user) const {
   QDir dir(QDir::homePath());
-  return dir.absoluteFilePath(
-      QString("data/avatar-cache/%1_%2.png").arg(user.id).arg(user.avatarHash));
+  return dir.absoluteFilePath(QString("cache/avatar-cache/%1_%2.png")
+                                  .arg(user.id)
+                                  .arg(user.avatarHash));
 }
 
 QString AvatarManager::guildIconCachePath(const QString &guildId,
                                           const QString &iconHash) const {
   QDir dir(QDir::homePath());
   return dir.absoluteFilePath(
-      QString("data/guild-icon-cache/%1_%2.png").arg(guildId).arg(iconHash));
+      QString("cache/guild-icon-cache/%1_%2.png").arg(guildId).arg(iconHash));
 }
 
 QString AvatarManager::avatarSourceForPath(const QString &path) const {

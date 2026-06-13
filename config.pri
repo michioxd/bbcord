@@ -60,7 +60,6 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/caret-down.png) \
         $$quote($$BASEDIR/assets/images/icons/first.png) \
         $$quote($$BASEDIR/assets/images/icons/hash.png) \
-        $$quote($$BASEDIR/assets/images/icons/house.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_chat_multiperson.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_copy.png) \
         $$quote($$BASEDIR/assets/images/icons/ic_edit.png) \
@@ -78,7 +77,6 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/images/icons/settings/ca_message_error.png) \
         $$quote($$BASEDIR/assets/images/icons/settings/ca_security_wipe.png) \
         $$quote($$BASEDIR/assets/images/icons/settings/ca_sms.png) \
-        $$quote($$BASEDIR/assets/images/icons/settings/ca_software_updates.png) \
         $$quote($$BASEDIR/assets/images/icons/settings/ca_storage_access.png) \
         $$quote($$BASEDIR/assets/images/icons/speaker.png) \
         $$quote($$BASEDIR/assets/images/icons/x-disabled.png) \

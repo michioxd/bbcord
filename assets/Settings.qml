@@ -1,8 +1,13 @@
 import bb.cascades 1.4
+import bb.system 1.2
 import "components"
 
 Sheet {
     id: settingsSheet
+
+    onOpened: {
+        settingsController.refreshCacheUsed()
+    }
 
     Page {
         titleBar: TitleBar {
@@ -42,23 +47,22 @@ Sheet {
                 SettingItem {
                     iconSource: "asset:///images/icons/settings/ca_storage_access.png"
                     title: qsTr("Cached media location")
-                    description: "/accounts/1000/..."
+                    description: settingsController.cachePath
                 }
 
                 SettingItem {
                     iconSource: "asset:///images/icons/settings/ca_data_management.png"
                     title: qsTr("Used")
-                    description: "0 B of 1 GB"
+                    description: settingsController.cacheUsed
                 }
 
                 SettingItem {
                     iconSource: "asset:///images/icons/settings/ca_security_wipe.png"
                     title: qsTr("Clear cache")
-                    description: qsTr("Clear cached data such as images and message history.")
+                    description: qsTr("Clear cached media such as avatars and attachments.")
+                    onTriggered: clearCacheDialog.show()
                 }
 
-                
-                
                 Header {
                     title: qsTr("Discord API")
                 }
@@ -136,6 +140,26 @@ Sheet {
                     }
                 }
             }
+        }
+
+        attachedObjects: [
+            SystemDialog {
+                id: clearCacheDialog
+                title: qsTr("Clear cache")
+                body: qsTr("Clear cached media? This cannot be undone.")
+                confirmButton.label: qsTr("Clear")
+                cancelButton.label: qsTr("Cancel")
+
+                onFinished: {
+                    if (result == SystemUiResult.ConfirmButtonSelection) {
+                        settingsController.clearCache()
+                    }
+                }
+            }
+        ]
+
+        onCreationCompleted: {
+            settingsController.refreshCacheUsed()
         }
     }
 }

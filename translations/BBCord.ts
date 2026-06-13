@@ -29,37 +29,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="183"/>
+        <location filename="../assets/About.qml" line="194"/>
         <source>Created by</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="198"/>
+        <location filename="../assets/About.qml" line="209"/>
         <source>Thanks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="202"/>
+        <location filename="../assets/About.qml" line="213"/>
         <source>BlackBerry (RIM)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="203"/>
+        <location filename="../assets/About.qml" line="214"/>
         <source>For QNX and BlackBerry 10</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="258"/>
+        <location filename="../assets/About.qml" line="269"/>
         <source>Contributors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="262"/>
+        <location filename="../assets/About.qml" line="273"/>
         <source>You</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/About.qml" line="263"/>
+        <location filename="../assets/About.qml" line="274"/>
         <source>Still love and using BB10 right now :3</source>
         <translation type="unfinished"></translation>
     </message>
@@ -67,51 +67,51 @@
 <context>
     <name>AboutController</name>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="32"/>
-        <location filename="../src/ui/AboutController.cpp" line="81"/>
+        <location filename="../src/ui/AboutController.cpp" line="31"/>
+        <location filename="../src/ui/AboutController.cpp" line="76"/>
         <source>Checking for update...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="93"/>
+        <location filename="../src/ui/AboutController.cpp" line="87"/>
         <source>Could not create update connection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="102"/>
-        <location filename="../src/ui/AboutController.cpp" line="126"/>
-        <location filename="../src/ui/AboutController.cpp" line="196"/>
+        <location filename="../src/ui/AboutController.cpp" line="95"/>
+        <location filename="../src/ui/AboutController.cpp" line="117"/>
+        <location filename="../src/ui/AboutController.cpp" line="180"/>
         <source>Unknown update check error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="122"/>
+        <location filename="../src/ui/AboutController.cpp" line="114"/>
         <source>Update check timeout</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="178"/>
+        <location filename="../src/ui/AboutController.cpp" line="165"/>
         <source>Update connection error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="243"/>
-        <location filename="../src/ui/AboutController.cpp" line="296"/>
+        <location filename="../src/ui/AboutController.cpp" line="225"/>
+        <location filename="../src/ui/AboutController.cpp" line="272"/>
         <source>Yay! You are on latest version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="252"/>
+        <location filename="../src/ui/AboutController.cpp" line="233"/>
         <source>Could not check for update</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="294"/>
+        <location filename="../src/ui/AboutController.cpp" line="270"/>
         <source>A new version is available: v%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/AboutController.cpp" line="301"/>
+        <location filename="../src/ui/AboutController.cpp" line="276"/>
         <source>Unknown update parse error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -351,83 +351,107 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../assets/Settings.qml" line="9"/>
+        <location filename="../assets/Settings.qml" line="14"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="25"/>
+        <location filename="../assets/Settings.qml" line="30"/>
         <source>User interface</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="30"/>
+        <location filename="../assets/Settings.qml" line="35"/>
         <source>Compact message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="31"/>
+        <location filename="../assets/Settings.qml" line="36"/>
         <source>Fit more messages on screen at one time. #IRC</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="39"/>
+        <location filename="../assets/Settings.qml" line="44"/>
         <source>Storage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="44"/>
+        <location filename="../assets/Settings.qml" line="49"/>
         <source>Cached media location</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="50"/>
+        <location filename="../assets/Settings.qml" line="55"/>
         <source>Used</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="56"/>
+        <location filename="../assets/Settings.qml" line="61"/>
+        <location filename="../assets/Settings.qml" line="148"/>
         <source>Clear cache</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="57"/>
-        <source>Clear cached data such as images and message history.</source>
+        <location filename="../assets/Settings.qml" line="62"/>
+        <source>Clear cached media such as avatars and attachments.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="63"/>
+        <location filename="../assets/Settings.qml" line="149"/>
+        <source>Clear cached media? This cannot be undone.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="150"/>
+        <source>Clear</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="151"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../assets/Settings.qml" line="67"/>
         <source>Discord API</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="68"/>
+        <location filename="../assets/Settings.qml" line="72"/>
         <source>API URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="74"/>
+        <location filename="../assets/Settings.qml" line="78"/>
         <source>CDN URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="95"/>
+        <location filename="../assets/Settings.qml" line="99"/>
         <source>For security reasons, after you update the Discord API URL, your saved token will be cleared.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="121"/>
+        <location filename="../assets/Settings.qml" line="125"/>
         <source>Miscellaneous</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="126"/>
+        <location filename="../assets/Settings.qml" line="130"/>
         <source>Sound effects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/Settings.qml" line="127"/>
+        <location filename="../assets/Settings.qml" line="131"/>
         <source>Play login, connecting, and error sounds. #MSNTV2</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SettingsController</name>
+    <message>
+        <location filename="../src/ui/SettingsController.cpp" line="129"/>
+        <source>%1 B</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
