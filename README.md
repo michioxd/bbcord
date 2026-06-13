@@ -22,6 +22,8 @@ This project still in early stages of development, and many features are not yet
 
 For obvious reasons, instructions are not provided here. Please [Google it](https://www.google.com/search?q=how+to+get+discord+token).
 
+**IF SOMEONE TELLS YOU TO PASTE SOMETHING IN THE DEVELOPER CONSOLE. DON'T TRY IT!**
+
 ## License
 
 [GPL-3.0](LICENSE)
