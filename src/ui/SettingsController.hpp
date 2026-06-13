@@ -40,6 +40,7 @@ Q_SIGNALS:
   void sfxEnabledChanged(bool enabled);
   void compactMessageEnabledChanged(bool enabled);
   void cacheUsedChanged(const QString &cacheUsed);
+  void cacheCleared();
   void apiUrlChanged(const QString &apiUrl);
   void cdnUrlChanged(const QString &cdnUrl);
 

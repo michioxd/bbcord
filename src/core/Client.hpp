@@ -61,6 +61,7 @@ Q_SIGNALS:
   void statusTextChanged(const QString &statusText);
 
 public Q_SLOTS:
+  void clearAvatarCacheState();
   Q_INVOKABLE void subscribeToGuildChannel(const QString &channelId,
                                            const QString &guildId);
   Q_INVOKABLE void loadInitialChatMessages(const QString &channelId,

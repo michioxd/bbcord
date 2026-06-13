@@ -59,7 +59,7 @@ QString discordPreviewUrl(const QString &url, int originalWidth,
   QString scheme = parsed.scheme().toLower();
   QString host = parsed.host().toLower();
   if ((scheme != "http" && scheme != "https") ||
-      !host.endsWith("discordapp.com")) {
+      (!host.endsWith("discordapp.com") && !host.endsWith("discordapp.net"))) {
     return url.trimmed();
   }
 
@@ -540,6 +540,12 @@ void ChatController::cancelCachedImage(const QString &url) {
   m_loadingAttachmentImages.remove(safeUrl);
   QMetaObject::invokeMethod(m_imageWorker, "cancelImage", Qt::QueuedConnection,
                             Q_ARG(QString, safeUrl));
+}
+
+void ChatController::clearMediaCacheState() {
+  m_cachedAttachmentImages.clear();
+  m_loadingAttachmentImages.clear();
+  rebuildChatDataModel();
 }
 
 void ChatController::onCurrentChannelMessagesChanged() {

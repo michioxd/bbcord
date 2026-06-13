@@ -109,6 +109,7 @@ Q_SIGNALS:
                               const QString &messageId);
 
 private Q_SLOTS:
+  void clearMediaCacheState();
   void onCurrentChannelMessagesChanged();
   void onChatMessagesReset(const QString &channelId,
                            const QVariantList &messages);

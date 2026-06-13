@@ -84,6 +84,9 @@ public:
   Q_INVOKABLE QString newestChatMessageId(const QString &channelId) const;
   Q_INVOKABLE void clearSession();
 
+public Q_SLOTS:
+  void clearMediaCacheState();
+
   void setLoggedIn(bool loggedIn);
   void setBusy(bool busy);
   void setDataLoading(bool dataLoading);

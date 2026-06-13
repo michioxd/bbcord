@@ -665,6 +665,45 @@ void AppStore::notifyChatAvatarChanged(const QString &userId,
   emit chatAvatarChanged(safeUserId, safeAvatarSource);
 }
 
+void AppStore::clearMediaCacheState() {
+  bool guildIconsChanged = false;
+  for (int i = 0; i < m_guilds.size(); ++i) {
+    QVariantMap guild = m_guilds.at(i).toMap();
+    if (!guild.value("icon").toString().isEmpty()) {
+      guild["icon"] = QString();
+      m_guilds.replace(i, guild);
+      guildIconsChanged = true;
+    }
+  }
+
+  bool dmsChanged = false;
+  for (int i = 0; i < m_dmChannels.size(); ++i) {
+    QVariantMap channel = m_dmChannels.at(i).toMap();
+    bool changed = false;
+    if (!channel.value("avatar").toString().isEmpty()) {
+      channel["avatar"] = QString();
+      changed = true;
+    }
+    if (!channel.value("avatar2").toString().isEmpty()) {
+      channel["avatar2"] = QString();
+      changed = true;
+    }
+    if (changed) {
+      m_dmChannels.replace(i, channel);
+      dmsChanged = true;
+    }
+  }
+
+  m_currentUserAvatarSource = kDefaultUserAvatar;
+  emit currentUserChanged();
+  if (guildIconsChanged) {
+    emit guildsChanged();
+  }
+  if (dmsChanged) {
+    emit dmChannelsChanged();
+  }
+}
+
 void AppStore::clearChatCache() {
   m_messageCache.clear();
   emit currentChannelMessagesChanged();

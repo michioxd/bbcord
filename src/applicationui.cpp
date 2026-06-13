@@ -26,7 +26,6 @@
 #include "ui/ServerListController.hpp"
 #include "ui/SettingsController.hpp"
 
-
 #include <bb/ApplicationInfo>
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
@@ -79,6 +78,13 @@ ApplicationUI::ApplicationUI()
   qml->setContextProperty("aboutController", m_aboutController);
   qml->setContextProperty("applicationInfo", new bb::ApplicationInfo(this));
   qml->setContextProperty("applicationUI", this);
+
+  QObject::connect(m_settingsController, SIGNAL(cacheCleared()),
+                   m_discordClient, SLOT(clearAvatarCacheState()));
+  QObject::connect(m_settingsController, SIGNAL(cacheCleared()), m_appStore,
+                   SLOT(clearMediaCacheState()));
+  QObject::connect(m_settingsController, SIGNAL(cacheCleared()),
+                   m_chatController, SLOT(clearMediaCacheState()));
 
   // Create root object for the UI
   AbstractPane *root = qml->createRootObject<AbstractPane>();

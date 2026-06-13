@@ -80,6 +80,7 @@ void SettingsController::setCompactMessageEnabled(bool enabled) {
 void SettingsController::clearCache() {
   clearDirectory(cachePath());
   refreshCacheUsed();
+  emit cacheCleared();
 }
 
 void SettingsController::refreshCacheUsed() {

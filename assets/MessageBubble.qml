@@ -290,6 +290,8 @@ Container {
             visible: root.attachmentTotal <= 1 && (root.image !== "" || root.imageLoading)
             preferredWidth: ui.du(root.displayImageWidth())
             preferredHeight: ui.du(root.displayImageHeight())
+            minWidth: ui.du(root.displayImageWidth())
+            minHeight: ui.du(root.displayImageHeight())
             maxWidth: ui.du(root.maxImageWidthDu)
             maxHeight: ui.du(root.maxImageHeightDu)
             topMargin: ui.du(1.0)
@@ -299,6 +301,10 @@ Container {
             ImageView {
                 visible: root.image !== ""
                 imageSource: root.image
+                preferredWidth: ui.du(root.displayImageWidth())
+                preferredHeight: ui.du(root.displayImageHeight())
+                minWidth: ui.du(root.displayImageWidth())
+                minHeight: ui.du(root.displayImageHeight())
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
                 scalingMethod: ScalingMethod.AspectFit
@@ -361,6 +367,8 @@ Container {
                             visible: ListItemData.isImage && (ListItemData.image !== "" || ListItemData.imageLoading)
                             preferredWidth: ui.du(ListItemData.displayWidthDu)
                             preferredHeight: ui.du(ListItemData.displayHeightDu)
+                            minWidth: ui.du(ListItemData.displayWidthDu)
+                            minHeight: ui.du(ListItemData.displayHeightDu)
                             maxWidth: ui.du(50.4)
                             maxHeight: ui.du(43.2)
 
@@ -369,6 +377,10 @@ Container {
                             ImageView {
                                 visible: ListItemData.image !== ""
                                 imageSource: ListItemData.image
+                                preferredWidth: ui.du(ListItemData.displayWidthDu)
+                                preferredHeight: ui.du(ListItemData.displayHeightDu)
+                                minWidth: ui.du(ListItemData.displayWidthDu)
+                                minHeight: ui.du(ListItemData.displayHeightDu)
                                 horizontalAlignment: HorizontalAlignment.Fill
                                 verticalAlignment: VerticalAlignment.Fill
                                 scalingMethod: ScalingMethod.AspectFit

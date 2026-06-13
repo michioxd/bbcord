@@ -229,6 +229,22 @@ void DiscordClient::logout() {
   setStatusText("Disconnected");
 }
 
+void DiscordClient::clearAvatarCacheState() {
+  m_avatarCacheRequests.clear();
+  m_guildIconCacheRequests.clear();
+  m_avatarSourcesByUserId.clear();
+  m_pendingAvatars.clear();
+  m_pendingGuildIcons.clear();
+  m_loadingAvatarUserId.clear();
+  m_loadingAvatarUserId2.clear();
+  m_loadingGuildIconId.clear();
+  m_loadingGuildIconId2.clear();
+  m_queuedAvatarUserIds.clear();
+  m_loadedAvatarUserIds.clear();
+  m_queuedGuildIconIds.clear();
+  m_loadedGuildIconIds.clear();
+}
+
 bool DiscordClient::loggedIn() const { return m_loggedIn; }
 
 bool DiscordClient::busy() const { return m_busy; }
