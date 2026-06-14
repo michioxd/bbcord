@@ -5,7 +5,6 @@
 #include "discord/GatewayWorker.hpp"
 #include "discord/NetworkWorker.hpp"
 
-
 #include "client/AvatarManager.hpp"
 #include "client/CacheManager.hpp"
 #include "client/GatewayHandler.hpp"
@@ -605,8 +604,8 @@ void DiscordClient::onGatewayReady(const QString &sessionId) {
   if (!m_loggedIn) {
     saveToken();
     setLoggedIn(true);
-    emit loginSucceeded();
     loadGuilds();
+    emit loginSucceeded();
   }
 
   setBusy(false);
