@@ -32,7 +32,7 @@ Page {
 
 		ListView {
 			id: memberList
-			dataModel: memberModel
+				dataModel: channelMemberListController.memberDataModel
 			horizontalAlignment: HorizontalAlignment.Fill
 			verticalAlignment: VerticalAlignment.Fill
 
@@ -66,6 +66,27 @@ Page {
 						rightPadding: ui.du(2.0)
 						topPadding: ui.du(0.8)
 						bottomPadding: ui.du(0.8)
+						property string lastAvatarRequestId: ""
+
+						function requestAvatar() {
+							if (lastAvatarRequestId == ListItemData.userId) {
+								return;
+							}
+							if (ListItemData.avatar === "" && ListItemData.avatarHash !== "") {
+								lastAvatarRequestId = ListItemData.userId;
+								ListItem.view.loadVisibleMemberAvatar(ListItemData.userId, ListItemData.avatarHash);
+							}
+						}
+
+						onCreationCompleted: {
+							requestAvatar();
+						}
+
+						ListItem.onDataChanged: {
+							if (lastAvatarRequestId != ListItemData.userId) {
+								requestAvatar();
+							}
+						}
 
 						layout: StackLayout {
 							orientation: LayoutOrientation.LeftToRight
@@ -119,8 +140,47 @@ Page {
 								topMargin: ui.du(-0.4)
 								opacity: 0.6
 								textStyle.fontSize: FontSize.XSmall
-								textStyle.color: Color.create("#B5BAC1")
+								textStyle.color: Color.create(ListItemData.statusColor)
 							}
+						}
+					}
+				},
+
+				ListItemComponent {
+					type: "loading"
+
+					Container {
+						horizontalAlignment: HorizontalAlignment.Fill
+						leftPadding: ui.du(2.0)
+						rightPadding: ui.du(2.0)
+						topPadding: ui.du(1.5)
+						bottomPadding: ui.du(1.5)
+
+						ActivityIndicator {
+							horizontalAlignment: HorizontalAlignment.Center
+							preferredWidth: ui.du(4.0)
+							preferredHeight: ui.du(4.0)
+							running: true
+						}
+					}
+				},
+
+				ListItemComponent {
+					type: "empty"
+
+					Container {
+						horizontalAlignment: HorizontalAlignment.Fill
+						leftPadding: ui.du(2.0)
+						rightPadding: ui.du(2.0)
+						topPadding: ui.du(3.0)
+						bottomPadding: ui.du(3.0)
+
+						Label {
+							text: ListItemData.text
+							multiline: true
+							horizontalAlignment: HorizontalAlignment.Center
+							textStyle.fontSize: FontSize.Small
+							textStyle.color: Color.create("#B5BAC1")
 						}
 					}
 				}
@@ -129,42 +189,20 @@ Page {
 			function itemType(data, indexPath) {
 				return data.type
 			}
+
+			function loadVisibleMemberAvatar(userId, avatarHash) {
+				channelMemberListController.loadMemberAvatar(userId, avatarHash);
+			}
+
+			attachedObjects: [
+				ListScrollStateHandler {
+					onAtEndChanged: {
+						if (atEnd) {
+							channelMemberListController.loadMore();
+						}
+					}
+				}
+			]
 		}
-	}
-
-	attachedObjects: [
-		ArrayDataModel {
-			id: memberModel
-		}
-	]
-
-	function addRole(name, count) {
-		memberModel.append({
-				"type": "role",
-				"name": name,
-				"count": count
-			})
-	}
-
-	function addMember(name, initials, avatarColor, avatar, nameColor, status) {
-		memberModel.append({
-				"type": "member",
-				"name": name,
-				"initials": initials,
-				"avatarColor": avatarColor,
-				"avatar": avatar,
-				"nameColor": nameColor,
-				"status": status
-			})
-	}
-
-	onCreationCompleted: {
-		addRole("Owner", 1)
-		addMember("michioxd", "M", "#5865F2", "", "#F2F3F5", "Online")
-
-		addRole("Bots", 1)
-		addMember("check", "C", "#43B581", "", "#43B581", "please check back soon :3")
-		addMember("back", "B", "#43B581", "", "#43B581", "please check back soon :3")
-		addMember("later", "L", "#43B581", "", "#43B581", "please check back soon :3")
 	}
 }

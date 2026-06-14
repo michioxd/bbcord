@@ -103,10 +103,6 @@ void GatewayHandler::applyGatewayOrderingEvent(
     return;
   }
   if (eventName == "PRESENCE_UPDATE") {
-    QMetaObject::invokeMethod(
-        m_client, "updateDmPresence", Qt::DirectConnection,
-        Q_ARG(QString, payload.value("user").toMap().value("id").toString()),
-        Q_ARG(QString, payload.value("status").toString()));
     if (!gatewayUiUpdateQueued) {
       gatewayUiUpdateQueued = true;
       QTimer::singleShot(250, m_client, SLOT(flushGatewayUiUpdates()));

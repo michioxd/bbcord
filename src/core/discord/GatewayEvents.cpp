@@ -60,7 +60,10 @@ bool shouldParseDispatch(const QString &eventName) {
          eventName == "MESSAGE_DELETE" || eventName == "READY" ||
          eventName == "GUILD_CREATE" || eventName == "GUILD_DELETE" ||
          eventName == "USER_SETTINGS_PROTO_UPDATE" ||
-         eventName == "PRESENCE_UPDATE";
+         eventName == "PRESENCE_UPDATE" ||
+         eventName == "GUILD_MEMBER_LIST_UPDATE" ||
+         eventName == "GUILD_MEMBERS_CHUNK" || eventName == "RATE_LIMITED" ||
+         eventName == "CHANNEL_MEMBER_COUNT_UPDATE";
 }
 
 QByteArray extractArrayBytes(const QByteArray &bytes, const char *fieldName) {
@@ -229,15 +232,21 @@ void DiscordGateway::handleEvent(struct mg_connection *connection, int event,
         static_cast<struct mg_ws_message *>(eventData);
     int opcode = message != NULL ? (message->flags & 0x0f) : -1;
     int closeCode = -1;
+    QString closeReason;
     if (opcode == WEBSOCKET_OP_CLOSE && message != NULL &&
         message->data.len >= 2) {
       const unsigned char *bytes =
           reinterpret_cast<const unsigned char *>(message->data.buf);
       closeCode =
           (static_cast<int>(bytes[0]) << 8) | static_cast<int>(bytes[1]);
+      if (message->data.len > 2) {
+        closeReason =
+            QString::fromUtf8(message->data.buf + 2, message->data.len - 2);
+      }
     }
     qDebug() << "[discord-gateway] control frame opcode" << opcode
-             << "closeCode" << closeCode << "payloadBytes"
+             << "closeCode" << closeCode << "reason" << closeReason
+             << "payloadBytes"
              << (message != NULL ? static_cast<int>(message->data.len) : 0);
     break;
   }
@@ -327,10 +336,26 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
   QByteArray bytes(data, length);
 
   QString fastEventName = DiscordJsonParser::extractStringField(bytes, "t");
+  bool lazyDebugActive =
+      m_lazyDebugUntilMs > 0 && mg_millis() < m_lazyDebugUntilMs;
+  bool mentionsLazyContext =
+      lazyDebugActive && ((!m_lastLazyGuildId.isEmpty() &&
+                           bytes.indexOf(m_lastLazyGuildId.toUtf8()) >= 0) ||
+                          (!m_lastLazyChannelId.isEmpty() &&
+                           bytes.indexOf(m_lastLazyChannelId.toUtf8()) >= 0));
   if (!fastEventName.isEmpty() && !shouldParseDispatch(fastEventName)) {
     int sequence = extractSequence(bytes);
     if (sequence >= 0) {
       m_sequence = sequence;
+    }
+    if (lazyDebugActive) {
+      qDebug() << "[discord-gateway] lazy debug ignored dispatch"
+               << fastEventName << "seq" << sequence << "bytes" << bytes.size()
+               << "mentionsLazyContext" << mentionsLazyContext;
+      if (mentionsLazyContext) {
+        qDebug() << "[discord-gateway] lazy debug ignored snippet"
+                 << QString::fromUtf8(bytes.left(512));
+      }
     }
     return;
   }
@@ -451,6 +476,18 @@ void DiscordGateway::handleTextMessage(const char *data, int length) {
   case 0:
     // qDebug() << "[discord-gateway] parsed dispatch" << payload.eventName
     //          << "seq" << payload.sequence;
+    if (lazyDebugActive) {
+      qDebug() << "[discord-gateway] lazy debug parsed dispatch"
+               << payload.eventName << "seq" << payload.sequence << "bytes"
+               << bytes.size() << "mentionsLazyContext" << mentionsLazyContext;
+      if (mentionsLazyContext ||
+          payload.eventName == "GUILD_MEMBER_LIST_UPDATE" ||
+          payload.eventName == "GUILD_MEMBERS_CHUNK" ||
+          payload.eventName == "CHANNEL_MEMBER_COUNT_UPDATE") {
+        qDebug() << "[discord-gateway] lazy debug parsed snippet"
+                 << QString::fromUtf8(bytes.left(512));
+      }
+    }
     if (payload.eventName == "READY") {
       qDebug() << "[discord-gateway] READY presences"
                << payload.data.value("presences").toList().size()
@@ -493,13 +530,22 @@ void DiscordGateway::handleDispatch(const QString &eventName,
                                     const QVariantMap &data, int sequence) {
   Q_UNUSED(sequence);
 
+  QVariantMap payload = data;
+
   if (eventName == "READY") {
-    m_sessionId = data.value("session_id").toString();
-    m_resumeGatewayUrl = data.value("resume_gateway_url").toString();
+    m_sessionId = payload.value("session_id").toString();
+    m_resumeGatewayUrl = payload.value("resume_gateway_url").toString();
     setState(Ready);
     emit ready(m_sessionId);
     flushPendingLazyRequests();
   }
 
-  emit dispatchReceived(eventName, data);
+  if (eventName == "GUILD_MEMBER_LIST_UPDATE" &&
+      payload.value("channel_id").toString().isEmpty() &&
+      payload.value("guild_id").toString() == m_lastLazyGuildId &&
+      !m_lastLazyChannelId.isEmpty()) {
+    payload["channel_id"] = m_lastLazyChannelId;
+  }
+
+  emit dispatchReceived(eventName, payload);
 }

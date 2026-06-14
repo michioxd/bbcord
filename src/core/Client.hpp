@@ -48,6 +48,10 @@ public:
   Q_INVOKABLE void selectHome();
   Q_INVOKABLE void selectGuild(const QString &guildId);
   Q_INVOKABLE void selectChannel(const QString &channelId);
+  Q_INVOKABLE void subscribeChannelMembers(const QString &channelId,
+                                           const QString &guildId,
+                                           int rangeStart, int rangeEnd);
+  Q_INVOKABLE QVariantMap guildPresenceForUser(const QString &userId) const;
 
   bool loggedIn() const;
   bool busy() const;
@@ -59,6 +63,9 @@ Q_SIGNALS:
   void loggedInChanged(bool loggedIn);
   void busyChanged(bool busy);
   void statusTextChanged(const QString &statusText);
+  void gatewayDispatchReceived(const QString &eventName,
+                               const QVariantMap &payload);
+  void gatewayConnectionClosed();
 
 public Q_SLOTS:
   void clearAvatarCacheState();
@@ -125,6 +132,7 @@ private Q_SLOTS:
   void moveDmToTop(const QString &channelId, const QString &lastMessageId);
   int guildMentionCount(const QString &guildId) const;
   void updateDmPresence(const QString &userId, const QString &status);
+  void updatePresencePayload(const QVariantMap &payload);
   bool applyPendingDmPresences();
   bool applyGuildOrderFromGatewayPayload(const QVariantMap &payload);
   void sortGuilds();

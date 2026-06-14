@@ -3,6 +3,15 @@
 #include "../Client.hpp"
 #include "../client/AvatarManager.hpp"
 
+QVariantMap DiscordClient::guildPresenceForUser(const QString &userId) const {
+  QString safeUserId = userId.trimmed();
+  if (safeUserId.isEmpty() || !m_dmPresenceByUserId.contains(safeUserId)) {
+    return QVariantMap();
+  }
+
+  return m_dmPresenceByUserId.value(safeUserId).toMap();
+}
+
 QString DiscordClient::avatarSourceForUser(const QString &userId) const {
   return m_avatarSourcesByUserId.value(userId.trimmed()).toString();
 }

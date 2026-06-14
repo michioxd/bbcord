@@ -93,7 +93,8 @@ QString presenceStatusForRecipients(const QVariantList &userIds,
   int bestRank = 0;
   for (int i = 0; i < userIds.size(); ++i) {
     QString userId = userIds.at(i).toString().trimmed();
-    QString status = dmPresenceByUserId.value(userId).toString();
+    QString status =
+        dmPresenceByUserId.value(userId).toMap().value("status").toString();
     int rank = 0;
     if (status == "online") {
       rank = 3;
@@ -194,15 +195,17 @@ void DiscordGatewayWorker::disconnectGateway() {
 }
 
 void DiscordGatewayWorker::sendLazyRequest(const QString &guildId,
-                                           const QString &channelId) {
+                                           const QString &channelId,
+                                           int rangeStart, int rangeEnd) {
   if (!isInObjectThread(this)) {
     QMetaObject::invokeMethod(this, "sendLazyRequest", Qt::QueuedConnection,
                               Q_ARG(QString, guildId),
-                              Q_ARG(QString, channelId));
+                              Q_ARG(QString, channelId), Q_ARG(int, rangeStart),
+                              Q_ARG(int, rangeEnd));
     return;
   }
 
-  m_gateway.sendLazyRequest(guildId, channelId);
+  m_gateway.sendLazyRequest(guildId, channelId, rangeStart, rangeEnd);
 }
 
 void DiscordGatewayWorker::updateGatewayOrderingState(
@@ -276,8 +279,9 @@ void DiscordGatewayWorker::onGatewayDispatchReceived(
     QString userId = payload.value("user").toMap().value("id").toString();
     QString status = payload.value("status").toString().trimmed();
     if (!userId.isEmpty()) {
-      m_gatewayDmPresenceByUserId.insert(
-          userId, status.isEmpty() ? QString("offline") : status);
+      QVariantMap presence = payload;
+      presence["status"] = status.isEmpty() ? QString("offline") : status;
+      m_gatewayDmPresenceByUserId.insert(userId, presence);
     }
     return;
   }
@@ -289,8 +293,8 @@ void DiscordGatewayWorker::onGatewayDispatchReceived(
       QString userId = presence.value("user").toMap().value("id").toString();
       QString status = presence.value("status").toString().trimmed();
       if (!userId.isEmpty()) {
-        m_gatewayDmPresenceByUserId.insert(
-            userId, status.isEmpty() ? QString("offline") : status);
+        presence["status"] = status.isEmpty() ? QString("offline") : status;
+        m_gatewayDmPresenceByUserId.insert(userId, presence);
       }
     }
   }

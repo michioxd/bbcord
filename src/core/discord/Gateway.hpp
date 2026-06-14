@@ -26,7 +26,8 @@ public:
   Q_INVOKABLE void connectToGateway(const QString &token);
   Q_INVOKABLE void disconnectFromGateway();
   Q_INVOKABLE void sendLazyRequest(const QString &guildId,
-                                   const QString &channelId);
+                                   const QString &channelId, int rangeStart = 0,
+                                   int rangeEnd = 99);
   Q_INVOKABLE void updateMessageFilterState(const QString &selectedChannelId,
                                             const QStringList &loadedChannelIds,
                                             const QString &currentUserId);
@@ -57,12 +58,14 @@ private:
   void sendHeartbeat();
   void sendIdentify();
   void sendJsonText(const QString &text);
+  void sendMemberChunkRequest(const QString &guildId, const QString &channelId,
+                              int rangeStart, int rangeEnd);
   void initializeTls(struct mg_connection *connection);
   void setState(ConnectionState state);
   void resetSession();
   void flushPendingLazyRequests();
-  QString lazyRequestKey(const QString &guildId,
-                         const QString &channelId) const;
+  QString lazyRequestKey(const QString &guildId, const QString &channelId,
+                         int rangeStart, int rangeEnd) const;
 
   mg_mgr *m_mgr;
   mg_connection *m_connection;
@@ -82,6 +85,9 @@ private:
   QString m_selectedChannelId;
   QStringList m_loadedChannelIds;
   QString m_currentUserId;
+  QString m_lastLazyGuildId;
+  QString m_lastLazyChannelId;
+  uint64_t m_lazyDebugUntilMs;
 };
 
 #endif /* Gateway_HPP_ */

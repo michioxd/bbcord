@@ -19,6 +19,7 @@
 #include "core/AppStore.hpp"
 #include "core/Client.hpp"
 #include "ui/AboutController.hpp"
+#include "ui/ChannelMemberList.hpp"
 #include "ui/ChatController.hpp"
 #include "ui/DmListController.hpp"
 #include "ui/ImagePreview.hpp"
@@ -39,6 +40,8 @@ using namespace bb::cascades;
 ApplicationUI::ApplicationUI()
     : QObject(), m_appStore(new AppStore(this)),
       m_discordClient(new DiscordClient(m_appStore, this)),
+      m_channelMemberListController(
+          new ChannelMemberListController(m_discordClient, m_appStore, this)),
       m_chatController(new ChatController(m_discordClient, m_appStore, this)),
       m_imagePreview(new ImagePreview(this)),
       m_dmListController(
@@ -69,6 +72,8 @@ ApplicationUI::ApplicationUI()
   QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
   qml->setContextProperty("appStore", m_appStore);
   qml->setContextProperty("discordClient", m_discordClient);
+  qml->setContextProperty("channelMemberListController",
+                          m_channelMemberListController);
   qml->setContextProperty("chatController", m_chatController);
   qml->setContextProperty("imagePreview", m_imagePreview);
   qml->setContextProperty("dmListController", m_dmListController);

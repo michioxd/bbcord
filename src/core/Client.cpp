@@ -555,6 +555,12 @@ void DiscordClient::onGuildIconCacheMiss(const QString &guildId,
 
 void DiscordClient::onGatewayDispatch(const QString &eventName,
                                       const QVariantMap &payload) {
+  if (eventName == "PRESENCE_UPDATE") {
+    updatePresencePayload(payload);
+  }
+
+  emit gatewayDispatchReceived(eventName, payload);
+
   if (eventName == "READY" || eventName == "USER_SETTINGS_PROTO_UPDATE") {
     QVariantList folders = payload.value("guild_folders").toList();
     if (folders.isEmpty()) {
@@ -627,6 +633,7 @@ void DiscordClient::onGatewayError(const QString &message) {
 
 void DiscordClient::onGatewayClosed() {
   qDebug() << "[discord-client] gateway closed";
+  emit gatewayConnectionClosed();
   if (m_busy && !m_loggedIn) {
     QString message = "Discord gateway connection closed";
     setBusy(false);
@@ -678,7 +685,20 @@ void DiscordClient::onGatewayGuildsAndDmsReady(
   m_guilds = updatedGuilds;
   m_orderedGuildIds = orderedGuildIds;
   sortGuilds();
-  m_dmPresenceByUserId = dmPresenceByUserId;
+  m_dmPresenceByUserId.clear();
+  for (QVariantMap::const_iterator it = dmPresenceByUserId.constBegin();
+       it != dmPresenceByUserId.constEnd(); ++it) {
+    QVariantMap presence;
+    if (it.value().type() == QVariant::Map) {
+      presence = it.value().toMap();
+    } else {
+      presence["status"] = it.value().toString();
+    }
+    if (presence.value("status").toString().trimmed().isEmpty()) {
+      presence["status"] = "offline";
+    }
+    m_dmPresenceByUserId.insert(it.key(), presence);
+  }
   for (QVariantMap::const_iterator it = m_dmPresenceByUserId.constBegin();
        it != m_dmPresenceByUserId.constEnd(); ++it) {
     if (!it.key().isEmpty() && !m_pendingDmPresenceUserIds.contains(it.key())) {

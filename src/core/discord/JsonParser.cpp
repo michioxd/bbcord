@@ -2,6 +2,8 @@
 
 #include <bb/data/JsonDataAccess>
 
+#include <QRegExp>
+
 DiscordJsonParser::GatewayPayload
 DiscordJsonParser::parseGatewayPayload(const QByteArray &bytes) {
   GatewayPayload payload;
@@ -125,40 +127,75 @@ QByteArray DiscordJsonParser::buildIdentifyPayload(const QString &token,
 }
 
 QByteArray DiscordJsonParser::buildGuildSubscribePayload(
-    const QString &guildId, const QString &channelId, QString *errorMessage) {
-  QVariantMap data;
+    const QString &guildId, const QString &channelId, int rangeStart,
+    int rangeEnd, QString *errorMessage) {
   QString safeGuildId = guildId.trimmed();
   QString safeChannelId = channelId.trimmed();
-  data["guild_id"] = safeGuildId;
-  data["typing"] = true;
-  data["activities"] = true;
-  data["threads"] = true;
-
-  if (!safeChannelId.isEmpty()) {
-    QVariantList range;
-    range.append(0);
-    range.append(99);
-
-    QVariantList ranges;
-    ranges.append(range);
-
-    QVariantMap channels;
-    channels[safeChannelId] = ranges;
-    data["channels"] = channels;
+  QRegExp snowflake("^\\d+$");
+  if (!snowflake.exactMatch(safeGuildId)) {
+    if (errorMessage != 0) {
+      *errorMessage = "Gateway subscribe request has invalid guild id";
+    }
+    return QByteArray();
+  }
+  if (!snowflake.exactMatch(safeChannelId)) {
+    if (errorMessage != 0) {
+      *errorMessage = "Gateway subscribe request has invalid channel id";
+    }
+    return QByteArray();
+  }
+  if (rangeStart < 0) {
+    rangeStart = 0;
+  }
+  if (rangeEnd < rangeStart) {
+    rangeEnd = rangeStart + 99;
   }
 
-  QVariantMap guildSubscriptions;
-  guildSubscriptions[safeGuildId] = QVariantList();
-  data["guild_subscriptions"] = guildSubscriptions;
+  if (errorMessage != 0) {
+    errorMessage->clear();
+  }
+  return QString("{\"op\":14,\"d\":{\"guild_id\":\"%1\",\"typing\":true,"
+                 "\"activities\":true,\"threads\":true,\"members\":[],"
+                 "\"thread_member_lists\":[],\"channels\":{\"%2\":[[%"
+                 "3,%4]]}}}")
+      .arg(safeGuildId)
+      .arg(safeChannelId)
+      .arg(rangeStart)
+      .arg(rangeEnd)
+      .toUtf8();
+}
+
+QByteArray DiscordJsonParser::buildGuildMembersRequestPayload(
+    const QString &guildId, const QString &query, int limit,
+    const QString &nonce, QString *errorMessage) {
+  QString safeGuildId = guildId.trimmed();
+  QRegExp snowflake("^\\d+$");
+  if (!snowflake.exactMatch(safeGuildId)) {
+    if (errorMessage != 0) {
+      *errorMessage = "Gateway members request has invalid guild id";
+    }
+    return QByteArray();
+  }
+  if (limit < 0) {
+    limit = 100;
+  }
+
+  QVariantMap data;
+  data["guild_id"] = safeGuildId;
+  data["query"] = query;
+  data["limit"] = limit;
+  data["presences"] = true;
+  if (!nonce.trimmed().isEmpty()) {
+    data["nonce"] = nonce.trimmed();
+  }
 
   QVariantMap root;
-  root["op"] = 14;
+  root["op"] = 8;
   root["d"] = data;
 
   bb::data::JsonDataAccess json;
   QByteArray payload;
   json.saveToBuffer(root, &payload);
-
   if (json.hasError()) {
     if (errorMessage != 0) {
       *errorMessage = json.error().errorMessage();

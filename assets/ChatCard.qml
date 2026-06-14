@@ -5,6 +5,8 @@ import "media"
 Page {
     id: chatPage
 
+    property string channelId: ""
+    property string guildId: ""
     property string channelName: "general"
     property alias title: titleBar.title
 
@@ -18,7 +20,7 @@ Page {
     property bool compactMessageEnabled: false
 
     signal backRequested
-    signal memberListRequested
+    signal memberListRequested(string channelId, string guildId, string channelName)
 
     actionBarVisibility: ChromeVisibility.Hidden
 
@@ -40,7 +42,7 @@ Page {
             imageSource: "asset:///images/icons/accent/users.png"
 
             onTriggered: {
-                chatPage.memberListRequested();
+                chatPage.memberListRequested(chatPage.channelId, chatPage.guildId, chatPage.channelName);
             }
         }
     }

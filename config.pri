@@ -124,6 +124,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/modules/Worker.cpp) \
         $$quote($$BASEDIR/src/main.cpp) \
         $$quote($$BASEDIR/src/ui/AboutController.cpp) \
+        $$quote($$BASEDIR/src/ui/ChannelMemberList.cpp) \
         $$quote($$BASEDIR/src/ui/ChatController.cpp) \
         $$quote($$BASEDIR/src/ui/DmListController.cpp) \
         $$quote($$BASEDIR/src/ui/ImagePreview.cpp) \
@@ -161,6 +162,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/core/modules/User.hpp) \
         $$quote($$BASEDIR/src/core/modules/Worker.hpp) \
         $$quote($$BASEDIR/src/ui/AboutController.hpp) \
+        $$quote($$BASEDIR/src/ui/ChannelMemberList.hpp) \
         $$quote($$BASEDIR/src/ui/ChatController.hpp) \
         $$quote($$BASEDIR/src/ui/DmListController.hpp) \
         $$quote($$BASEDIR/src/ui/ImagePreview.hpp) \

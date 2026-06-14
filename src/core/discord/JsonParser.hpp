@@ -29,7 +29,13 @@ public:
                                          QString *errorMessage = 0);
   static QByteArray buildGuildSubscribePayload(const QString &guildId,
                                                const QString &channelId,
+                                               int rangeStart, int rangeEnd,
                                                QString *errorMessage = 0);
+  static QByteArray buildGuildMembersRequestPayload(const QString &guildId,
+                                                    const QString &query,
+                                                    int limit,
+                                                    const QString &nonce,
+                                                    QString *errorMessage = 0);
   static int valueToInt(const QVariant &value, int fallback);
   static bool hasJsonToken(const QByteArray &bytes, const char *compactToken,
                            const char *spacedToken);

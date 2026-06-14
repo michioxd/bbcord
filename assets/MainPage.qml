@@ -336,6 +336,8 @@ Page {
 
         if (page) {
             chatController.openChannel(channelId, guildId, channelName);
+            page.channelId = channelId;
+            page.guildId = guildId;
             page.channelName = channelName;
             page.title = channelName;
             page.compactMessageEnabled = settingsController.compactMessageEnabled;
@@ -347,13 +349,24 @@ Page {
                     mainPage.navigationPane.pop();
                 }
             });
-            page.memberListRequested.connect(function () {
+            page.memberListRequested.connect(function (requestedChannelId, requestedGuildId, requestedChannelName) {
+                if (requestedChannelId === "") {
+                    requestedChannelId = chatController.currentChannelId;
+                }
+                if (requestedGuildId === "") {
+                    requestedGuildId = chatController.currentGuildId;
+                }
+                if (requestedChannelName === "") {
+                    requestedChannelName = chatController.currentChannelName;
+                }
                 var memberPage = channelMemberListDefinition.createObject();
 
                 if (memberPage) {
-                    memberPage.channelName = channelName;
-                    memberPage.title = "Members #" + channelName;
+                    channelMemberListController.openChannel(requestedChannelId, requestedGuildId, requestedChannelName);
+                    memberPage.channelName = requestedChannelName;
+                    memberPage.title = "Members #" + requestedChannelName;
                     memberPage.backRequested.connect(function () {
+                        channelMemberListController.closeChannel();
                         if (mainPage.navigationPane) {
                             mainPage.navigationPane.pop();
                         }

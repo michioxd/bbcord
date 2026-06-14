@@ -125,39 +125,78 @@
     </message>
 </context>
 <context>
+    <name>ChannelMemberListController</name>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="236"/>
+        <source>Member list is rate limited. Try again later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="379"/>
+        <source>Unable to load members. Gateway disconnected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="393"/>
+        <source>Unable to load members. No gateway response.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="711"/>
+        <source>Unable to load members. Client is not ready.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="764"/>
+        <source>Online</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="765"/>
+        <source>Offline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="794"/>
+        <location filename="../src/ui/ChannelMemberList.cpp" line="813"/>
+        <source>Members</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ChatCard</name>
     <message>
-        <location filename="../assets/ChatCard.qml" line="215"/>
+        <location filename="../assets/ChatCard.qml" line="217"/>
         <source>Loading more messages...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="270"/>
+        <location filename="../assets/ChatCard.qml" line="272"/>
         <source>Replying to </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="302"/>
+        <location filename="../assets/ChatCard.qml" line="304"/>
         <source>Attachments</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="369"/>
+        <location filename="../assets/ChatCard.qml" line="371"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="444"/>
+        <location filename="../assets/ChatCard.qml" line="446"/>
         <source>Message </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="471"/>
+        <location filename="../assets/ChatCard.qml" line="473"/>
         <source>Editing message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../assets/ChatCard.qml" line="497"/>
+        <location filename="../assets/ChatCard.qml" line="499"/>
         <source>Attach files</source>
         <translation type="unfinished"></translation>
     </message>

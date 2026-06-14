@@ -74,7 +74,8 @@ void DiscordClient::selectChannel(const QString &channelId) {
     if (m_gatewayWorker != 0) {
       QMetaObject::invokeMethod(m_gatewayWorker, "sendLazyRequest",
                                 Qt::QueuedConnection, Q_ARG(QString, guildId),
-                                Q_ARG(QString, safeChannelId));
+                                Q_ARG(QString, safeChannelId), Q_ARG(int, 0),
+                                Q_ARG(int, 99));
     }
   }
 

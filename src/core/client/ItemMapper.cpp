@@ -139,7 +139,8 @@ ItemMapper::dmStatusForRecipients(const QVariantList &userIds,
   int bestRank = 0;
   for (int i = 0; i < userIds.size(); ++i) {
     QString userId = userIds.at(i).toString().trimmed();
-    QString status = dmPresenceByUserId.value(userId).toString();
+    QString status =
+        dmPresenceByUserId.value(userId).toMap().value("status").toString();
     int rank = presenceRank(status);
     if (rank > bestRank) {
       bestRank = rank;

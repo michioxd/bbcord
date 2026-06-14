@@ -261,13 +261,38 @@ void DiscordClient::updateDmPresence(const QString &userId,
   }
 
   if (m_dmPresenceByUserId.contains(safeUserId) &&
-      m_dmPresenceByUserId.value(safeUserId).toString() == safeStatus) {
+      m_dmPresenceByUserId.value(safeUserId)
+              .toMap()
+              .value("status")
+              .toString() == safeStatus) {
     return;
   }
 
-  m_dmPresenceByUserId.insert(safeUserId, safeStatus);
+  QVariantMap presence;
+  presence["status"] = safeStatus;
+  m_dmPresenceByUserId.insert(safeUserId, presence);
   if (!m_pendingDmPresenceUserIds.contains(safeUserId)) {
     m_pendingDmPresenceUserIds.append(safeUserId);
+  }
+}
+
+void DiscordClient::updatePresencePayload(const QVariantMap &payload) {
+  QString userId =
+      payload.value("user").toMap().value("id").toString().trimmed();
+  if (userId.isEmpty()) {
+    return;
+  }
+
+  QString status = payload.value("status").toString().trimmed();
+  if (status.isEmpty()) {
+    status = "offline";
+  }
+
+  QVariantMap presence = payload;
+  presence["status"] = status;
+  m_dmPresenceByUserId.insert(userId, presence);
+  if (!m_pendingDmPresenceUserIds.contains(userId)) {
+    m_pendingDmPresenceUserIds.append(userId);
   }
 }
 
@@ -309,7 +334,8 @@ bool DiscordClient::applyPendingDmPresences() {
     int bestRank = 0;
     for (int j = 0; j < recipientIds.size(); ++j) {
       QString uid = recipientIds.at(j).toString().trimmed();
-      QString s = m_dmPresenceByUserId.value(uid).toString();
+      QString s =
+          m_dmPresenceByUserId.value(uid).toMap().value("status").toString();
       int rank = 0;
       if (s == "online")
         rank = 3;

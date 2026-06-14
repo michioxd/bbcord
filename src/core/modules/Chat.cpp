@@ -41,7 +41,32 @@ void DiscordClient::subscribeToGuildChannel(const QString &channelId,
   if (m_gatewayWorker != 0) {
     QMetaObject::invokeMethod(m_gatewayWorker, "sendLazyRequest",
                               Qt::QueuedConnection, Q_ARG(QString, safeGuildId),
-                              Q_ARG(QString, safeChannelId));
+                              Q_ARG(QString, safeChannelId), Q_ARG(int, 0),
+                              Q_ARG(int, 99));
+  }
+}
+
+void DiscordClient::subscribeChannelMembers(const QString &channelId,
+                                            const QString &guildId,
+                                            int rangeStart, int rangeEnd) {
+  QString safeChannelId = channelId.trimmed();
+  QString safeGuildId = guildId.trimmed();
+  if (safeChannelId.isEmpty() || safeGuildId.isEmpty()) {
+    qDebug() << "[discord-chat] subscribe members skipped"
+             << "guild" << safeGuildId << "channel" << safeChannelId << "range"
+             << rangeStart << rangeEnd;
+    return;
+  }
+
+  m_chatGuildByChannelId.insert(safeChannelId, safeGuildId);
+  qDebug() << "[discord-chat] subscribe channel members"
+           << "guild" << safeGuildId << "channel" << safeChannelId << "range"
+           << rangeStart << rangeEnd << "hasGateway" << (m_gatewayWorker != 0);
+  if (m_gatewayWorker != 0) {
+    QMetaObject::invokeMethod(m_gatewayWorker, "sendLazyRequest",
+                              Qt::QueuedConnection, Q_ARG(QString, safeGuildId),
+                              Q_ARG(QString, safeChannelId),
+                              Q_ARG(int, rangeStart), Q_ARG(int, rangeEnd));
   }
 }
 
